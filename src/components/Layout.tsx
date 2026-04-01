@@ -161,7 +161,7 @@ export const Layout = () => {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={() => setIsSidebarOpen(false)}
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 lg:hidden"
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[90] lg:hidden"
           />
         )}
       </AnimatePresence>
@@ -169,14 +169,13 @@ export const Layout = () => {
       {/* Sidebar */}
       <motion.aside
         className={clsx(
-          "fixed lg:sticky top-0 left-0 h-screen w-64 z-50 flex flex-col p-4 pt-[env(safe-area-inset-top)]",
-          "transform transition-transform duration-300 ease-in-out lg:translate-x-0",
+          "fixed lg:sticky top-0 left-0 h-screen w-64 z-[100] flex flex-col p-4 pt-[env(safe-area-inset-top)]",
+          "transform transition-transform duration-300 ease-in-out lg:translate-x-0 shadow-2xl",
           isSidebarOpen ? "translate-x-0" : "-translate-x-full"
         )}
         style={{
           background: 'linear-gradient(160deg, #0f172a 0%, #1e293b 60%, #1a1f3a 100%)',
-          borderRight: '1px solid rgba(255,255,255,0.08)',
-          boxShadow: '10px 0 40px rgba(0,0,0,0.3)'
+          borderRight: '1px solid rgba(255,255,255,0.08)'
         }}
       >
         <SidebarContent />

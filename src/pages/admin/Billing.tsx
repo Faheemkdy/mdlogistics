@@ -513,7 +513,7 @@ export const Billing = () => {
         <motion.div
            initial={{ y: 100 }}
            animate={{ y: 0 }}
-           className="lg:hidden fixed bottom-0 left-0 right-0 z-50 flex gap-3 p-4 bg-[#e0e5ec]/90 backdrop-blur-md border-t border-white/50 shadow-[0_-10px_20px_rgba(163,177,198,0.3)] pb-[calc(1rem+env(safe-area-inset-bottom))]"
+           className="lg:hidden fixed bottom-0 left-0 right-0 z-30 flex gap-3 p-4 bg-[#e0e5ec]/90 backdrop-blur-md border-t border-white/50 shadow-[0_-10px_20px_rgba(163,177,198,0.3)] pb-[calc(1rem+env(safe-area-inset-bottom))]"
         >
           <Button
             onClick={handleNativeShare}
