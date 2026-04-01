@@ -79,7 +79,7 @@ export const Login = () => {
             transition={{ type: 'spring', stiffness: 200, damping: 20, delay: 0.3 }}
             className="w-28 h-28 mx-auto rounded-3xl bg-white/10 backdrop-blur-sm border border-white/20 flex items-center justify-center shadow-2xl p-5"
           >
-            <Logo showText={false} className="w-full h-full" />
+            <Logo showText={false} isBranded className="w-full h-full" />
           </motion.div>
 
           <motion.div
@@ -117,7 +117,9 @@ export const Login = () => {
 
         {/* Bottom Badge */}
         <div className="absolute bottom-8 left-0 right-0 text-center">
-          <p className="text-slate-600 text-xs font-medium">Kondotty, Malappuram</p>
+          <p className="text-slate-500 text-[10px] font-bold tracking-widest uppercase">
+            Kondotty, Malappuram Dt.  |  +91 9633606862  |  mdcourierkdy@gmail.com
+          </p>
         </div>
       </motion.div>
 
@@ -242,8 +244,8 @@ export const Login = () => {
             </form>
           </div>
 
-          <p className="text-center text-slate-400 text-xs">
-            MD Courier Service · Kondotty, Malappuram
+          <p className="text-center text-slate-400 text-[10px] font-bold tracking-widest uppercase">
+            MD Logistics  ·  Kondotty, Malappuram Dt.
           </p>
         </motion.div>
       </div>

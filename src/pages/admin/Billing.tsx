@@ -1,29 +1,32 @@
-import React, { useState, useEffect } from 'react';
-import { Card } from '../../components/ui/Card';
+import { useState, useEffect } from 'react';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
-import { Plus, Trash2, Download, Share2, Package, ShoppingCart } from 'lucide-react';
+import { Plus, Trash2, Download, Share2, Package, ShoppingCart, FileText, Search, Calendar, Edit3, Trash } from 'lucide-react';
 import { generateBillingPDF, getBillingPDFFile } from '../../utils/billingPdfGenerator';
 import { motion, AnimatePresence } from 'framer-motion';
+import { clsx } from 'clsx';
+import { supabase } from '../../lib/supabase';
+import { format } from 'date-fns';
 
 export const Billing = () => {
-  const [mode, setMode] = useState<'delivery' | 'product'>('delivery');
+  const [mode, setMode] = useState<'delivery' | 'product' | 'history'>('delivery');
   const [customerName, setCustomerName] = useState('');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   
-  // Delivery State with updated columns
-  // description -> Date (YYYY-MM-DD)
-  // amount -> Calculated Price
+  const [savedBills, setSavedBills] = useState<any[]>([]);
+  const [searchName, setSearchName] = useState('');
+  const [searchDate, setSearchDate] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [editingBillId, setEditingBillId] = useState<string | null>(null);
   const [deliveryItems, setDeliveryItems] = useState([
     { id: 1, description: '', q20: '', q25: '', q30: '', q35: '', q40: '', q50: '', total: 0, amount: '' }
   ]);
 
-  // Product State
+  // Product State: no rate field, only amount
   const [productItems, setProductItems] = useState([
-    { id: 1, name: '', qty: 1, rate: 0, amount: 0 }
+    { id: 1, name: '', qty: 1, amount: 0 }
   ]);
 
-  // Totals
   const [deliveryTotalQty, setDeliveryTotalQty] = useState(0);
   const [deliveryTotalAmount, setDeliveryTotalAmount] = useState(0);
   const [productTotal, setProductTotal] = useState(0);
@@ -33,8 +36,6 @@ export const Billing = () => {
     setDeliveryItems(prev => prev.map(item => {
       if (item.id === id) {
         const newItem = { ...item, [field]: value };
-        
-        // Auto Calculate Totals and Amount if a quantity field changes
         if (['q20', 'q25', 'q30', 'q35', 'q40', 'q50'].includes(field)) {
             const q20 = Number(newItem.q20) || 0;
             const q25 = Number(newItem.q25) || 0;
@@ -42,334 +43,489 @@ export const Billing = () => {
             const q35 = Number(newItem.q35) || 0;
             const q40 = Number(newItem.q40) || 0;
             const q50 = Number(newItem.q50) || 0;
-            
-            // Total Quantity
             newItem.total = q20 + q25 + q30 + q35 + q40 + q50;
-            
-            // Total Amount (Qty * Rate)
-            const calculatedAmount = (q20 * 20) + (q25 * 25) + (q30 * 30) + (q35 * 35) + (q40 * 40) + (q50 * 50);
-            newItem.amount = calculatedAmount.toFixed(2);
+            newItem.amount = ((q20 * 20) + (q25 * 25) + (q30 * 30) + (q35 * 35) + (q40 * 40) + (q50 * 50)).toFixed(2);
         }
-        
         return newItem;
       }
       return item;
     }));
   };
 
-  const addDeliveryRow = () => {
-    setDeliveryItems([...deliveryItems, { id: Date.now(), description: '', q20: '', q25: '', q30: '', q35: '', q40: '', q50: '', total: 0, amount: '' }]);
-  };
+  const addDeliveryRow = () => setDeliveryItems(prev => [...prev, { id: Date.now(), description: '', q20: '', q25: '', q30: '', q35: '', q40: '', q50: '', total: 0, amount: '' }]);
+  const removeDeliveryRow = (id: number) => { if (deliveryItems.length > 1) setDeliveryItems(prev => prev.filter(i => i.id !== id)); };
 
-  const removeDeliveryRow = (id: number) => {
-    if (deliveryItems.length > 1) {
-      setDeliveryItems(deliveryItems.filter(i => i.id !== id));
-    }
-  };
-
-  // --- Product Logic ---
+  // --- Product Logic (no rate) ---
   const updateProductItem = (id: number, field: string, value: string | number) => {
-    setProductItems(prev => prev.map(item => {
-      if (item.id === id) {
-        const newItem = { ...item, [field]: value };
-        // Removed auto-calculation of amount = qty * rate
-        // Amount is now manually entered or updated independently
-        return newItem;
-      }
-      return item;
-    }));
+    setProductItems(prev => prev.map(item => item.id === id ? { ...item, [field]: value } : item));
+  };
+  const addProductRow = () => setProductItems(prev => [...prev, { id: Date.now(), name: '', qty: 1, amount: 0 }]);
+  const removeProductRow = (id: number) => { if (productItems.length > 1) setProductItems(prev => prev.filter(i => i.id !== id)); };
+
+  // --- Database Logic ---
+  const fetchSavedBills = async () => {
+    setLoading(true);
+    let query = supabase.from('bills').select('*').order('date', { ascending: false });
+    if (searchName) query = query.ilike('customer_name', `%${searchName}%`);
+    if (searchDate) query = query.eq('date', searchDate);
+    
+    const { data, error } = await query;
+    if (error) console.error('Error fetching bills:', error);
+    else setSavedBills(data || []);
+    setLoading(false);
   };
 
-  const addProductRow = () => {
-    setProductItems([...productItems, { id: Date.now(), name: '', qty: 1, rate: 0, amount: 0 }]);
-  };
+  const saveBill = async () => {
+    if (!customerName) return alert('Please enter customer name');
+    
+    const billData = {
+      type: mode === 'history' ? 'delivery' : mode, // Fallback if somehow called in history
+      customer_name: customerName,
+      date,
+      items: mode === 'delivery' ? deliveryItems : productItems,
+      totals: mode === 'delivery' ? { qty: deliveryTotalQty, amount: deliveryTotalAmount } : { amount: productTotal }
+    };
 
-  const removeProductRow = (id: number) => {
-    if (productItems.length > 1) {
-      setProductItems(productItems.filter(i => i.id !== id));
+    setLoading(true);
+    const { error } = editingBillId 
+      ? await supabase.from('bills').update(billData).eq('id', editingBillId).select()
+      : await supabase.from('bills').insert(billData).select();
+
+    if (error) {
+      alert('Error saving bill: ' + error.message);
+      setLoading(false);
+      return;
     }
+
+    // Trigger PDF Download after saving
+    handlePDF();
+    
+    // Reset if it was a new bill
+    if (!editingBillId) {
+      setCustomerName('');
+      setDeliveryItems([{ id: 1, description: '', q20: '', q25: '', q30: '', q35: '', q40: '', q50: '', total: 0, amount: '' }]);
+      setProductItems([{ id: 1, name: '', qty: 1, amount: 0 }]);
+    }
+    
+    setEditingBillId(null);
+    setLoading(false);
+    fetchSavedBills();
+    alert('Bill saved and PDF generated!');
   };
 
-  // --- PDF Logic ---
+  const deleteBill = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this bill?')) return;
+    const { error } = await supabase.from('bills').delete().eq('id', id);
+    if (error) alert('Error deleting: ' + error.message);
+    else fetchSavedBills();
+  };
+
+  const editSavedBill = (bill: any) => {
+    setMode(bill.type);
+    setCustomerName(bill.customer_name);
+    setDate(bill.date);
+    setEditingBillId(bill.id);
+    if (bill.type === 'delivery') setDeliveryItems(bill.items);
+    else setProductItems(bill.items);
+  };
+
+  // --- PDF / Share Logic ---
   const handlePDF = () => {
     if (mode === 'delivery') {
       generateBillingPDF('delivery', customerName, date, deliveryItems, { qty: deliveryTotalQty, amount: deliveryTotalAmount });
-    } else {
+    } else if (mode === 'product') {
       generateBillingPDF('product', customerName, date, productItems, { amount: productTotal });
     }
   };
 
-  // --- Native Sharing Logic ---
   const handleNativeShare = async () => {
+    if (mode === 'history') return; // Cannot share from history tab directly (use the row button)
+
     const file = getBillingPDFFile(
-      mode, 
-      customerName, 
-      date, 
-      mode === 'delivery' ? deliveryItems : productItems, 
+      mode as 'delivery' | 'product', customerName, date,
+      mode === 'delivery' ? deliveryItems : productItems,
       mode === 'delivery' ? { qty: deliveryTotalQty, amount: deliveryTotalAmount } : { amount: productTotal }
     );
-
     if (navigator.share && navigator.canShare({ files: [file] })) {
-      try {
-        await navigator.share({
-          files: [file],
-          title: `Invoice for ${customerName}`,
-          text: `Here is the invoice for ${customerName}.`,
-        });
-      } catch (error) {
-        console.log('Error sharing:', error);
-      }
+      try { await navigator.share({ files: [file], title: `Invoice for ${customerName}`, text: `Here is the invoice for ${customerName}.` }); }
+      catch (e) { console.log('Sharing cancelled', e); }
     } else {
-      alert('Direct sharing is not supported on this device/browser. Downloading file instead.');
+      alert('Direct sharing not supported. Downloading instead.');
       handlePDF();
     }
   };
 
   // --- Effects ---
   useEffect(() => {
-    const dQty = deliveryItems.reduce((acc, curr) => acc + curr.total, 0);
-    const dAmt = deliveryItems.reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
-    setDeliveryTotalQty(dQty);
-    setDeliveryTotalAmount(dAmt);
+    setDeliveryTotalQty(deliveryItems.reduce((acc, curr) => acc + curr.total, 0));
+    setDeliveryTotalAmount(deliveryItems.reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0));
   }, [deliveryItems]);
 
   useEffect(() => {
-    // Summing up the manually entered amounts
-    const pTotal = productItems.reduce((acc, curr) => acc + Number(curr.amount || 0), 0);
-    setProductTotal(pTotal);
+    setProductTotal(productItems.reduce((acc, curr) => acc + Number(curr.amount || 0), 0));
   }, [productItems]);
 
+  useEffect(() => {
+    if (mode === 'history') fetchSavedBills();
+  }, [mode, searchName, searchDate]);
+
+  const currentTotal = mode === 'delivery' ? deliveryTotalAmount : productTotal;
+
   return (
-    <div className="space-y-6 pb-20">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+    <div className="space-y-6 pb-28">
+      {/* ── Header ── */}
+      <motion.div
+        initial={{ opacity: 0, y: -16 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+      >
         <div>
-          <h1 className="text-2xl font-bold text-slate-800">Billing & Invoicing</h1>
-          <p className="text-slate-500">Create instant bills</p>
+          <h1 className="text-3xl font-black text-slate-800 tracking-tight">Billing & Invoice</h1>
+          <p className="text-slate-500 font-medium mt-1">Create and export professional invoices</p>
         </div>
-        
-        <div className="flex gap-2 bg-slate-200 p-1 rounded-xl">
-          <button 
-            onClick={() => setMode('delivery')}
-            className={`px-4 py-2 rounded-lg font-bold transition-all flex items-center gap-2 text-sm ${mode === 'delivery' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+
+        {/* Mode Toggle */}
+        <div className="flex gap-1.5 p-1.5 bg-[#e0e5ec] rounded-2xl shadow-[inset_4px_4px_8px_rgba(163,177,198,0.5),inset_-4px_-4px_8px_rgba(255,255,255,0.7)] overflow-x-auto no-scrollbar">
+          {(['delivery', 'product', 'history'] as const).map((m) => (
+            <button
+              key={m}
+              onClick={() => setMode(m)}
+              className={clsx(
+                'flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all duration-300 whitespace-nowrap',
+                mode === m
+                  ? m === 'delivery'
+                    ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg shadow-blue-500/30'
+                    : m === 'product'
+                      ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-lg shadow-emerald-500/30'
+                      : 'bg-gradient-to-r from-slate-600 to-slate-800 text-white shadow-lg shadow-slate-500/30'
+                  : 'text-slate-500 hover:text-slate-700'
+              )}
+            >
+              {m === 'delivery' ? <Package size={16} /> : m === 'product' ? <ShoppingCart size={16} /> : <FileText size={16} />}
+              <span className="capitalize">{m}</span>
+            </button>
+          ))}
+        </div>
+      </motion.div>
+
+      {mode !== 'history' ? (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+          {/* ── Left Panel ── */}
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.1 }}
+            className="lg:col-span-1 space-y-5"
           >
-            <Package size={16} /> Delivery
-          </button>
-          <button 
-            onClick={() => setMode('product')}
-            className={`px-4 py-2 rounded-lg font-bold transition-all flex items-center gap-2 text-sm ${mode === 'product' ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-          >
-            <ShoppingCart size={16} /> Product
-          </button>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
-        {/* Left Panel: Customer Info */}
-        <div className="lg:col-span-1 space-y-6">
-          <Card className="h-fit">
-            <h3 className="font-bold text-lg mb-4 text-slate-700">Customer Details</h3>
-            <div className="space-y-4">
-              <Input 
-                label="Customer Name" 
-                value={customerName} 
-                onChange={(e) => setCustomerName(e.target.value)} 
-                placeholder="Name"
-              />
-              <Input 
-                type="date" 
-                label="Date" 
-                value={date} 
-                onChange={(e) => setDate(e.target.value)} 
-              />
-            </div>
-          </Card>
-
-          {/* Desktop Actions */}
-          <Card className="hidden lg:block h-fit">
-            <h3 className="font-bold text-lg mb-4 text-slate-700">Actions</h3>
-            <div className="grid grid-cols-1 gap-3">
-              <Button onClick={handlePDF} className="w-full">
-                <Download size={18} /> Download PDF
-              </Button>
-              <Button onClick={handleNativeShare} className="w-full bg-green-600 text-white hover:text-white">
-                <Share2 size={18} /> Share (WhatsApp)
-              </Button>
-            </div>
-          </Card>
-        </div>
-
-        {/* Right Panel: Table */}
-        <div className="lg:col-span-2 space-y-6">
-          <Card className="min-h-[500px] flex flex-col">
-            <div className="flex justify-between items-center mb-6">
-              <h3 className="font-bold text-xl text-slate-700">
-                {mode === 'delivery' ? 'Package Details' : 'Item Details'}
-              </h3>
-              <div className="text-right">
-                <p className="text-sm text-slate-400">Total Amount</p>
-                <p className={`text-2xl font-black ${mode === 'delivery' ? 'text-blue-600' : 'text-emerald-600'}`}>
-                  Rs. {mode === 'delivery' ? deliveryTotalAmount.toFixed(2) : productTotal.toFixed(2)}
-                </p>
+            {/* Customer Details Card */}
+            <div className="bg-gradient-to-br from-[#eef2f7] to-[#d3d8df] rounded-3xl p-6 shadow-[8px_8px_20px_rgba(163,177,198,0.5),-8px_-8px_20px_rgba(255,255,255,0.8)] border border-white/50">
+              <div className="flex items-center gap-3 mb-5">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-blue-600 flex items-center justify-center shadow-lg">
+                  <FileText size={18} className="text-white" />
+                </div>
+                <h3 className="font-black text-lg text-slate-800">Invoice Details</h3>
+              </div>
+              <div className="space-y-4">
+                <Input
+                  label="Customer Name"
+                  value={customerName}
+                  onChange={(e) => setCustomerName(e.target.value)}
+                  placeholder="Enter customer name"
+                />
+                <Input
+                  type="date"
+                  label="Date"
+                  value={date}
+                  onChange={(e) => setDate(e.target.value)}
+                />
               </div>
             </div>
 
-            {/* Table Container */}
-            <div className="flex-1 overflow-x-auto">
-              <table className="w-full text-left border-collapse min-w-[800px]">
-                <thead>
-                  <tr className="text-slate-500 text-sm border-b border-slate-200 bg-slate-50">
-                    {mode === 'delivery' ? (
-                      <>
-                        <th className="p-2 w-32">Date</th>
-                        <th className="p-2 text-center w-16 font-bold text-slate-700">Total</th>
-                        <th className="p-2 text-center">20</th>
-                        <th className="p-2 text-center">25</th>
-                        <th className="p-2 text-center">30</th>
-                        <th className="p-2 text-center">35</th>
-                        <th className="p-2 text-center">40</th>
-                        <th className="p-2 text-center">50</th>
-                        <th className="p-2 text-right w-24">Amount</th>
-                        <th className="p-2 w-8"></th>
-                      </>
-                    ) : (
-                      <>
-                        <th className="p-3 w-1/3">Item Name</th>
-                        <th className="p-3 text-center w-20">Qty</th>
-                        <th className="p-3 text-right w-32">Rate</th>
-                        <th className="p-3 text-right w-32">Amount</th>
-                        <th className="p-3 w-10"></th>
-                      </>
-                    )}
-                  </tr>
-                </thead>
-                <tbody>
-                  <AnimatePresence>
-                    {mode === 'delivery' ? (
-                      deliveryItems.map((item) => (
-                        <motion.tr 
-                          key={item.id}
-                          initial={{ opacity: 0, y: 10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          exit={{ opacity: 0, x: -10 }}
-                          className="border-b border-slate-100 group hover:bg-slate-50 transition-colors"
-                        >
-                          <td className="p-2">
-                            <input 
-                              type="date" 
-                              value={item.description}
-                              onChange={(e) => updateDeliveryItem(item.id, 'description', e.target.value)}
-                              className="w-full bg-transparent border-b border-slate-200 focus:border-blue-500 outline-none text-slate-700 p-1 text-sm"
-                            />
-                          </td>
-                          <td className="p-2 text-center font-bold text-slate-700 bg-slate-50">{item.total}</td>
-                          {['q20', 'q25', 'q30', 'q35', 'q40', 'q50'].map((size) => (
-                            <td key={size} className="p-1">
-                              <input 
-                                type="number" 
-                                placeholder="-"
-                                // @ts-ignore
-                                value={item[size]}
-                                onChange={(e) => updateDeliveryItem(item.id, size, e.target.value)}
-                                className="w-full bg-slate-100 rounded text-center text-slate-700 p-1 outline-none focus:ring-1 focus:ring-blue-500 text-sm font-medium"
+            {/* Total Summary Card */}
+            <div className={clsx(
+              'rounded-3xl p-6 text-white shadow-xl',
+              mode === 'delivery'
+                ? 'bg-gradient-to-br from-blue-500 to-blue-700 shadow-blue-500/30'
+                : 'bg-gradient-to-br from-emerald-500 to-emerald-700 shadow-emerald-500/30'
+            )}>
+              <p className="text-white/70 text-sm font-bold uppercase tracking-widest">Total Amount</p>
+              <p className="text-4xl font-black mt-2 tracking-tight">Rs. {currentTotal.toFixed(2)}</p>
+              {mode === 'delivery' && (
+                <p className="text-white/60 text-sm mt-1.5 font-medium">
+                  {deliveryTotalQty} packages total
+                </p>
+              )}
+            </div>
+
+            {/* Desktop Actions */}
+            <div className="hidden lg:flex flex-col gap-3">
+              <Button onClick={handleNativeShare} className="w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white hover:text-white font-bold shadow-lg shadow-green-500/30 border-none py-3.5">
+                <Share2 size={18} /> Share via WhatsApp
+              </Button>
+              <Button onClick={saveBill} disabled={loading} className="w-full py-3.5 bg-slate-800 text-white hover:bg-slate-700">
+                <Download size={18} /> {loading ? 'Saving...' : editingBillId ? 'Update & Download' : 'Save & Download'}
+              </Button>
+              {editingBillId && (
+                <Button variant="secondary" onClick={() => {
+                  setEditingBillId(null);
+                  setCustomerName('');
+                  setDeliveryItems([{ id: 1, description: '', q20: '', q25: '', q30: '', q35: '', q40: '', q50: '', total: 0, amount: '' }]);
+                  setProductItems([{ id: 1, name: '', qty: 1, amount: 0 }]);
+                }} className="w-full py-2 text-xs">Cancel Edit</Button>
+              )}
+            </div>
+          </motion.div>
+
+          {/* ── Right Panel: Table ── */}
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.15 }}
+            className="lg:col-span-2"
+          >
+            <div className="bg-gradient-to-br from-[#eef2f7] to-[#d3d8df] rounded-3xl shadow-[8px_8px_20px_rgba(163,177,198,0.5),-8px_-8px_20px_rgba(255,255,255,0.8)] border border-white/50 overflow-hidden">
+              
+              {/* Table Header */}
+              <div className="px-6 pt-6 pb-4 border-b border-white/30">
+                <h3 className="font-black text-xl text-slate-800">
+                  {mode === 'delivery' ? 'Package Details' : 'Item Details'}
+                </h3>
+                <p className="text-slate-500 text-sm mt-0.5 font-medium">
+                  {mode === 'delivery'
+                    ? 'Enter quantities per price tier — totals calculate automatically'
+                    : 'Enter items and their amounts'}
+                </p>
+              </div>
+
+              {/* Table */}
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse" style={{ minWidth: mode === 'delivery' ? '700px' : '400px' }}>
+                  <thead>
+                    <tr className="bg-slate-800 text-white text-xs">
+                      {mode === 'delivery' ? (
+                        <>
+                          <th className="px-4 py-3.5 font-bold rounded-none w-28 text-left">Date</th>
+                          <th className="px-3 py-3.5 font-bold text-center w-14 text-yellow-300">Total</th>
+                          {['20', '25', '30', '35', '40', '50'].map(s => (
+                            <th key={s} className="px-2 py-3.5 font-bold text-center text-slate-300">{s}</th>
+                          ))}
+                          <th className="px-4 py-3.5 font-bold text-right text-green-300">Amount</th>
+                          <th className="px-3 py-3.5 w-8"></th>
+                        </>
+                      ) : (
+                        <>
+                          <th className="px-5 py-3.5 font-bold text-left">Item Name</th>
+                          <th className="px-4 py-3.5 font-bold text-center w-20">Qty</th>
+                          <th className="px-4 py-3.5 font-bold text-right w-32 text-green-300">Amount (Rs.)</th>
+                          <th className="px-3 py-3.5 w-8"></th>
+                        </>
+                      )}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <AnimatePresence mode="wait">
+                      {mode === 'delivery' ? (
+                        deliveryItems.map((item, idx) => (
+                          <motion.tr
+                            key={item.id}
+                            initial={{ opacity: 0, y: 8 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, x: -20 }}
+                            transition={{ delay: idx * 0.04 }}
+                            className={clsx(
+                              'border-b border-white/20 group hover:bg-white/20 transition-colors',
+                              idx % 2 === 0 ? 'bg-white/10' : 'bg-transparent'
+                            )}
+                          >
+                            <td className="px-3 py-2">
+                              <input
+                                type="date"
+                                value={item.description}
+                                onChange={(e) => updateDeliveryItem(item.id, 'description', e.target.value)}
+                                className="w-full bg-white/60 border border-white/40 rounded-lg text-slate-700 text-xs p-1.5 outline-none focus:ring-2 focus:ring-blue-400 focus:bg-white transition-all"
                               />
                             </td>
-                          ))}
-                          <td className="p-2">
-                            <input 
-                              type="text" 
-                              placeholder="0.00"
-                              value={item.amount}
-                              readOnly
-                              className="w-full bg-transparent border-b border-transparent outline-none text-right font-bold text-blue-600 p-1 text-sm cursor-default"
-                            />
-                          </td>
-                          <td className="p-2 text-center">
-                            <button onClick={() => removeDeliveryRow(item.id)} className="text-slate-400 hover:text-red-500 transition-colors">
-                              <Trash2 size={16} />
-                            </button>
-                          </td>
-                        </motion.tr>
-                      ))
-                    ) : (
-                      productItems.map((item) => (
-                        <motion.tr 
-                          key={item.id}
-                          initial={{ opacity: 0, y: 10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          exit={{ opacity: 0, x: -10 }}
-                          className="border-b border-slate-100 group hover:bg-slate-50 transition-colors"
-                        >
-                          <td className="p-2">
-                            <input 
-                              type="text" 
-                              placeholder="Product Name"
-                              value={item.name}
-                              onChange={(e) => updateProductItem(item.id, 'name', e.target.value)}
-                              className="w-full bg-transparent border-b border-slate-200 focus:border-emerald-500 outline-none text-slate-700 p-1"
-                            />
-                          </td>
-                          <td className="p-2">
-                            <input 
-                              type="number" 
-                              value={item.qty}
-                              onChange={(e) => updateProductItem(item.id, 'qty', e.target.value)}
-                              className="w-full bg-slate-100 rounded text-center text-slate-700 p-1 outline-none focus:ring-1 focus:ring-emerald-500"
-                            />
-                          </td>
-                          <td className="p-2">
-                            <input 
-                              type="number" 
-                              value={item.rate}
-                              onChange={(e) => updateProductItem(item.id, 'rate', e.target.value)}
-                              className="w-full bg-slate-100 rounded text-right text-slate-700 p-1 outline-none focus:ring-1 focus:ring-emerald-500"
-                            />
-                          </td>
-                          <td className="p-2">
-                            <input 
-                              type="number"
-                              placeholder="0.00"
-                              value={item.amount || ''}
-                              onChange={(e) => updateProductItem(item.id, 'amount', e.target.value)}
-                              className="w-full bg-slate-100 rounded text-right font-bold text-emerald-600 p-1 outline-none focus:ring-1 focus:ring-emerald-500"
-                            />
-                          </td>
-                          <td className="p-2 text-center">
-                            <button onClick={() => removeProductRow(item.id)} className="text-slate-400 hover:text-red-500 transition-colors">
-                              <Trash2 size={16} />
-                            </button>
-                          </td>
-                        </motion.tr>
-                      ))
-                    )}
-                  </AnimatePresence>
-                </tbody>
-              </table>
-            </div>
+                            <td className="px-2 py-2 text-center">
+                              <span className="font-black text-slate-800 bg-yellow-100 text-yellow-700 px-2 py-1 rounded-lg text-sm">{item.total}</span>
+                            </td>
+                            {['q20', 'q25', 'q30', 'q35', 'q40', 'q50'].map((size) => (
+                              <td key={size} className="px-1.5 py-2">
+                                <input
+                                  type="number"
+                                  placeholder="—"
+                                  // @ts-ignore
+                                  value={item[size]}
+                                  onChange={(e) => updateDeliveryItem(item.id, size, e.target.value)}
+                                  className="w-full bg-white/60 border border-white/40 rounded-lg text-center text-slate-700 p-1.5 outline-none focus:ring-2 focus:ring-blue-400 focus:bg-white text-xs font-bold transition-all"
+                                />
+                              </td>
+                            ))}
+                            <td className="px-3 py-2 text-right">
+                              <span className="font-black text-blue-700 text-sm">
+                                {item.amount ? `${Number(item.amount).toFixed(2)}` : '—'}
+                              </span>
+                            </td>
+                            <td className="px-2 py-2 text-center">
+                              <button
+                                onClick={() => removeDeliveryRow(item.id)}
+                                className="w-7 h-7 flex items-center justify-center rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 transition-all opacity-0 group-hover:opacity-100"
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            </td>
+                          </motion.tr>
+                        ))
+                      ) : (
+                        productItems.map((item, idx) => (
+                          <motion.tr
+                            key={item.id}
+                            initial={{ opacity: 0, y: 8 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, x: -20 }}
+                            transition={{ delay: idx * 0.04 }}
+                            className={clsx(
+                              'border-b border-white/20 group hover:bg-white/20 transition-colors',
+                              idx % 2 === 0 ? 'bg-white/10' : 'bg-transparent'
+                            )}
+                          >
+                            <td className="px-4 py-2.5">
+                              <input
+                                type="text"
+                                placeholder="Product name..."
+                                value={item.name}
+                                onChange={(e) => updateProductItem(item.id, 'name', e.target.value)}
+                                className="w-full bg-white/60 border border-white/40 rounded-lg text-slate-700 p-2 outline-none focus:ring-2 focus:ring-emerald-400 focus:bg-white text-sm transition-all"
+                              />
+                            </td>
+                            <td className="px-3 py-2.5">
+                              <input
+                                type="number"
+                                value={item.qty}
+                                onChange={(e) => updateProductItem(item.id, 'qty', e.target.value)}
+                                className="w-full bg-white/60 border border-white/40 rounded-lg text-center text-slate-700 p-2 outline-none focus:ring-2 focus:ring-emerald-400 focus:bg-white text-sm font-bold transition-all"
+                              />
+                            </td>
+                            <td className="px-3 py-2.5">
+                              <input
+                                type="number"
+                                placeholder="0.00"
+                                value={item.amount || ''}
+                                onChange={(e) => updateProductItem(item.id, 'amount', e.target.value)}
+                                className="w-full bg-white/60 border border-white/40 rounded-lg text-right text-emerald-700 font-black p-2 outline-none focus:ring-2 focus:ring-emerald-400 focus:bg-white text-sm transition-all"
+                              />
+                            </td>
+                            <td className="px-2 py-2.5 text-center">
+                              <button
+                                onClick={() => removeProductRow(item.id)}
+                                className="w-7 h-7 flex items-center justify-center rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 transition-all opacity-0 group-hover:opacity-100"
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            </td>
+                          </motion.tr>
+                        ))
+                      )}
+                    </AnimatePresence>
+                  </tbody>
+                </table>
+              </div>
 
-            <div className="mt-6 pt-4 border-t border-slate-100">
-              <Button 
-                onClick={mode === 'delivery' ? addDeliveryRow : addProductRow} 
-                variant="ghost" 
-                className="w-full border border-dashed border-slate-300 text-slate-500 hover:text-blue-600 hover:border-blue-400 hover:bg-blue-50"
-              >
-                <Plus size={18} /> Add New Row
-              </Button>
+              {/* Add Row Button */}
+              <div className="p-5 border-t border-white/20">
+                <button
+                  onClick={mode === 'delivery' ? addDeliveryRow : addProductRow}
+                  className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl border-2 border-dashed border-slate-300 text-slate-500 font-bold text-sm hover:border-blue-400 hover:text-blue-600 hover:bg-blue-50/50 transition-all duration-200"
+                >
+                  <Plus size={18} /> Add New Row
+                </button>
+              </div>
             </div>
-          </Card>
-
-          {/* Mobile Actions */}
-          <div className="lg:hidden space-y-3">
-             <Button onClick={handleNativeShare} className="w-full bg-green-600 text-white hover:text-white shadow-lg shadow-green-500/20 py-4 text-lg">
-                <Share2 size={20} /> Share (WhatsApp)
-             </Button>
-             <Button onClick={handlePDF} variant="secondary" className="w-full">
-                <Download size={20} /> Download PDF
-             </Button>
-          </div>
+          </motion.div>
         </div>
-      </div>
+      ) : (
+        /* History View */
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="space-y-6"
+        >
+          {/* Search Controls */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-gradient-to-br from-[#eef2f7] to-[#d3d8df] p-6 rounded-3xl shadow-lg border border-white/50">
+             <div className="relative">
+                <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="Search by customer name..."
+                  value={searchName}
+                  onChange={(e) => setSearchName(e.target.value)}
+                  className="w-full pl-12 pr-4 py-3 rounded-2xl bg-white border border-white/50 focus:ring-2 focus:ring-slate-400 outline-none transition-all shadow-inner"
+                />
+             </div>
+             <div className="relative">
+                <Calendar size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  type="date"
+                  value={searchDate}
+                  onChange={(e) => setSearchDate(e.target.value)}
+                  className="w-full pl-12 pr-4 py-3 rounded-2xl bg-white border border-white/50 focus:ring-2 focus:ring-slate-400 outline-none transition-all shadow-inner"
+                />
+             </div>
+          </div>
+
+          {/* List of Bills */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {loading ? (
+              <div className="lg:col-span-2 text-center py-20 text-slate-400 font-bold">Loading saved bills...</div>
+            ) : savedBills.length === 0 ? (
+              <div className="lg:col-span-2 text-center py-20 text-slate-400 font-bold">No saved bills found.</div>
+            ) : savedBills.map((bill) => (
+              <div key={bill.id} className="bg-gradient-to-br from-[#eef2f7] to-[#d3d8df] p-5 rounded-3xl shadow-md border border-white/50 flex items-center gap-4 group">
+                <div className={clsx(
+                  "w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg text-white font-black",
+                  bill.type === 'delivery' ? 'bg-blue-500' : 'bg-emerald-500'
+                )}>
+                  {bill.type === 'delivery' ? 'D' : 'P'}
+                </div>
+                <div className="flex-1">
+                  <h4 className="font-black text-slate-800">{bill.customer_name}</h4>
+                  <p className="text-slate-500 text-xs font-medium">{format(new Date(bill.date), 'dd MMM yyyy')} · Rs.{bill.totals.amount.toFixed(2)}</p>
+                </div>
+                <div className="flex gap-2">
+                  <button onClick={() => generateBillingPDF(bill.type, bill.customer_name, bill.date, bill.items, bill.totals)} className="p-2.5 rounded-xl bg-white/60 text-slate-600 hover:bg-slate-800 hover:text-white transition-all shadow-sm">
+                    <Download size={16} />
+                  </button>
+                  <button onClick={() => editSavedBill(bill)} className="p-2.5 rounded-xl bg-white/60 text-slate-600 hover:bg-indigo-600 hover:text-white transition-all shadow-sm">
+                    <Edit3 size={16} />
+                  </button>
+                  <button onClick={() => deleteBill(bill.id)} className="p-2.5 rounded-xl bg-white/60 text-slate-600 hover:bg-red-500 hover:text-white transition-all shadow-sm">
+                    <Trash size={16} />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </motion.div>
+      )}
+
+      {/* ── Mobile Action Bar ── */}
+      {mode !== 'history' && (
+        <motion.div
+           initial={{ y: 100 }}
+           animate={{ y: 0 }}
+           className="lg:hidden fixed bottom-0 left-0 right-0 z-50 flex gap-3 p-4 bg-[#e0e5ec]/90 backdrop-blur-md border-t border-white/50 shadow-[0_-10px_20px_rgba(163,177,198,0.3)] pb-[calc(1rem+env(safe-area-inset-bottom))]"
+        >
+          <Button
+            onClick={handleNativeShare}
+            className="flex-1 bg-gradient-to-r from-green-500 to-emerald-600 text-white hover:text-white font-bold shadow-lg shadow-green-500/30 border-none py-4"
+          >
+            <Share2 size={20} /> Share
+          </Button>
+          <Button onClick={saveBill} disabled={loading} className="flex-1 py-4 bg-slate-800 text-white">
+            <Download size={20} /> {loading ? 'Saving...' : 'Save'}
+          </Button>
+        </motion.div>
+      )}
     </div>
   );
 };

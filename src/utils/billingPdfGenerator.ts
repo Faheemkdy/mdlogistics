@@ -2,6 +2,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { format } from 'date-fns';
 
+
 // MD Logistics Brand Colors
 const BRAND = {
   primary: [30, 41, 59] as [number, number, number],      // slate-800
@@ -40,50 +41,56 @@ const createPDFDoc = (
   doc.setFillColor(...BRAND.bg);
   doc.rect(0, 0, pw, ph, 'F');
 
-  // Top dark band (full width)
+  // Top dark band
   doc.setFillColor(...BRAND.primary);
   doc.rect(0, 0, pw, 52, 'F');
 
-  // Accent stripe
+  // Indigo accent stripe
   doc.setFillColor(...BRAND.accent);
   doc.rect(0, 52, pw, 3, 'F');
 
-  // Decorative circle (top-right)
-  doc.setFillColor(255, 255, 255, 0.04);
+  // Decorative circles top-right
   doc.setDrawColor(255, 255, 255);
-  doc.setLineWidth(0.3);
-  doc.circle(pw - 20, 10, 38, 'S');
-  doc.circle(pw - 20, 10, 22, 'S');
+  doc.setLineWidth(0.2);
+  const circX = pw - 22;
+  const circY = 12;
+  const circR = 38;
+  
+  doc.circle(circX, circY, circR, 'S');
+  doc.circle(circX, circY, 22, 'S');
 
-  // ── LOGO / BRAND ────────────────────────────────────────────
-  // Logo box
-  doc.setFillColor(...BRAND.accent);
-  roundedRect(doc, margin, 10, 30, 30, 4, 'F');
+  // ── LOGO TEXT: MD LOGISTICS ────────
+  const logoX = margin;
+  const logoY = 12;
 
-  // Logo text "MD"
-  doc.setTextColor(...BRAND.white);
+  // "MD" Main Text
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(18);
-  doc.text('MD', margin + 15, 29, { align: 'center' });
-
-  // Company Name
-  doc.setFontSize(24);
-  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(42);
   doc.setTextColor(...BRAND.white);
-  doc.text('MD LOGISTICS', margin + 35, 22);
+  doc.text('MD', logoX, logoY + 26);
 
-  // Tagline
-  doc.setFontSize(9);
+  const mdWidth = doc.getTextWidth('MD');
+  const stackedX = logoX + mdWidth + 4;
+
+  // "LOGISTICS" Text
+  doc.setFontSize(14);
+  doc.setTextColor(...BRAND.white);
+  doc.text('LOGISTICS', stackedX, logoY + 22);
+
+  // Vertical divider
+  const logWidth = doc.getTextWidth('LOGISTICS');
+  const divX = stackedX + logWidth + 8;
+  
+  doc.setDrawColor(255, 255, 255);
+  doc.setLineWidth(0.4);
+  doc.line(divX, logoY + 10, divX, logoY + 24);
+
+  // Address and Contact (Two Lines)
+  doc.setFontSize(8.5);
   doc.setFont('helvetica', 'normal');
-  doc.setTextColor(148, 163, 184); // slate-400
-  doc.text('Kondotty, Malappuram Dt.  |  +91 9633606862  |  mdcourierkdy@gmail.com', margin + 35, 31);
-
-  // ── INVOICE LABEL ───────────────────────────────────────────
-  const labelText = type === 'delivery' ? 'DELIVERY INVOICE' : 'PRODUCT INVOICE';
-  doc.setFontSize(10);
-  doc.setFont('helvetica', 'bold');
-  doc.setTextColor(165, 180, 252); // indigo-300
-  doc.text(labelText, pw - margin, 22, { align: 'right' });
+  doc.setTextColor(226, 232, 240); // slate-200
+  doc.text('Kondotty, Malappuram Dt.  |  +91 9633606862', divX + 6, logoY + 16);
+  doc.text('mdcourierkdy@gmail.com', divX + 6, logoY + 22.5);
 
   // ── INFO SECTION ────────────────────────────────────────────
   const infoY = 65;
@@ -133,7 +140,7 @@ const createPDFDoc = (
   let tableBody: any[] = [];
 
   if (type === 'delivery') {
-    tableHead = [['Date/Desc', 'Total Qty', '20', '25', '30', '35', '40', '50', 'Amount (Rs.)']];
+    tableHead = [['Date', 'Total Qty', '20', '25', '30', '35', '40', '50', 'Amount (Rs.)']];
     tableBody = items.map(item => [
       item.description || '-',
       item.total || 0,
@@ -146,12 +153,12 @@ const createPDFDoc = (
       item.amount ? `${Number(item.amount).toFixed(2)}` : '-'
     ]);
   } else {
-    tableHead = [['#', 'Item Name', 'Quantity', 'Rate (Rs.)', 'Amount (Rs.)']];
+    // Product: Only # | Item Name | Quantity | Amount (no Rate)
+    tableHead = [['#', 'Item Name', 'Quantity', 'Amount (Rs.)']];
     tableBody = items.map((item, i) => [
       i + 1,
       item.name || '-',
       item.qty,
-      `${Number(item.rate).toFixed(2)}`,
       `${Number(item.amount).toFixed(2)}`
     ]);
   }
@@ -183,8 +190,7 @@ const createPDFDoc = (
       0: { cellWidth: 10 },
       1: { halign: 'left' },
       2: { halign: 'center' },
-      3: { halign: 'right' },
-      4: { halign: 'right', fontStyle: 'bold', textColor: BRAND.accent }
+      3: { halign: 'right', fontStyle: 'bold', textColor: BRAND.accent }
     },
     alternateRowStyles: { fillColor: BRAND.bgAlt },
     rowPageBreak: 'auto',
@@ -239,34 +245,50 @@ const createPDFDoc = (
   doc.text(`Rs. ${Number(totals.amount).toFixed(2)}`, pw - margin - 4, amtY + 1.5, { align: 'right' });
 
   // ── SIGNATURES ──────────────────────────────────────────────
-  const sigY = ph - 38;
+  const sigY = ph - 35;
 
   // Divider
   doc.setDrawColor(...BRAND.border);
   doc.setLineWidth(0.4);
-  doc.line(margin, sigY - 4, pw - margin, sigY - 4);
+  doc.line(margin, sigY - 8, pw - margin, sigY - 8);
+
+  // Thank You Note (Product only, as requested)
+  if (type === 'product') {
+    doc.setFont('helvetica', 'bolditalic');
+    doc.setFontSize(10);
+    doc.setTextColor(...BRAND.accent);
+    doc.text('Thank you for choosing MD Logistics!', margin, sigY - 12);
+  }
+
+  // Terms & Conditions — Product invoices only
+  if (type === 'product') {
+    doc.setFont('helvetica', 'italic');
+    doc.setFontSize(7);
+    doc.setTextColor(...BRAND.textMuted);
+    doc.text('* Items should be checked at the time of delivery.', margin, sigY + 2);
+  }
 
   // Left signature
   doc.setDrawColor(...BRAND.textMuted);
   doc.setLineWidth(0.5);
-  doc.line(margin, sigY + 10, margin + 60, sigY + 10);
+  doc.line(margin, sigY + 12, margin + 50, sigY + 12);
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8);
   doc.setTextColor(...BRAND.textMuted);
-  doc.text('Customer Signature', margin, sigY + 15);
+  doc.text('Customer Signature', margin, sigY + 17);
 
   // Right signature
-  doc.line(pw - margin - 60, sigY + 10, pw - margin, sigY + 10);
-  doc.text('Authorized Signature', pw - margin - 60, sigY + 15);
+  doc.line(pw - margin - 50, sigY + 12, pw - margin, sigY + 12);
+  doc.text('Authorized Signature', pw - margin - 50, sigY + 17);
 
   // ── FOOTER ──────────────────────────────────────────────────
   doc.setFillColor(...BRAND.primary);
   doc.rect(0, ph - 14, pw, 14, 'F');
 
-  doc.setFont('helvetica', 'normal');
+  doc.setFont('helvetica', 'bold');
   doc.setFontSize(8);
   doc.setTextColor(...BRAND.white);
-  doc.text('MD Logistics · Kondotty, Malappuram · +91 9633606862 · mdcourierkdy@gmail.com', pw / 2, ph - 6, { align: 'center' });
+  doc.text('MD Logistics  |  Your Trusted Delivery Partner  |  Kondotty, Malappuram  |  +91 9633606862', pw / 2, ph - 6, { align: 'center' });
 
   return doc;
 };

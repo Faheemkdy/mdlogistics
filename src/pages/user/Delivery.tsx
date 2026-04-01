@@ -4,7 +4,8 @@ import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../context/AuthContext';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
-import { Search, Check, MapPin, Truck } from 'lucide-react';
+import { Modal } from '../../components/ui/Modal';
+import { Search, Check, MapPin, Truck, Plus } from 'lucide-react';
 import { clsx } from 'clsx';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -17,6 +18,12 @@ export const Delivery = () => {
   
   const [selections, setSelections] = useState<Record<string, string>>({});
 
+  // Quick Add Shop State
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [newShopName, setNewShopName] = useState('');
+  const [newShopLocation, setNewShopLocation] = useState('');
+  const [addingShop, setAddingShop] = useState(false);
+
   useEffect(() => {
     fetchShops();
   }, []);
@@ -24,6 +31,36 @@ export const Delivery = () => {
   const fetchShops = async () => {
     const { data } = await supabase.from('shops').select('*').order('name');
     setShops(data || []);
+  };
+
+  const handleQuickAddShop = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newShopName.trim()) return;
+    
+    setAddingShop(true);
+    try {
+      const { data, error } = await supabase
+        .from('shops')
+        .insert([{ name: newShopName, location: newShopLocation }])
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      // Add to local state and select it
+      setShops(prev => [data, ...prev]);
+      toggleShop(data.id);
+      
+      // Reset and close
+      setNewShopName('');
+      setNewShopLocation('');
+      setIsAddModalOpen(false);
+      setSearch(''); // Clear search to show the new shop
+    } catch (error: any) {
+      alert('Error adding shop: ' + error.message);
+    } finally {
+      setAddingShop(false);
+    }
   };
 
   const handleDeliver = async () => {
@@ -73,14 +110,23 @@ export const Delivery = () => {
       <div className="sticky top-[calc(64px+env(safe-area-inset-top))] lg:top-0 z-30 bg-[#e0e5ec]/90 backdrop-blur-md pt-4 pb-4 -mx-4 px-4 shadow-[0_4px_10px_rgba(163,177,198,0.2)] transition-all">
         <h1 className="text-2xl font-black text-slate-800 tracking-tight">Select Shops</h1>
         
-        <div className="relative mt-4">
-            <Search className="absolute left-4 top-3.5 text-slate-400" size={20} />
-            <Input 
-              placeholder="Search shops..." 
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="pl-12 !bg-white/60 backdrop-blur-sm"
-            />
+        <div className="relative mt-4 flex gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-4 top-3.5 text-slate-400" size={20} />
+              <Input 
+                placeholder="Search shops..." 
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="pl-12 !bg-white/60 backdrop-blur-sm"
+              />
+            </div>
+            <Button 
+                variant="primary" 
+                onClick={() => setIsAddModalOpen(true)}
+                className="!px-4 !py-0 !rounded-xl shadow-sm bg-white"
+              >
+                <Plus size={24} />
+            </Button>
         </div>
       </div>
 
@@ -143,10 +189,18 @@ export const Delivery = () => {
             );
           })}
         </AnimatePresence>
+
         {filteredShops.length === 0 && (
-            <div className="text-center py-10 text-slate-400 font-medium">
-                No shops found
-            </div>
+          <div className="text-center py-12 px-6">
+            <p className="text-slate-500 font-medium mb-6">Shop not found? Add it now.</p>
+            <Button 
+              onClick={() => setIsAddModalOpen(true)}
+              variant="primary"
+              className="mx-auto"
+            >
+              <Plus size={20} /> Add New Shop
+            </Button>
+          </div>
         )}
       </div>
 
@@ -167,6 +221,47 @@ export const Delivery = () => {
             <Truck size={20} /> Confirm
         </Button>
       </motion.div>
+
+      <Modal 
+        isOpen={isAddModalOpen} 
+        onClose={() => setIsAddModalOpen(false)}
+        title="Add New Shop"
+      >
+        <form onSubmit={handleQuickAddShop} className="space-y-6">
+          <Input 
+            label="Shop Name"
+            placeholder="Enter shop name"
+            value={newShopName}
+            onChange={(e) => setNewShopName(e.target.value)}
+            required
+            autoFocus
+          />
+          <Input 
+            label="Location / Area"
+            placeholder="e.g. Kozhikode, Manjeri"
+            value={newShopLocation}
+            onChange={(e) => setNewShopLocation(e.target.value)}
+          />
+          <div className="flex gap-3 pt-2">
+            <Button 
+              type="button" 
+              variant="ghost" 
+              onClick={() => setIsAddModalOpen(false)}
+              className="flex-1"
+            >
+              Cancel
+            </Button>
+            <Button 
+              type="submit" 
+              variant="primary" 
+              isLoading={addingShop}
+              className="flex-1 bg-green-600 text-white hover:bg-green-700 border-none"
+            >
+              Add & Select
+            </Button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 };
