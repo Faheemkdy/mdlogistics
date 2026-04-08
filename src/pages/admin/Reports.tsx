@@ -197,17 +197,17 @@ export const Reports = () => {
       </div>
 
       {/* Tab Toggle */}
-      <div className="flex gap-1.5 p-1.5 bg-[#e0e5ec] rounded-2xl shadow-[inset_4px_4px_8px_rgba(163,177,198,0.5),inset_-4px_-4px_8px_rgba(255,255,255,0.7)] w-fit">
+      <div className="flex gap-1.5 p-1.5 bg-slate-100 rounded-2xl shadow-inner border border-slate-200 w-fit">
         {(['pickups', 'deliveries'] as const).map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
-            className={`px-5 py-2.5 rounded-xl text-sm font-bold transition-all duration-300 capitalize ${
+            className={`px-6 py-2.5 rounded-xl text-sm font-black transition-all duration-300 capitalize ${
               activeTab === tab
                 ? tab === 'pickups'
-                  ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg shadow-blue-500/30'
-                  : 'bg-gradient-to-r from-green-500 to-emerald-600 text-white shadow-lg shadow-green-500/30'
-                : 'text-slate-500 hover:text-slate-700'
+                  ? 'bg-white text-blue-600 shadow-md ring-1 ring-black/5'
+                  : 'bg-white text-green-600 shadow-md ring-1 ring-black/5'
+                : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'
             }`}
           >
             {tab}
@@ -225,9 +225,9 @@ export const Reports = () => {
           </div>
 
           {pickupData.map((company) => (
-            <div key={company.id} className="bg-gradient-to-br from-[#eef2f7] to-[#d3d8df] rounded-2xl shadow-[6px_6px_14px_rgba(163,177,198,0.4),-6px_-6px_14px_rgba(255,255,255,0.7)] border border-white/50 overflow-hidden">
+            <div key={company.id} className="bg-white/80 backdrop-blur-xl rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white overflow-hidden">
               <div
-                className="flex items-center justify-between p-5 cursor-pointer hover:bg-white/20 transition-colors"
+                className="flex items-center justify-between p-5 cursor-pointer hover:bg-white transition-colors"
                 onClick={() => setExpandedCompany(expandedCompany === company.id ? null : company.id)}
               >
                 <div className="flex items-center gap-4">
@@ -293,10 +293,10 @@ export const Reports = () => {
             {deliveryData.map((delivery) => (
               <div
                 key={delivery.id}
-                className="flex items-center gap-4 p-4 bg-gradient-to-br from-[#eef2f7] to-[#d3d8df] rounded-2xl shadow-[6px_6px_14px_rgba(163,177,198,0.4),-6px_-6px_14px_rgba(255,255,255,0.7)] border-l-4 border border-white/50"
+                className="flex items-center gap-4 p-4 bg-white/80 backdrop-blur-xl rounded-2xl shadow-[0_4px_20px_rgb(0,0,0,0.03)] border-l-4 border border-white"
                 style={{ borderLeftColor: '#10b981' }}
               >
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center shadow-md flex-shrink-0">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center shadow-lg flex-shrink-0">
                   <span className="text-white font-black text-base">{(delivery.shops?.name || '?').charAt(0)}</span>
                 </div>
                 <div className="flex-1 min-w-0">

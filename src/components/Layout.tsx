@@ -25,8 +25,8 @@ export const Layout = () => {
         className={clsx(
           "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 relative group",
           isActive
-            ? "bg-gradient-to-r from-indigo-600 to-blue-600 text-white shadow-lg shadow-indigo-500/30"
-            : "text-slate-400 hover:text-white hover:bg-white/10"
+            ? "bg-white/10 text-white shadow-lg ring-1 ring-white/20"
+            : "text-slate-400 hover:text-white hover:bg-white/5"
         )}
       >
         <div className={clsx(
@@ -132,7 +132,7 @@ export const Layout = () => {
     return (
       <div className="min-h-screen bg-transparent flex flex-col">
         {/* Modern Mobile-First Top Header for Users */}
-        <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-slate-200 px-5 py-4 flex items-center justify-between shadow-sm lg:px-8">
+        <header className="sticky top-0 z-50 bg-white/70 backdrop-blur-xl px-5 py-4 flex items-center justify-between border-b border-slate-200/50 shadow-[0_4px_20px_rgb(0,0,0,0.03)] lg:px-8">
            {/* Branding / Home Link */}
            <div className="flex items-center gap-3 cursor-pointer group" onClick={() => navigate('/')}>
               <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-indigo-500 to-blue-600 flex items-center justify-center p-2.5 shadow-lg shadow-blue-500/30 group-hover:scale-105 transition-transform">
@@ -145,19 +145,19 @@ export const Layout = () => {
            </div>
 
            {/* Profile & Logout Action */}
-           <div className="flex items-center gap-4">
-              <div className="text-right hidden sm:block">
-                 <p className="text-sm font-black text-slate-800">{profile?.username}</p>
-                 <p className="text-xs text-slate-500 font-bold uppercase tracking-wider">{profile?.role}</p>
+           <div className="flex items-center gap-3">
+              <div className="text-right hidden sm:block mr-2">
+                 <p className="text-sm font-black text-slate-900">{profile?.username}</p>
+                 <p className="text-[10px] text-blue-600 font-black uppercase tracking-widest">{profile?.role}</p>
               </div>
-              <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-indigo-500 to-blue-600 flex items-center justify-center text-lg font-black text-white shadow-md">
+              <div className="w-11 h-11 rounded-2xl bg-slate-100 flex items-center justify-center text-lg font-black text-blue-600 border border-slate-200">
                 {profile?.username?.charAt(0).toUpperCase() || 'U'}
               </div>
               <button 
                 onClick={handleSignOut} 
-                className="w-11 h-11 rounded-2xl flex items-center justify-center bg-red-50 text-red-500 hover:bg-red-500 hover:text-white transition-all shadow-sm"
+                className="w-11 h-11 rounded-2xl flex items-center justify-center bg-red-50 text-red-500 hover:bg-red-500 hover:text-white transition-all shadow-sm border border-red-100/50"
               >
-                <LogOut size={20} strokeWidth={2.5} />
+                <LogOut size={20} />
               </button>
            </div>
         </header>
@@ -223,15 +223,19 @@ export const Layout = () => {
       <motion.aside
         className={clsx(
           "fixed lg:sticky top-0 left-0 h-screen w-64 z-[100] flex flex-col p-4 pt-[env(safe-area-inset-top)]",
-          "transform transition-transform duration-300 ease-in-out lg:translate-x-0 shadow-2xl",
-          isSidebarOpen ? "translate-x-0" : "-translate-x-full"
+          "transform transition-transform duration-300 ease-in-out lg:translate-x-0 overflow-hidden",
+          isSidebarOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full lg:shadow-none"
         )}
         style={{
-          background: 'linear-gradient(160deg, #0f172a 0%, #1e293b 60%, #1a1f3a 100%)',
-          borderRight: '1px solid rgba(255,255,255,0.08)'
+          background: 'linear-gradient(165deg, #0f172a 0%, #1e1b4b 100%)',
+          borderRight: '1px solid rgba(255,255,255,0.05)'
         }}
       >
-        <SidebarContent />
+        {/* Decorative Glow */}
+        <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 blur-[60px] -mr-16 -mt-16 pointer-events-none" />
+        <div className="relative z-10 flex flex-col h-full">
+          <SidebarContent />
+        </div>
       </motion.aside>
 
       {/* Main Content */}

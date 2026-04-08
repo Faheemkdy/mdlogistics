@@ -230,20 +230,20 @@ export const Billing = () => {
         </div>
 
         {/* Mode Toggle */}
-        <div className="flex gap-1.5 p-1.5 bg-[#e0e5ec] rounded-2xl shadow-[inset_4px_4px_8px_rgba(163,177,198,0.5),inset_-4px_-4px_8px_rgba(255,255,255,0.7)] overflow-x-auto no-scrollbar">
+        <div className="flex gap-1.5 p-1.5 bg-slate-100 rounded-2xl shadow-inner border border-slate-200 overflow-x-auto no-scrollbar">
           {(['delivery', 'product', 'history'] as const).map((m) => (
             <button
               key={m}
               onClick={() => setMode(m)}
               className={clsx(
-                'flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all duration-300 whitespace-nowrap',
+                'flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-black transition-all duration-300 whitespace-nowrap',
                 mode === m
                   ? m === 'delivery'
-                    ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg shadow-blue-500/30'
+                    ? 'bg-white text-blue-600 shadow-md ring-1 ring-black/5'
                     : m === 'product'
-                      ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-lg shadow-emerald-500/30'
-                      : 'bg-gradient-to-r from-slate-600 to-slate-800 text-white shadow-lg shadow-slate-500/30'
-                  : 'text-slate-500 hover:text-slate-700'
+                      ? 'bg-white text-emerald-600 shadow-md ring-1 ring-black/5'
+                      : 'bg-white text-slate-800 shadow-md ring-1 ring-black/5'
+                  : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'
               )}
             >
               {m === 'delivery' ? <Package size={16} /> : m === 'product' ? <ShoppingCart size={16} /> : <FileText size={16} />}
@@ -264,7 +264,7 @@ export const Billing = () => {
             className="lg:col-span-1 space-y-5"
           >
             {/* Customer Details Card */}
-            <div className="bg-gradient-to-br from-[#eef2f7] to-[#d3d8df] rounded-3xl p-6 shadow-[8px_8px_20px_rgba(163,177,198,0.5),-8px_-8px_20px_rgba(255,255,255,0.8)] border border-white/50">
+            <div className="bg-white/80 backdrop-blur-xl rounded-[2.5rem] p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white">
               <div className="flex items-center gap-3 mb-5">
                 <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-blue-600 flex items-center justify-center shadow-lg">
                   <FileText size={18} className="text-white" />
@@ -329,7 +329,7 @@ export const Billing = () => {
             transition={{ delay: 0.15 }}
             className="lg:col-span-2"
           >
-            <div className="bg-gradient-to-br from-[#eef2f7] to-[#d3d8df] rounded-3xl shadow-[8px_8px_20px_rgba(163,177,198,0.5),-8px_-8px_20px_rgba(255,255,255,0.8)] border border-white/50 overflow-hidden">
+            <div className="bg-white/80 backdrop-blur-xl rounded-[2.5rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white overflow-hidden">
               
               {/* Table Header */}
               <div className="px-6 pt-6 pb-4 border-b border-white/30">
@@ -347,7 +347,7 @@ export const Billing = () => {
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse" style={{ minWidth: mode === 'delivery' ? '700px' : '400px' }}>
                   <thead>
-                    <tr className="bg-slate-800 text-white text-xs">
+                    <tr className="bg-slate-900 text-white text-[10px] uppercase tracking-wider">
                       {mode === 'delivery' ? (
                         <>
                           <th className="px-4 py-3.5 font-bold rounded-none w-28 text-left">Date</th>
@@ -440,7 +440,7 @@ export const Billing = () => {
                                 placeholder="Product name..."
                                 value={item.name}
                                 onChange={(e) => updateProductItem(item.id, 'name', e.target.value)}
-                                className="w-full bg-white/60 border border-white/40 rounded-lg text-slate-700 p-2 outline-none focus:ring-2 focus:ring-emerald-400 focus:bg-white text-sm transition-all"
+                                className="w-full bg-slate-100 border border-slate-200 rounded-lg text-slate-700 p-2 outline-none focus:ring-2 focus:ring-emerald-400 focus:bg-white text-sm transition-all shadow-inner"
                               />
                             </td>
                             <td className="px-3 py-2.5">
@@ -496,7 +496,7 @@ export const Billing = () => {
           className="space-y-6"
         >
           {/* Search Controls */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-gradient-to-br from-[#eef2f7] to-[#d3d8df] p-6 rounded-3xl shadow-lg border border-white/50">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-white/80 backdrop-blur-xl p-6 rounded-[2.5rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white">
              <div className="relative">
                 <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
                 <input
@@ -525,7 +525,7 @@ export const Billing = () => {
             ) : savedBills.length === 0 ? (
               <div className="lg:col-span-2 text-center py-20 text-slate-400 font-bold">No saved bills found.</div>
             ) : savedBills.map((bill) => (
-              <div key={bill.id} className="bg-gradient-to-br from-[#eef2f7] to-[#d3d8df] p-5 rounded-3xl shadow-md border border-white/50 flex items-center gap-4 group">
+              <div key={bill.id} className="bg-white/80 backdrop-blur-xl p-5 rounded-[2rem] shadow-[0_4px_20px_rgb(0,0,0,0.03)] border border-white flex items-center gap-4 group hover:shadow-lg transition-all">
                 <div className={clsx(
                   "w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg text-white font-black",
                   bill.type === 'delivery' ? 'bg-blue-500' : 'bg-emerald-500'
@@ -558,7 +558,7 @@ export const Billing = () => {
         <motion.div
            initial={{ y: 100 }}
            animate={{ y: 0 }}
-           className="lg:hidden fixed bottom-0 left-0 right-0 z-30 flex gap-3 p-4 bg-[#e0e5ec]/90 backdrop-blur-md border-t border-white/50 shadow-[0_-10px_20px_rgba(163,177,198,0.3)] pb-[calc(1rem+env(safe-area-inset-bottom))]"
+           className="lg:hidden fixed bottom-0 left-0 right-0 z-30 flex gap-3 p-4 bg-white/90 backdrop-blur-xl border-t border-slate-200 shadow-[0_-10px_30px_rgba(0,0,0,0.05)] pb-[calc(1rem+env(safe-area-inset-bottom))]"
         >
           <Button
             onClick={handleNativeShare}

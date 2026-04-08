@@ -112,7 +112,7 @@ export const Shops = () => {
           className="lg:col-span-1 space-y-5"
         >
           {/* Add Form Card */}
-          <div className="bg-gradient-to-br from-[#eef2f7] to-[#d3d8df] rounded-3xl p-6 shadow-[10px_10px_24px_rgba(163,177,198,0.5),-10px_-10px_24px_rgba(255,255,255,0.8)] border border-white/50">
+          <div className="bg-white/80 backdrop-blur-xl rounded-[2.5rem] p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white">
             <div className="flex items-center gap-3 mb-5">
               <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg">
                 <Store size={18} className="text-white" />
@@ -129,7 +129,7 @@ export const Shops = () => {
           </div>
 
           {/* Bulk Import Card */}
-          <div className="bg-gradient-to-br from-[#eef2f7] to-[#d3d8df] rounded-3xl p-6 shadow-[10px_10px_24px_rgba(163,177,198,0.5),-10px_-10px_24px_rgba(255,255,255,0.8)] border border-white/50">
+          <div className="bg-white/80 backdrop-blur-xl rounded-[2.5rem] p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white">
             <h4 className="font-black text-sm text-slate-600 uppercase tracking-widest mb-4">Bulk Import</h4>
             <input type="file" id="excel-upload" className="hidden" accept=".xlsx, .xls" onChange={handleExcelUpload} disabled={importing} />
             <label htmlFor="excel-upload" className="block">
@@ -182,7 +182,7 @@ export const Shops = () => {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search shops..."
-              className="w-full bg-gradient-to-br from-[#eef2f7] to-[#d3d8df] rounded-2xl pl-12 pr-4 py-3.5 font-medium text-slate-700 outline-none shadow-[inset_4px_4px_8px_rgba(163,177,198,0.4),inset_-4px_-4px_8px_rgba(255,255,255,0.6)] border border-white/30 placeholder-slate-400 focus:ring-2 focus:ring-blue-400/30 transition-all"
+              className="w-full bg-white/80 backdrop-blur-md rounded-2xl pl-12 pr-4 py-4 font-medium text-slate-800 outline-none shadow-[0_4px_12px_rgb(0,0,0,0.02)] border border-white focus:border-blue-500/20 focus:bg-white transition-all"
             />
           </div>
 
@@ -196,7 +196,7 @@ export const Shops = () => {
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, scale: 0.95, x: 20 }}
                   transition={{ duration: 0.25, delay: index * 0.03 }}
-                  className="flex items-center gap-4 p-4 bg-gradient-to-br from-[#eef2f7] to-[#d3d8df] rounded-2xl shadow-[6px_6px_14px_rgba(163,177,198,0.4),-6px_-6px_14px_rgba(255,255,255,0.7)] border border-white/50"
+                  className="flex items-center gap-4 p-4 bg-white/80 backdrop-blur-xl rounded-2xl shadow-[0_4px_20px_rgb(0,0,0,0.03)] border border-white"
                 >
                   {/* Shop Icon */}
                   <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-md flex-shrink-0">
