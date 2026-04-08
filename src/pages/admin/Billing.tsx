@@ -114,10 +114,24 @@ export const Billing = () => {
   };
 
   const deleteBill = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this bill?')) return;
-    const { error } = await supabase.from('bills').delete().eq('id', id);
-    if (error) alert('Error deleting: ' + error.message);
-    else fetchSavedBills();
+    try {
+      if (!window.confirm('Are you sure you want to delete this bill?')) return;
+      setLoading(true);
+      const { error } = await supabase.from('bills').delete().eq('id', id);
+      
+      if (error) {
+        console.error('Delete error:', error);
+        alert('Error deleting: ' + error.message);
+      } else {
+        await fetchSavedBills();
+        alert('Bill deleted successfully');
+      }
+    } catch (e: any) {
+      console.error('Delete exception:', e);
+      alert('An unexpected error occurred while deleting.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const editSavedBill = (bill: any) => {
