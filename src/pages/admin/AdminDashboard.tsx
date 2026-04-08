@@ -87,7 +87,7 @@ export const AdminDashboard = () => {
 
   const downloadPickupsReport = async () => {
     const today = new Date().toISOString().split('T')[0];
-    const { data, error } = await supabase.from('pickups').select(`id, created_at, companies (name), pickup_items ( item_number, shops (name, location) )`).eq('date', today);
+    const { data, error } = await supabase.from('pickups').select(`id, created_at, profiles (username), companies (name), pickup_items ( item_number, shops (name, location) )`).eq('date', today);
     if (error || !data || data.length === 0) { alert('No pickups found for today.'); return; }
     const doc = new jsPDF();
     drawPDFHeader(doc);
@@ -95,11 +95,12 @@ export const AdminDashboard = () => {
     let tableData: any[] = [];
     data.forEach((pickup: any) => {
       const companyName = pickup.companies?.name || 'Unknown';
+      const staffName = pickup.profiles?.username || 'Unknown';
       pickup.pickup_items?.forEach((item: any) => {
-        tableData.push([companyName, item.shops?.name || 'Unknown', item.shops?.location || '-', item.item_number || '-', format(new Date(pickup.created_at), 'hh:mm a')]);
+        tableData.push([companyName, item.shops?.name || 'Unknown', item.shops?.location || '-', item.item_number || '-', staffName, format(new Date(pickup.created_at), 'hh:mm a')]);
       });
     });
-    autoTable(doc, { head: [['Company', 'Shop', 'Location', 'Item No.', 'Time']], body: tableData, startY: 80, theme: 'grid', headStyles: { fillColor: [249, 115, 22], textColor: 255, fontStyle: 'bold' }, styles: { cellPadding: 4, fontSize: 10 }, alternateRowStyles: { fillColor: [255, 247, 237] } });
+    autoTable(doc, { head: [['Company', 'Shop', 'Location', 'Item No.', 'Staff', 'Time']], body: tableData, startY: 80, theme: 'grid', headStyles: { fillColor: [249, 115, 22], textColor: 255, fontStyle: 'bold' }, styles: { cellPadding: 4, fontSize: 10 }, alternateRowStyles: { fillColor: [255, 247, 237] } });
     drawGreenFooter(doc, "TOTAL ITEMS:", tableData.length);
     savePDF(doc, `pickups_${today}.pdf`);
   };
@@ -111,8 +112,8 @@ export const AdminDashboard = () => {
     const doc = new jsPDF();
     drawPDFHeader(doc);
     drawCustomerInfo(doc, "Report Type:", "Daily Deliveries Report", format(new Date(today), 'dd/MM/yyyy'));
-    const tableData = data.map((d: any) => [d.shops?.name || 'Unknown', d.shops?.location || '-', d.item_number || '-', format(new Date(d.created_at), 'hh:mm a')]);
-    autoTable(doc, { head: [['Shop Name', 'Location', 'Item No.', 'Time']], body: tableData, startY: 80, theme: 'grid', headStyles: { fillColor: [34, 197, 94], textColor: 255, fontStyle: 'bold' }, styles: { cellPadding: 4, fontSize: 11 }, alternateRowStyles: { fillColor: [240, 253, 244] } });
+    const tableData = data.map((d: any) => [d.shops?.name || 'Unknown', d.shops?.location || '-', d.item_number || '-', d.profiles?.username || 'Unknown', format(new Date(d.created_at), 'hh:mm a')]);
+    autoTable(doc, { head: [['Shop Name', 'Location', 'Item No.', 'Staff', 'Time']], body: tableData, startY: 80, theme: 'grid', headStyles: { fillColor: [34, 197, 94], textColor: 255, fontStyle: 'bold' }, styles: { cellPadding: 4, fontSize: 11 }, alternateRowStyles: { fillColor: [240, 253, 244] } });
     drawGreenFooter(doc, "TOTAL DELIVERIES:", data.length);
     savePDF(doc, `deliveries_${today}.pdf`);
   };

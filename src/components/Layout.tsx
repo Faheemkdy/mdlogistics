@@ -128,10 +128,63 @@ export const Layout = () => {
     </>
   );
 
+  if (profile?.role !== 'admin') {
+    return (
+      <div className="min-h-screen bg-transparent flex flex-col">
+        {/* Modern Mobile-First Top Header for Users */}
+        <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-slate-200 px-5 py-4 flex items-center justify-between shadow-sm lg:px-8">
+           {/* Branding / Home Link */}
+           <div className="flex items-center gap-3 cursor-pointer group" onClick={() => navigate('/')}>
+              <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-indigo-500 to-blue-600 flex items-center justify-center p-2.5 shadow-lg shadow-blue-500/30 group-hover:scale-105 transition-transform">
+                <Logo showText={false} className="fit brightness-0 invert w-full h-full" />
+              </div>
+              <div>
+                 <h1 className="font-black text-slate-800 leading-none tracking-wide text-xl">MD</h1>
+                 <p className="text-[0.65rem] font-bold text-blue-500 uppercase tracking-[0.2em] mt-1">Logistics</p>
+              </div>
+           </div>
+
+           {/* Profile & Logout Action */}
+           <div className="flex items-center gap-4">
+              <div className="text-right hidden sm:block">
+                 <p className="text-sm font-black text-slate-800">{profile?.username}</p>
+                 <p className="text-xs text-slate-500 font-bold uppercase tracking-wider">{profile?.role}</p>
+              </div>
+              <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-indigo-500 to-blue-600 flex items-center justify-center text-lg font-black text-white shadow-md">
+                {profile?.username?.charAt(0).toUpperCase() || 'U'}
+              </div>
+              <button 
+                onClick={handleSignOut} 
+                className="w-11 h-11 rounded-2xl flex items-center justify-center bg-red-50 text-red-500 hover:bg-red-500 hover:text-white transition-all shadow-sm"
+              >
+                <LogOut size={20} strokeWidth={2.5} />
+              </button>
+           </div>
+        </header>
+
+        {/* User Content Area */}
+        <main className="flex-1 w-full max-w-2xl mx-auto pt-6 pb-24 px-4 sm:px-6">
+           <AnimatePresence mode="wait">
+             <motion.div
+               key={location.pathname}
+               initial={{ opacity: 0, y: 16, scale: 0.99 }}
+               animate={{ opacity: 1, y: 0, scale: 1 }}
+               exit={{ opacity: 0, y: -12, scale: 0.99 }}
+               transition={{ duration: 0.35, ease: [0.23, 1, 0.32, 1] }}
+             >
+               <Outlet />
+             </motion.div>
+           </AnimatePresence>
+        </main>
+      </div>
+    );
+  }
+
+  // --- ADMIN LAYOUT ---
   return (
     <div className="min-h-screen bg-transparent flex overflow-hidden">
 
-      {/* Mobile Header */}
+      {/* Mobile Header (Admin) */}
       <div className="lg:hidden fixed top-0 left-0 right-0 z-40 flex items-center justify-between px-4 py-3 pt-[calc(env(safe-area-inset-top)+12px)]"
         style={{
           background: 'rgba(15,23,42,0.95)',
