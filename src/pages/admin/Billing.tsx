@@ -141,6 +141,27 @@ export const Billing = () => {
   const handleNativeShare = async () => {
     if (mode === 'history') return; // Cannot share from history tab directly (use the row button)
 
+    if (!customerName) return alert('Please enter customer name');
+
+    const billData = {
+      type: mode,
+      customer_name: customerName,
+      date,
+      items: mode === 'delivery' ? deliveryItems : productItems,
+      totals: mode === 'delivery' ? { qty: deliveryTotalQty, amount: deliveryTotalAmount } : { amount: productTotal }
+    };
+
+    setLoading(true);
+    const { error } = editingBillId 
+      ? await supabase.from('bills').update(billData).eq('id', editingBillId)
+      : await supabase.from('bills').insert(billData);
+
+    if (error) {
+      alert('Error saving bill before share: ' + error.message);
+      setLoading(false);
+      return;
+    }
+
     const file = getBillingPDFFile(
       mode as 'delivery' | 'product', customerName, date,
       mode === 'delivery' ? deliveryItems : productItems,
@@ -153,6 +174,16 @@ export const Billing = () => {
       alert('Direct sharing not supported. Downloading instead.');
       handlePDF();
     }
+
+    // Reset Form if it's a new bill
+    if (!editingBillId) {
+      setCustomerName('');
+      setDeliveryItems([{ id: 1, description: '', q20: '', q25: '', q30: '', q35: '', q40: '', q50: '', total: 0, amount: '' }]);
+      setProductItems([{ id: 1, name: '', qty: 1, amount: 0 }]);
+    }
+    setEditingBillId(null);
+    setLoading(false);
+    fetchSavedBills();
   };
 
   // --- Effects ---

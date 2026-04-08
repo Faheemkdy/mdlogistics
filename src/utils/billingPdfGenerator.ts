@@ -3,6 +3,7 @@ import autoTable from 'jspdf-autotable';
 import { format } from 'date-fns';
 
 
+
 // MD Logistics Brand Colors
 const BRAND = {
   primary: [30, 41, 59] as [number, number, number],      // slate-800

@@ -6,6 +6,7 @@ import { Download, Trash2, Edit2, Check, X, TrendingUp, TrendingDown, FileText }
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { drawPDFHeader, drawCustomerInfo, drawGreenFooter, savePDF } from '../../utils/pdfGenerator';
+
 import { format } from 'date-fns';
 import { motion, AnimatePresence } from 'framer-motion';
 import { clsx } from 'clsx';
@@ -60,7 +61,9 @@ export const DaySheet = () => {
     if (entries.length === 0) { alert('No data to download'); return; }
     const doc = new jsPDF();
     drawPDFHeader(doc);
+
     drawCustomerInfo(doc, "Report Type:", "Day Sheet Statement", format(new Date(filterDate), 'dd/MM/yyyy'));
+
     const tableData = entries.map(e => [e.type.toUpperCase(), e.description, e.amount]);
     autoTable(doc, { head: [['Type', 'Description', 'Amount']], body: tableData, startY: 80, theme: 'grid', headStyles: { fillColor: [79, 70, 229], textColor: 255, fontStyle: 'bold' }, styles: { cellPadding: 4, fontSize: 11 }, alternateRowStyles: { fillColor: [245, 247, 250] } });
     const balance = entries.filter(e => e.type === 'income').reduce((a, b) => a + Number(b.amount), 0) - entries.filter(e => e.type === 'expense').reduce((a, b) => a + Number(b.amount), 0);
