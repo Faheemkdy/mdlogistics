@@ -107,7 +107,7 @@ export const Delivery = () => {
 
   return (
     <div className="max-w-2xl mx-auto pb-24 relative min-h-[80vh]">
-      <div className="sticky top-[calc(56px+env(safe-area-inset-top))] lg:top-0 z-30 bg-[#e0e5ec]/80 backdrop-blur-xl pt-4 pb-4 -mx-4 px-4 border-b border-white/40 transition-all">
+      <div className="sticky top-[calc(56px+env(safe-area-inset-top))] lg:top-0 z-30 bg-white/80 backdrop-blur-xl pt-4 pb-4 -mx-4 px-4 border-b border-slate-200 transition-all">
         <div>
            <h1 className="text-3xl font-black text-slate-800 tracking-tight truncate">Select Shops</h1>
            <p className="text-slate-500 font-medium text-sm">Tap to select shops for delivery</p>

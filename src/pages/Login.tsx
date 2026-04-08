@@ -48,7 +48,7 @@ export const Login = () => {
   };
 
   return (
-    <div className="min-h-screen flex overflow-hidden" style={{ background: '#e0e5ec' }}>
+    <div className="min-h-screen flex overflow-hidden" style={{ background: 'transparent' }}>
 
       {/* Left Panel - Dark Hero */}
       <motion.div

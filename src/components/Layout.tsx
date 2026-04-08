@@ -129,7 +129,7 @@ export const Layout = () => {
   );
 
   return (
-    <div className="min-h-screen bg-[#e0e5ec] flex overflow-hidden">
+    <div className="min-h-screen bg-transparent flex overflow-hidden">
 
       {/* Mobile Header */}
       <div className="lg:hidden fixed top-0 left-0 right-0 z-40 flex items-center justify-between px-4 py-3 pt-[calc(env(safe-area-inset-top)+12px)]"
