@@ -107,25 +107,28 @@ export const Delivery = () => {
 
   return (
     <div className="max-w-2xl mx-auto pb-24 relative min-h-[80vh]">
-      <div className="sticky top-[calc(64px+env(safe-area-inset-top))] lg:top-0 z-30 bg-[#e0e5ec]/90 backdrop-blur-md pt-4 pb-4 -mx-4 px-4 shadow-[0_4px_10px_rgba(163,177,198,0.2)] transition-all">
-        <h1 className="text-2xl font-black text-slate-800 tracking-tight">Select Shops</h1>
+      <div className="sticky top-[calc(56px+env(safe-area-inset-top))] lg:top-0 z-30 bg-[#e0e5ec]/80 backdrop-blur-xl pt-4 pb-4 -mx-4 px-4 border-b border-white/40 transition-all">
+        <div>
+           <h1 className="text-3xl font-black text-slate-800 tracking-tight truncate">Select Shops</h1>
+           <p className="text-slate-500 font-medium text-sm">Tap to select shops for delivery</p>
+        </div>
         
         <div className="relative mt-4 flex gap-2">
             <div className="relative flex-1">
-              <Search className="absolute left-4 top-3.5 text-slate-400" size={20} />
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
               <Input 
                 placeholder="Search shops..." 
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="pl-12 !bg-white/60 backdrop-blur-sm"
+                className="pl-12 !bg-white/80 border-0 shadow-sm rounded-2xl h-14 font-medium"
               />
             </div>
             <Button 
                 variant="primary" 
                 onClick={() => setIsAddModalOpen(true)}
-                className="!px-4 !py-0 !rounded-xl shadow-sm bg-white"
+                className="!w-14 !h-14 !p-0 flex items-center justify-center !rounded-2xl shadow-lg shadow-green-500/30 bg-gradient-to-br from-green-500 to-emerald-600 border-none"
               >
-                <Plus size={24} />
+                <Plus size={24} className="text-white" />
             </Button>
         </div>
       </div>
@@ -142,24 +145,28 @@ export const Delivery = () => {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.03 }}
                 className={clsx(
-                  "p-5 rounded-2xl transition-all duration-300",
+                  "p-5 rounded-3xl cursor-pointer transition-all duration-300 border backdrop-blur-lg relative overflow-hidden",
                   isSelected 
-                    ? "bg-gradient-to-br from-green-50 to-[#e0e5ec] shadow-[inset_4px_4px_8px_rgba(163,177,198,0.3),inset_-4px_-4px_8px_rgba(255,255,255,0.8)] border border-green-200" 
-                    : "bg-gradient-to-br from-[#eef2f7] to-[#d3d8df] shadow-[6px_6px_12px_rgba(163,177,198,0.5),-6px_-6px_12px_rgba(255,255,255,0.7)] border border-white/40"
+                    ? "bg-emerald-50/80 border-emerald-200 shadow-[0_8px_30px_rgba(16,185,129,0.15)] ring-2 ring-emerald-500/20" 
+                    : "bg-white/80 border-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] hover:bg-white"
                 )}
               >
-                <div className="flex items-center gap-4" onClick={() => toggleShop(shop.id)}>
+                {isSelected && (
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 blur-3xl rounded-full pointer-events-none" />
+                )}
+
+                <div className="flex items-center gap-4 relative z-10" onClick={() => toggleShop(shop.id)}>
                     <div className={clsx(
-                        "w-8 h-8 rounded-xl flex items-center justify-center transition-all duration-300 flex-shrink-0 cursor-pointer shadow-inner",
-                        isSelected ? "bg-green-500 text-white scale-110" : "bg-white text-transparent"
+                        "w-10 h-10 rounded-2xl flex items-center justify-center transition-all duration-300 flex-shrink-0 shadow-sm",
+                        isSelected ? "bg-gradient-to-br from-green-500 to-emerald-600 text-white shadow-emerald-500/40 scale-110" : "bg-slate-100 text-slate-300"
                     )}>
-                        <Check size={18} strokeWidth={3} />
+                        <Check size={20} strokeWidth={4} />
                     </div>
                     
-                    <div className="flex-1 cursor-pointer">
-                      <p className={clsx("font-bold text-lg transition-colors", isSelected ? "text-green-700" : "text-slate-700")}>{shop.name}</p>
-                      <div className="flex items-center gap-1.5 text-slate-500 text-sm font-medium mt-0.5">
-                          <MapPin size={14} className={isSelected ? "text-green-400" : ""} /> {shop.location}
+                    <div className="flex-1">
+                      <p className={clsx("font-black text-xl tracking-tight transition-colors", isSelected ? "text-emerald-900" : "text-slate-800")}>{shop.name}</p>
+                      <div className="flex items-center gap-1.5 text-slate-500 text-sm font-medium mt-1">
+                          <MapPin size={14} className={isSelected ? "text-emerald-500" : ""} /> {shop.location}
                       </div>
                     </div>
                 </div>
@@ -168,20 +175,21 @@ export const Delivery = () => {
                   {isSelected && (
                       <motion.div 
                         initial={{ opacity: 0, height: 0, marginTop: 0 }} 
-                        animate={{ opacity: 1, height: 'auto', marginTop: 16 }}
+                        animate={{ opacity: 1, height: 'auto', marginTop: 20 }}
                         exit={{ opacity: 0, height: 0, marginTop: 0 }}
-                        className="pl-12"
+                        className="relative z-10"
                       >
-                          <Input 
-                            type="tel"
-                            inputMode="numeric"
-                            pattern="[0-9]*"
-                            placeholder="Item Number / Count" 
-                            value={selections[shop.id]} 
-                            onChange={(e) => updateItemNumber(shop.id, e.target.value)}
-                            className="bg-white/80 !py-3 !text-sm shadow-inner font-bold text-green-700"
-                            autoFocus
-                          />
+                        <label className="text-xs font-bold uppercase tracking-wider text-emerald-600 mb-2 block">Item Number / Count</label>
+                        <Input 
+                          type="tel"
+                          inputMode="numeric"
+                          pattern="[0-9]*"
+                          placeholder="e.g. 5" 
+                          value={selections[shop.id]} 
+                          onChange={(e) => updateItemNumber(shop.id, e.target.value)}
+                          className="!bg-white border-emerald-200 !py-4 font-black text-2xl text-emerald-900 shadow-sm focus:ring-4 focus:ring-emerald-500/20"
+                          autoFocus
+                        />
                       </motion.div>
                   )}
                 </AnimatePresence>
@@ -207,18 +215,19 @@ export const Delivery = () => {
       <motion.div 
         initial={{ y: 100 }}
         animate={{ y: 0 }}
-        className="fixed bottom-0 left-0 right-0 p-4 bg-[#e0e5ec]/90 backdrop-blur-md border-t border-white/50 z-30 flex items-center justify-between shadow-[0_-10px_20px_rgba(163,177,198,0.3)] pb-[calc(1rem+env(safe-area-inset-bottom))]"
+        className="fixed bottom-0 left-0 right-0 p-5 bg-white/80 backdrop-blur-2xl border-t border-slate-200 z-30 flex items-center justify-between shadow-[0_-20px_40px_rgba(0,0,0,0.05)] pb-[calc(1.25rem+env(safe-area-inset-bottom))]"
       >
-        <div className="text-sm font-black text-slate-600 bg-white/50 px-4 py-2 rounded-xl shadow-inner">
-            {selectedCount} <span className="font-medium text-slate-500">selected</span>
+        <div className="flex flex-col">
+          <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Selected</span>
+          <span className="text-2xl font-black text-slate-800 leading-none">{selectedCount}</span>
         </div>
         <Button 
             onClick={handleDeliver} 
             isLoading={loading} 
-            className="w-1/2 bg-gradient-to-r from-green-500 to-green-600 text-white hover:text-white shadow-[0_8px_16px_rgba(34,197,94,0.4)] border-none py-4 text-lg"
+            className="w-2/3 bg-slate-900 text-white hover:bg-slate-800 shadow-xl shadow-slate-900/20 border-none py-4 rounded-2xl text-lg font-black"
             disabled={selectedCount === 0}
         >
-            <Truck size={20} /> Confirm
+            <Truck size={22} /> Confirm Delivery
         </Button>
       </motion.div>
 

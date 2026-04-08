@@ -6,7 +6,7 @@ import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Modal } from '../../components/ui/Modal';
-import { Search, Check, ChevronLeft, Save, MapPin, Plus } from 'lucide-react';
+import { Search, Check, ChevronLeft, ChevronRight, Save, MapPin, Plus } from 'lucide-react';
 import { clsx } from 'clsx';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -121,20 +121,27 @@ export const Pickup = () => {
 
   return (
     <div className="max-w-2xl mx-auto pb-24">
-      <div className="sticky top-[calc(64px+env(safe-area-inset-top))] lg:top-0 z-30 bg-[#e0e5ec]/90 backdrop-blur-md pt-4 pb-4 -mx-4 px-4 shadow-[0_4px_10px_rgba(163,177,198,0.2)] transition-all">
-         <div className="flex items-center gap-3">
-             {step === 2 && (
-                 <motion.button 
-                    whileTap={{ scale: 0.9 }}
-                    className="p-2 bg-white rounded-xl shadow-sm text-slate-600 shrink-0 -ml-2" 
-                    onClick={() => setStep(1)}
-                 >
-                     <ChevronLeft size={24} />
-                 </motion.button>
-             )}
-             <h1 className="text-2xl font-black text-slate-800 tracking-tight truncate">
-                {step === 1 ? 'Select Company' : 'Select Shops'}
-             </h1>
+      <div className="sticky top-[calc(56px+env(safe-area-inset-top))] lg:top-0 z-30 bg-[#e0e5ec]/80 backdrop-blur-xl pt-4 pb-4 -mx-4 px-4 border-b border-white/40 transition-all">
+         <div className="flex flex-col gap-1">
+             <div className="flex items-center gap-3">
+                 {step === 2 && (
+                     <motion.button 
+                        whileTap={{ scale: 0.9 }}
+                        className="w-10 h-10 flex items-center justify-center bg-white rounded-2xl shadow-sm text-slate-600 hover:text-blue-600 transition-colors" 
+                        onClick={() => setStep(1)}
+                     >
+                         <ChevronLeft size={22} strokeWidth={3} />
+                     </motion.button>
+                 )}
+                 <div>
+                   <h1 className="text-3xl font-black text-slate-800 tracking-tight truncate">
+                      {step === 1 ? 'Select Company' : 'Select Shops'}
+                   </h1>
+                   <p className="text-slate-500 font-medium text-sm">
+                     {step === 1 ? 'Choose the logistics company for pickup' : 'Tap to select shops and add items'}
+                   </p>
+                 </div>
+             </div>
          </div>
 
          <AnimatePresence>
@@ -146,20 +153,20 @@ export const Pickup = () => {
                 className="relative mt-4 flex gap-2"
               >
                   <div className="relative flex-1">
-                    <Search className="absolute left-4 top-3.5 text-slate-400" size={20} />
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
                     <Input 
                       placeholder="Search shops..." 
                       value={search}
                       onChange={(e) => setSearch(e.target.value)}
-                      className="pl-12 !bg-white/60 backdrop-blur-sm"
+                      className="pl-12 !bg-white/80 border-0 shadow-sm rounded-2xl h-14 font-medium"
                     />
                   </div>
                   <Button 
                     variant="primary" 
                     onClick={() => setIsAddModalOpen(true)}
-                    className="!px-4 !py-0 !rounded-xl shadow-sm bg-white"
+                    className="!w-14 !h-14 !p-0 flex items-center justify-center !rounded-2xl shadow-lg shadow-blue-500/30 bg-gradient-to-br from-blue-500 to-indigo-600 border-none"
                   >
-                    <Plus size={24} />
+                    <Plus size={24} className="text-white" />
                   </Button>
               </motion.div>
            )}
@@ -181,17 +188,18 @@ export const Pickup = () => {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.05 }}
                 key={company.id}
+                onClick={() => { setSelectedCompany(company.id); setStep(2); }}
+                className="group p-5 rounded-3xl cursor-pointer bg-white border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] hover:-translate-y-1 transition-all flex items-center justify-between"
               >
-                <Card 
-                  onClick={() => { setSelectedCompany(company.id); setStep(2); }}
-                  hoverEffect
-                  className="flex items-center justify-between p-6 active:scale-[0.98] transition-transform"
-                >
-                  <span className="font-bold text-xl text-slate-700">{company.name}</span>
-                  <div className="w-10 h-10 rounded-full shadow-[inset_3px_3px_6px_rgb(163,177,198,0.4),inset_-3px_-3px_6px_rgba(255,255,255,0.5)] flex items-center justify-center bg-white/30">
-                    <span className="text-blue-500 font-bold">→</span>
+                <div className="flex items-center gap-4">
+                  <div className="w-14 h-14 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center text-2xl font-black text-slate-300 group-hover:text-blue-500 group-hover:bg-blue-50 transition-colors">
+                    {company.name.charAt(0).toUpperCase()}
                   </div>
-                </Card>
+                  <span className="font-bold text-xl text-slate-800">{company.name}</span>
+                </div>
+                <div className="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-blue-500 group-hover:text-white transition-colors shadow-sm">
+                  <ChevronRight size={20} strokeWidth={3} />
+                </div>
               </motion.div>
             ))}
           </motion.div>
@@ -214,24 +222,28 @@ export const Pickup = () => {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: index * 0.03 }}
                     className={clsx(
-                      "p-5 rounded-2xl transition-all duration-300",
+                      "p-5 rounded-3xl cursor-pointer transition-all duration-300 border backdrop-blur-lg relative overflow-hidden",
                       isSelected 
-                        ? "bg-gradient-to-br from-blue-50 to-[#e0e5ec] shadow-[inset_4px_4px_8px_rgba(163,177,198,0.3),inset_-4px_-4px_8px_rgba(255,255,255,0.8)] border border-blue-200" 
-                        : "bg-gradient-to-br from-[#eef2f7] to-[#d3d8df] shadow-[6px_6px_12px_rgba(163,177,198,0.5),-6px_-6px_12px_rgba(255,255,255,0.7)] border border-white/40"
+                        ? "bg-blue-50/80 border-blue-200 shadow-[0_8px_30px_rgba(59,130,246,0.15)] ring-2 ring-blue-500/20" 
+                        : "bg-white/80 border-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] hover:bg-white"
                     )}
                   >
-                    <div className="flex items-center gap-4" onClick={() => toggleShop(shop.id)}>
+                    {isSelected && (
+                      <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 blur-3xl rounded-full pointer-events-none" />
+                    )}
+                    
+                    <div className="flex items-center gap-4 relative z-10" onClick={() => toggleShop(shop.id)}>
                         <div className={clsx(
-                            "w-8 h-8 rounded-xl flex items-center justify-center transition-all duration-300 flex-shrink-0 cursor-pointer shadow-inner",
-                            isSelected ? "bg-blue-500 text-white scale-110" : "bg-white text-transparent"
+                            "w-10 h-10 rounded-2xl flex items-center justify-center transition-all duration-300 flex-shrink-0 shadow-sm",
+                            isSelected ? "bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-blue-500/40 scale-110" : "bg-slate-100 text-slate-300"
                         )}>
-                            <Check size={18} strokeWidth={3} />
+                            <Check size={20} strokeWidth={4} />
                         </div>
                         
-                        <div className="flex-1 cursor-pointer">
-                          <p className={clsx("font-bold text-lg transition-colors", isSelected ? "text-blue-700" : "text-slate-700")}>{shop.name}</p>
-                          <div className="flex items-center gap-1.5 text-slate-500 text-sm font-medium mt-0.5">
-                              <MapPin size={14} className={isSelected ? "text-blue-400" : ""} /> {shop.location}
+                        <div className="flex-1">
+                          <p className={clsx("font-black text-xl tracking-tight transition-colors", isSelected ? "text-blue-900" : "text-slate-800")}>{shop.name}</p>
+                          <div className="flex items-center gap-1.5 text-slate-500 text-sm font-medium mt-1">
+                              <MapPin size={14} className={isSelected ? "text-blue-500" : ""} /> {shop.location}
                           </div>
                         </div>
                     </div>
@@ -240,20 +252,21 @@ export const Pickup = () => {
                       {isSelected && (
                           <motion.div 
                             initial={{ opacity: 0, height: 0, marginTop: 0 }} 
-                            animate={{ opacity: 1, height: 'auto', marginTop: 16 }}
+                            animate={{ opacity: 1, height: 'auto', marginTop: 20 }}
                             exit={{ opacity: 0, height: 0, marginTop: 0 }}
-                            className="pl-12"
+                            className="relative z-10"
                           >
-                              <Input 
-                                type="tel"
-                                inputMode="numeric"
-                                pattern="[0-9]*"
-                                placeholder="Item Number / Count" 
-                                value={selections[shop.id]} 
-                                onChange={(e) => updateItemNumber(shop.id, e.target.value)}
-                                className="bg-white/80 !py-3 !text-sm shadow-inner font-bold text-blue-700"
-                                autoFocus
-                              />
+                            <label className="text-xs font-bold uppercase tracking-wider text-blue-600 mb-2 block">Item Number / Count</label>
+                            <Input 
+                              type="tel"
+                              inputMode="numeric"
+                              pattern="[0-9]*"
+                              placeholder="e.g. 5" 
+                              value={selections[shop.id]} 
+                              onChange={(e) => updateItemNumber(shop.id, e.target.value)}
+                              className="!bg-white border-blue-200 !py-4 font-black text-2xl text-blue-900 shadow-sm focus:ring-4 focus:ring-blue-500/20"
+                              autoFocus
+                            />
                           </motion.div>
                       )}
                     </AnimatePresence>
@@ -278,18 +291,19 @@ export const Pickup = () => {
             <motion.div 
               initial={{ y: 100 }}
               animate={{ y: 0 }}
-              className="fixed bottom-0 left-0 right-0 p-4 bg-[#e0e5ec]/90 backdrop-blur-md border-t border-white/50 z-30 flex items-center justify-between shadow-[0_-10px_20px_rgba(163,177,198,0.3)] pb-[calc(1rem+env(safe-area-inset-bottom))]"
+              className="fixed bottom-0 left-0 right-0 p-5 bg-white/80 backdrop-blur-2xl border-t border-slate-200 z-30 flex items-center justify-between shadow-[0_-20px_40px_rgba(0,0,0,0.05)] pb-[calc(1.25rem+env(safe-area-inset-bottom))]"
             >
-              <div className="text-sm font-black text-slate-600 bg-white/50 px-4 py-2 rounded-xl shadow-inner">
-                  {selectedCount} <span className="font-medium text-slate-500">selected</span>
+              <div className="flex flex-col">
+                <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Selected</span>
+                <span className="text-2xl font-black text-slate-800 leading-none">{selectedCount}</span>
               </div>
               <Button 
                 onClick={handleSave} 
                 isLoading={loading} 
-                className="w-1/2 bg-gradient-to-r from-blue-500 to-blue-600 text-white hover:text-white shadow-[0_8px_16px_rgba(59,130,246,0.4)] border-none py-4 text-lg"
+                className="w-2/3 bg-slate-900 text-white hover:bg-slate-800 shadow-xl shadow-slate-900/20 border-none py-4 rounded-2xl text-lg font-black"
                 disabled={selectedCount === 0}
               >
-                <Save size={20} /> Save
+                <Save size={22} /> Confirm Pickup
               </Button>
             </motion.div>
           </motion.div>
