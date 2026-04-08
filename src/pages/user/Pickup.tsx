@@ -234,10 +234,10 @@ export const Pickup = () => {
                     
                     <div className="flex items-center gap-4 relative z-10" onClick={() => toggleShop(shop.id)}>
                         <div className={clsx(
-                            "w-10 h-10 rounded-2xl flex items-center justify-center transition-all duration-300 flex-shrink-0 shadow-sm",
-                            isSelected ? "bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-blue-500/40 scale-110" : "bg-slate-100 text-slate-300"
+                            "w-8 h-8 rounded-xl flex items-center justify-center transition-all duration-300 flex-shrink-0 shadow-sm border-2",
+                            isSelected ? "bg-gradient-to-br from-blue-500 to-indigo-600 border-transparent text-white shadow-blue-500/40 scale-110" : "bg-white border-slate-300 text-transparent hover:border-blue-300"
                         )}>
-                            <Check size={20} strokeWidth={4} />
+                            <Check size={18} strokeWidth={4} />
                         </div>
                         
                         <div className="flex-1">
@@ -300,7 +300,7 @@ export const Pickup = () => {
               <Button 
                 onClick={handleSave} 
                 isLoading={loading} 
-                className="w-2/3 bg-slate-900 text-white hover:bg-slate-800 shadow-xl shadow-slate-900/20 border-none py-4 rounded-2xl text-lg font-black"
+                className="w-2/3 bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-xl shadow-blue-500/30 border-none py-4 rounded-2xl text-lg font-black hover:scale-[1.02]"
                 disabled={selectedCount === 0}
               >
                 <Save size={22} /> Confirm Pickup
