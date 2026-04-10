@@ -15,10 +15,11 @@ export const Input: React.FC<InputProps> = ({ label, error, className, ...props 
         whileFocus={{ scale: 1.01 }}
         transition={{ duration: 0.2 }}
         className={clsx(
-          "w-full px-5 py-4 rounded-[1.25rem] bg-white/60 text-slate-800 placeholder-slate-400 outline-none transition-all text-base border-2 border-transparent",
-          "shadow-[0_4px_12px_rgb(0,0,0,0.02)]",
-          "focus:shadow-[0_8px_20px_rgb(59,130,246,0.1)] focus:border-blue-500/20 focus:bg-white",
-          error && "border-red-400/50 bg-red-50/50",
+          // Deep inset shadow for 3D carved-out effect
+          "w-full px-4 py-3 rounded-xl bg-[#e0e5ec] text-slate-700 placeholder-slate-400 outline-none transition-all text-base border border-transparent",
+          "shadow-[inset_5px_5px_10px_rgb(163,177,198,0.6),inset_-5px_-5px_10px_rgba(255,255,255,0.7)]",
+          "focus:shadow-[inset_7px_7px_14px_rgb(163,177,198,0.7),inset_-7px_-7px_14px_rgba(255,255,255,0.8)] focus:border-white/40 focus:bg-[#e6ebf0]",
+          error && "border-red-400/50 shadow-[inset_5px_5px_10px_rgba(248,113,113,0.2)]",
           className
         )}
         {...props}

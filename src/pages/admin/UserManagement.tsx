@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase, createTempClient, getEmailFromUsername } from '../../lib/supabase';
-import { UserPlus, AlertCircle, Ban, Edit2, X, Check, User, KeyRound, Users, Search, Crown, CheckCircle2, Mail, ShieldCheck } from 'lucide-react';
+import { UserPlus, CheckCircle, AlertCircle, Ban, Edit2, X, Check, User, KeyRound, Users, Search, Crown, CheckCircle2, Mail } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface DeactivateModalProps {
@@ -18,63 +18,54 @@ const DeactivateModal: React.FC<DeactivateModalProps> = ({ user, onConfirm, onCa
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-md"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ background: 'rgba(15, 23, 42, 0.7)', backdropFilter: 'blur(8px)' }}
       onClick={onCancel}
     >
       <motion.div
-        initial={{ opacity: 0, scale: 0.9, y: 20 }}
+        initial={{ opacity: 0, scale: 0.8, y: 30 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.9, y: 20 }}
-        transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-        className="w-full max-w-sm bg-white/90 backdrop-blur-2xl rounded-[2.5rem] p-8 border border-white shadow-[0_20px_50px_rgba(0,0,0,0.1)] relative overflow-hidden"
+        exit={{ opacity: 0, scale: 0.8, y: 30 }}
+        transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+        className="w-full max-w-sm bg-gradient-to-br from-slate-800 to-slate-900 rounded-3xl p-8 border border-white/10 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Decorative Glow */}
-        <div className={`absolute -top-24 -right-24 w-48 h-48 blur-[60px] opacity-20 pointer-events-none ${
-          isDeactivating ? 'bg-orange-500' : 'bg-emerald-500'
-        }`} />
-
-        <div className="flex flex-col items-center text-center gap-6 relative z-10">
+        <div className="flex flex-col items-center text-center gap-4">
           <motion.div
-            initial={{ scale: 0, rotate: -15 }}
-            animate={{ scale: 1, rotate: 0 }}
-            transition={{ type: 'spring', stiffness: 500, damping: 25, delay: 0.1 }}
-            className={`w-20 h-20 rounded-[2rem] flex items-center justify-center shadow-lg ${
-              isDeactivating 
-                ? 'bg-orange-500 text-white shadow-orange-200' 
-                : 'bg-emerald-500 text-white shadow-emerald-200'
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            transition={{ type: 'spring', stiffness: 400, damping: 20, delay: 0.1 }}
+            className={`w-20 h-20 rounded-2xl flex items-center justify-center ${
+              isDeactivating ? 'bg-orange-500/20 border border-orange-500/30' : 'bg-emerald-500/20 border border-emerald-500/30'
             }`}
           >
-            {isDeactivating ? <Ban size={36} strokeWidth={2.5} /> : <CheckCircle2 size={36} strokeWidth={2.5} />}
+            {isDeactivating ? <Ban size={36} className="text-orange-400" /> : <CheckCircle2 size={36} className="text-emerald-400" />}
           </motion.div>
-
           <div>
-            <h3 className="text-2xl font-black text-slate-800 tracking-tight">
+            <h3 className="text-xl font-black text-white">
               {isDeactivating ? 'Deactivate User?' : 'Activate User?'}
             </h3>
-            <p className="text-slate-500 mt-2 text-sm font-medium leading-relaxed">
-              Action for <span className="text-slate-900 font-black">"{user?.username}"</span>
+            <p className="text-slate-400 mt-2 text-sm leading-relaxed">
+              Are you sure you want to {isDeactivating ? 'deactivate' : 'activate'}{' '}
+              <span className="text-white font-bold">"{user?.username}"</span>?
               <br />
               {isDeactivating 
-                ? 'This user will temporarily lose all system access.'
-                : 'This user will regain access to their account.'}
+                ? 'They will no longer be able to log in to the system.'
+                : 'They will be granted access to log in again.'}
             </p>
           </div>
-
           <div className="flex gap-3 w-full mt-2">
             <button
               onClick={onCancel}
-              className="flex-1 py-4 rounded-2xl bg-slate-100 text-slate-600 font-black text-sm hover:bg-slate-200 transition-all active:scale-95"
+              className="flex-1 py-3 rounded-xl bg-white/10 text-white font-bold hover:bg-white/20 transition-colors"
             >
               Cancel
             </button>
             <button
               onClick={onConfirm}
               disabled={isLoading}
-              className={`flex-1 py-4 rounded-2xl text-white font-black text-sm transition-all shadow-lg active:scale-95 flex items-center justify-center gap-2 ${
-                isDeactivating 
-                  ? 'bg-orange-500 hover:bg-orange-600 shadow-orange-200' 
-                  : 'bg-emerald-500 hover:bg-emerald-600 shadow-emerald-200'
+              className={`flex-1 py-3 rounded-xl text-white font-bold transition-colors disabled:opacity-60 flex items-center justify-center gap-2 ${
+                isDeactivating ? 'bg-orange-500 hover:bg-orange-600' : 'bg-emerald-500 hover:bg-emerald-600'
               }`}
             >
               {isLoading ? (
@@ -83,8 +74,8 @@ const DeactivateModal: React.FC<DeactivateModalProps> = ({ user, onConfirm, onCa
                   transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
                   className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full"
                 />
-              ) : (isDeactivating ? <Ban size={18} /> : <CheckCircle2 size={18} />)}
-              {isLoading ? 'Wait...' : (isDeactivating ? 'Confirm' : 'Confirm')}
+              ) : (isDeactivating ? <Ban size={16} /> : <CheckCircle2 size={16} />)}
+              {isLoading ? 'Processing...' : (isDeactivating ? 'Deactivate' : 'Activate')}
             </button>
           </div>
         </div>
@@ -299,76 +290,66 @@ export const UserManagement = () => {
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.1, ease: [0.23, 1, 0.32, 1] }}
-          className="bg-white/80 backdrop-blur-xl rounded-[2.5rem] p-8 border border-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] h-fit overflow-hidden relative"
+          className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-3xl p-6 border border-white/10 shadow-2xl h-fit"
         >
-          {/* Subtle background glow */}
-          <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 blur-[80px] -mr-16 -mt-16 pointer-events-none" />
-          <div className="relative z-10">
-          <div className="flex items-center gap-4 mb-8">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-700 flex items-center justify-center text-white shadow-lg shadow-blue-500/20">
-              <UserPlus size={28} strokeWidth={2.5} />
+          <div className="flex items-center gap-4 mb-6">
+            <div className="p-3 bg-blue-500/20 border border-blue-400/30 text-blue-400 rounded-2xl">
+              <UserPlus size={24} />
             </div>
             <div>
-              <h3 className="font-black text-2xl text-slate-800 tracking-tight">New Staff</h3>
-              <p className="text-slate-500 font-bold text-xs uppercase tracking-widest mt-0.5">Registration</p>
+              <h3 className="font-bold text-xl text-white">New Staff</h3>
+              <p className="text-slate-400 text-sm">Create a new account</p>
             </div>
           </div>
 
-          <form onSubmit={handleCreateUser} className="space-y-6">
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Username</label>
-              <div className="relative group">
-                <User size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
-                <input
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  placeholder="Create username..."
-                  required
-                  className="w-full pl-12 pr-4 py-4 bg-slate-100 border border-slate-200 rounded-2xl text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:bg-white focus:border-blue-400 transition-all font-bold"
-                />
-              </div>
+          <form onSubmit={handleCreateUser} className="space-y-4">
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Username</label>
+              <input
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="Enter username"
+                required
+                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all"
+              />
             </div>
-
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Password</label>
-              <div className="relative group">
-                <KeyRound size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Min. 6 characters"
-                  required
-                  className="w-full pl-12 pr-4 py-4 bg-slate-100 border border-slate-200 rounded-2xl text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:bg-white focus:border-blue-400 transition-all font-bold"
-                />
-              </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Password</label>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Min 6 characters"
+                required
+                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all"
+              />
             </div>
-
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Access Level</label>
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Access Level</label>
               <select
                 value={role}
                 onChange={(e) => setRole(e.target.value as 'admin' | 'user')}
-                className="w-full px-4 py-4 bg-slate-100 border border-slate-200 rounded-2xl text-slate-800 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:bg-white focus:border-blue-400 transition-all font-bold appearance-none cursor-pointer shadow-sm"
+                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all appearance-none cursor-pointer"
+                style={{ colorScheme: 'dark' }}
               >
-                <option value="user">👤 Standard User (Staff)</option>
-                <option value="admin">🛡️ Administrator (Full Access)</option>
+                <option value="user" className="bg-slate-800 text-white">Standard User (Staff)</option>
+                <option value="admin" className="bg-slate-800 text-white">Administrator</option>
               </select>
             </div>
 
             <AnimatePresence>
               {message && (
                 <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: 10 }}
-                  className={`p-4 rounded-2xl flex items-start gap-3 text-sm font-bold shadow-sm ${
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className={`p-3 rounded-xl flex items-start gap-3 text-sm font-medium overflow-hidden ${
                     message.type === 'error'
-                      ? 'bg-red-50 text-red-600 border border-red-100'
-                      : 'bg-emerald-50 text-emerald-600 border border-emerald-100'
+                      ? 'bg-red-500/20 text-red-300 border border-red-500/30'
+                      : 'bg-green-500/20 text-green-300 border border-green-500/30'
                   }`}
                 >
-                  {message.type === 'error' ? <AlertCircle size={20} className="shrink-0" /> : <CheckCircle2 size={20} className="shrink-0" />}
+                  {message.type === 'error' ? <AlertCircle size={18} className="shrink-0 mt-0.5" /> : <CheckCircle size={18} className="shrink-0 mt-0.5" />}
                   <span>{message.text}</span>
                 </motion.div>
               )}
@@ -377,113 +358,106 @@ export const UserManagement = () => {
             <motion.button
               type="submit"
               disabled={loading}
-              whileHover={{ scale: 1.02, y: -2 }}
+              whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
-              className="w-full py-4 bg-gradient-to-r from-blue-600 to-indigo-700 text-white font-black rounded-2xl hover:shadow-xl hover:shadow-blue-500/30 transition-all disabled:opacity-60 flex items-center justify-center gap-3 shadow-lg shadow-blue-500/20 mt-2"
+              className="w-full py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold rounded-xl hover:from-blue-500 hover:to-indigo-500 transition-all disabled:opacity-60 flex items-center justify-center gap-2 shadow-lg shadow-blue-500/25 mt-2"
             >
               {loading ? (
                 <motion.div
                   animate={{ rotate: 360 }}
                   transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-                  className="w-5 h-5 border-3 border-white/30 border-t-white rounded-full"
+                  className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full"
                 />
-              ) : <UserPlus size={20} strokeWidth={2.5} />}
-              {loading ? 'Processing...' : 'Register Staff Member'}
+              ) : <UserPlus size={18} />}
+              {loading ? 'Creating...' : 'Create User'}
             </motion.button>
           </form>
-        </div>
-      </motion.div>
+        </motion.div>
 
-      {/* User List */}
-      <motion.div
-        initial={{ opacity: 0, y: 30 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6, delay: 0.2, ease: [0.23, 1, 0.32, 1] }}
-        className="lg:col-span-2 bg-white/80 backdrop-blur-xl rounded-[2.5rem] p-6 border border-white shadow-[0_8px_30px_rgb(0,0,0,0.04)]"
-      >
-        <div className="flex items-center justify-between mb-6">
-          <h3 className="font-bold text-xl text-slate-800">All Users
-            <span className="ml-2 text-sm font-medium text-slate-400">({filteredUsers.length})</span>
-          </h3>
-          <div className="relative">
-            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-            <input
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search..."
-              className="pl-8 pr-4 py-2 bg-white/70 border border-white/80 rounded-xl text-sm text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-400/40 w-32 focus:w-48 transition-all"
-            />
+        {/* User List */}
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.2, ease: [0.23, 1, 0.32, 1] }}
+          className="lg:col-span-2 bg-gradient-to-br from-[#eef2f7] to-[#d3d8df] rounded-3xl p-6 border border-white/50 shadow-[9px_9px_16px_rgb(163,177,198,0.6),-9px_-9px_16px_rgba(255,255,255,0.7)]"
+        >
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="font-bold text-xl text-slate-800">All Users
+              <span className="ml-2 text-sm font-medium text-slate-400">({filteredUsers.length})</span>
+            </h3>
+            <div className="relative">
+              <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search..."
+                className="pl-8 pr-4 py-2 bg-white/70 border border-white/80 rounded-xl text-sm text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-400/40 w-32 focus:w-48 transition-all"
+              />
+            </div>
           </div>
-        </div>
 
-        <div className="space-y-3 max-h-[560px] overflow-y-auto pr-1 pb-2">
-          <AnimatePresence mode="popLayout">
-            {fetchLoading ? (
-              <motion.div
-                key="loader"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="flex flex-col items-center justify-center py-16 gap-3"
-              >
+          <div className="space-y-3 max-h-[560px] overflow-y-auto pr-1 pb-2">
+            <AnimatePresence mode="popLayout">
+              {fetchLoading ? (
                 <motion.div
-                  animate={{ rotate: 360 }}
-                  transition={{ duration: 1.2, repeat: Infinity, ease: 'linear' }}
-                  className="w-10 h-10 border-slate-300 border-t-blue-500 rounded-full"
-                  style={{ border: '3px solid', borderTopColor: '#3b82f6' }}
-                />
-                <p className="text-slate-400 font-medium text-sm">Loading users...</p>
-              </motion.div>
-            ) : filteredUsers.length === 0 ? (
-              <motion.div
-                key="empty"
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="flex flex-col items-center justify-center py-24 gap-4"
-              >
-                <div className="w-20 h-20 rounded-[2.5rem] bg-slate-50 flex items-center justify-center shadow-inner border border-slate-100">
-                  <Users size={32} className="text-slate-300" />
-                </div>
-                <div className="text-center">
-                  <p className="text-slate-800 font-bold text-lg">No staff found</p>
-                  <p className="text-slate-400 font-medium text-sm mt-1">Try a different search or add a new member</p>
-                </div>
-              </motion.div>
-            ) : (
-              filteredUsers.map((user, index) => {
-                const isMasterAdmin = user.username === 'md';
-                const isDeactivated = user.is_active === false;
-                
-                // Cannot act on self (deactivate/delete)
-                const isSelf = currentUserProfile?.id === user.id;
-
-                return (
+                  key="loader"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="flex flex-col items-center justify-center py-16 gap-3"
+                >
                   <motion.div
-                    key={user.id}
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, scale: 0.95, x: -20 }}
-                    transition={{ duration: 0.3, delay: index * 0.04 }}
-                    layout
-                    whileHover={{ y: -4, boxShadow: "0 10px 25px -5px rgba(0,0,0,0.05)" }}
-                    className={`flex flex-col gap-0 backdrop-blur-sm rounded-[2rem] border transition-all overflow-hidden ${
-                       isDeactivated 
-                        ? 'bg-slate-50 border-slate-200 opacity-70 grayscale-[0.5]' 
-                        : 'bg-white/60 border-white shadow-sm hover:bg-white hover:border-slate-100'
-                    }`}
-                  >
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 1.2, repeat: Infinity, ease: 'linear' }}
+                    className="w-10 h-10 border-slate-300 border-t-blue-500 rounded-full"
+                    style={{ border: '3px solid', borderTopColor: '#3b82f6' }}
+                  />
+                  <p className="text-slate-400 font-medium text-sm">Loading users...</p>
+                </motion.div>
+              ) : filteredUsers.length === 0 ? (
+                <motion.div
+                  key="empty"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="flex flex-col items-center justify-center py-16 gap-3"
+                >
+                  <div className="w-16 h-16 rounded-2xl bg-slate-200 flex items-center justify-center shadow-inner">
+                    <Users size={28} className="text-slate-400" />
+                  </div>
+                  <p className="text-slate-400 font-medium">No users found</p>
+                </motion.div>
+              ) : (
+                filteredUsers.map((user, index) => {
+                  const isMasterAdmin = user.username === 'md';
+                  const isDeactivated = user.is_active === false;
+                  
+                  // Cannot act on self (deactivate/delete)
+                  const isSelf = currentUserProfile?.id === user.id;
+
+                  return (
+                    <motion.div
+                      key={user.id}
+                      initial={{ opacity: 0, x: 20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, scale: 0.95, x: -20 }}
+                      transition={{ duration: 0.3, delay: index * 0.04 }}
+                      layout
+                      className={`flex flex-col gap-0 backdrop-blur-sm rounded-2xl border transition-all overflow-hidden ${
+                         isDeactivated 
+                          ? 'bg-slate-200/50 border-slate-300 opacity-70 grayscale-[0.5]' 
+                          : 'bg-white/60 border-white/80 shadow-sm hover:shadow-md hover:bg-white/80'
+                      }`}
+                    >
                       <div className="flex items-center justify-between p-4">
                         <div className="flex items-center gap-3">
-                          <div className={`w-12 h-12 rounded-[1.25rem] flex items-center justify-center font-bold text-white overflow-hidden shadow-lg flex-shrink-0 relative group mb-0.5 ${
+                          <div className={`w-11 h-11 rounded-xl flex items-center justify-center font-bold text-white overflow-hidden shadow-md flex-shrink-0 ${
                             isMasterAdmin 
-                              ? 'bg-gradient-to-br from-amber-400 to-amber-600'
+                              ? 'bg-gradient-to-br from-amber-500 to-yellow-600'
                               : user.role === 'admin'
-                                ? 'bg-gradient-to-br from-slate-700 to-slate-900 border border-white/20'
-                                : 'bg-gradient-to-br from-blue-500 to-indigo-600'
+                                ? 'bg-gradient-to-br from-purple-500 to-indigo-600'
+                                : 'bg-gradient-to-br from-blue-400 to-blue-600'
                           }`}>
-                            {isMasterAdmin ? <Crown size={24} className="text-white drop-shadow-md" /> :
-                             user.role === 'admin' ? <ShieldCheck size={24} className="text-white drop-shadow-md" /> : <User size={24} className="text-white drop-shadow-md" />}
-                            {/* Inner glow */}
-                            <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity" />
+                            {isMasterAdmin ? <Crown size={20} className="text-yellow-100" /> :
+                             user.role === 'admin' ? <Crown size={20} /> : <User size={20} />}
                           </div>
 
                           {editingId === user.id ? (
@@ -496,19 +470,19 @@ export const UserManagement = () => {
                           ) : (
                             <div>
                               <div className="flex items-center gap-2">
-                                <p className="font-black text-slate-800 text-base">{user.username}</p>
+                                <p className="font-bold text-slate-800">{user.username}</p>
                                 {isDeactivated && (
-                                  <span className="text-[10px] font-black bg-slate-200 text-slate-500 px-2 py-0.5 rounded-lg border border-slate-300/50 uppercase tracking-tighter">Disabled</span>
+                                  <span className="text-[9px] font-bold bg-slate-300 text-slate-600 px-1.5 py-0.5 rounded text-uppercase tracking-wider">Deactivated</span>
                                 )}
                               </div>
-                              <span className={`text-[9px] font-black uppercase tracking-[0.15em] px-2.5 py-1 rounded-lg mt-1 inline-flex items-center gap-1.5 border ${
+                              <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full mt-0.5 inline-block ${
                                 isMasterAdmin
-                                  ? 'bg-amber-50 text-amber-600 border-amber-200'
+                                  ? 'bg-amber-100 text-amber-700 border border-amber-200'
                                   : user.role === 'admin'
-                                    ? 'bg-slate-100 text-slate-600 border-slate-200'
-                                    : 'bg-blue-50 text-blue-600 border-blue-200'
+                                    ? 'bg-purple-100 text-purple-700 border border-purple-200'
+                                    : 'bg-blue-100 text-blue-700 border border-blue-200'
                               }`}>
-                                {isMasterAdmin ? '👑 Master' : user.role === 'admin' ? '🛡️ Admin' : '👤 Staff Member'}
+                                {isMasterAdmin ? '👑 Master Admin' : user.role === 'admin' ? '🛡️ Admin' : '👤 Staff'}
                               </span>
                             </div>
                           )}
@@ -585,42 +559,36 @@ export const UserManagement = () => {
                             transition={{ duration: 0.25, ease: 'easeInOut' }}
                             className="overflow-hidden bg-orange-50/50 border-t border-slate-200/60"
                           >
-                            <div className="px-5 py-5 flex gap-4 flex-col sm:flex-row sm:items-center">
+                            <div className="px-4 py-4 flex gap-3 flex-col sm:flex-row sm:items-center">
                               {isMasterAdmin ? (
-                                <div className="flex-1 w-full bg-white p-4 rounded-2xl border border-orange-100 shadow-sm">
-                                  <div className="flex items-center gap-3 mb-3">
-                                     <div className="w-8 h-8 rounded-lg bg-orange-100 flex items-center justify-center text-orange-500">
-                                        <ShieldCheck size={18} />
-                                     </div>
-                                     <p className="text-sm text-slate-800 font-black">Security Policy</p>
-                                  </div>
-                                  <p className="text-xs text-slate-500 mb-4 font-medium leading-relaxed">
-                                    Master Admin passwords cannot be changed directly for security. Send an OTP magic link to <span className="text-orange-600 font-bold">mdcourierkdy@gmail.com</span> to proceed.
+                                <div className="flex-1 w-full">
+                                  <p className="text-sm text-slate-600 mb-3 font-medium">
+                                    Master Admin passwords cannot be changed directly here for security. Send an OTP magic link to the registered secure email (mdcourierkdy@gmail.com).
                                   </p>
                                   <motion.button
-                                    whileHover={{ scale: 1.02, y: -2 }} whileTap={{ scale: 0.98 }}
+                                    whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
                                     onClick={sendMasterAdminOTPLink}
-                                    className="px-6 py-3 bg-orange-500 text-white text-sm font-black rounded-xl hover:bg-orange-600 transition-all w-full flex items-center justify-center gap-2 shadow-lg shadow-orange-500/20"
+                                    className="px-4 py-2.5 bg-orange-500 text-white text-sm font-bold rounded-xl hover:bg-orange-600 transition-colors w-full flex items-center justify-center gap-2 shadow-md shadow-orange-500/20"
                                   >
-                                    <Mail size={18} /> Send Reset Link
+                                    <Mail size={16} /> Send Email OTP Reset Link
                                   </motion.button>
                                 </div>
                               ) : (
                                 <>
-                                  <div className="flex items-center gap-3 flex-1 relative group">
-                                    <KeyRound size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-orange-400" />
+                                  <div className="flex items-center gap-2 flex-1">
+                                    <KeyRound size={14} className="text-orange-400 shrink-0" />
                                     <input
                                       type="password"
                                       placeholder="New Password (min 6 chars)"
                                       value={newPassword}
                                       onChange={(e) => setNewPassword(e.target.value)}
-                                      className="w-full pl-12 pr-4 py-3 bg-white border border-orange-100 rounded-xl text-sm font-bold text-slate-800 focus:outline-none focus:ring-4 focus:ring-orange-400/10 focus:border-orange-300 transition-all placeholder:font-normal"
+                                      className="flex-1 px-3 py-2 bg-white border border-orange-200 rounded-xl text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-orange-400/50"
                                     />
                                   </div>
                                   <motion.button
                                     whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
                                     onClick={() => handlePasswordReset(user.id)}
-                                    className="px-6 py-3 bg-slate-900 text-white text-sm font-black rounded-xl hover:bg-black transition-all whitespace-nowrap shadow-lg shadow-slate-200"
+                                    className="px-4 py-2 bg-orange-500 text-white text-sm font-bold rounded-xl hover:bg-orange-600 transition-colors whitespace-nowrap shadow-sm shadow-orange-500/20"
                                   >
                                     Update Password
                                   </motion.button>

@@ -32,7 +32,7 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, 
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
               className={clsx(
-                "w-full max-w-md bg-white/90 backdrop-blur-2xl rounded-[2.5rem] shadow-[0_20px_60px_rgba(0,0,0,0.15)] border border-white overflow-hidden pointer-events-auto",
+                "w-full max-w-md bg-[#e0e5ec] rounded-[2rem] shadow-[20px_20px_40px_rgba(163,177,198,0.5),-20px_-20px_40px_rgba(255,255,255,0.8)] border border-white/40 overflow-hidden pointer-events-auto",
                 className
               )}
             >

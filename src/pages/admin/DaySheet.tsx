@@ -6,7 +6,6 @@ import { Download, Trash2, Edit2, Check, X, TrendingUp, TrendingDown, FileText }
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { drawPDFHeader, drawCustomerInfo, drawGreenFooter, savePDF } from '../../utils/pdfGenerator';
-
 import { format } from 'date-fns';
 import { motion, AnimatePresence } from 'framer-motion';
 import { clsx } from 'clsx';
@@ -61,9 +60,7 @@ export const DaySheet = () => {
     if (entries.length === 0) { alert('No data to download'); return; }
     const doc = new jsPDF();
     drawPDFHeader(doc);
-
     drawCustomerInfo(doc, "Report Type:", "Day Sheet Statement", format(new Date(filterDate), 'dd/MM/yyyy'));
-
     const tableData = entries.map(e => [e.type.toUpperCase(), e.description, e.amount]);
     autoTable(doc, { head: [['Type', 'Description', 'Amount']], body: tableData, startY: 80, theme: 'grid', headStyles: { fillColor: [79, 70, 229], textColor: 255, fontStyle: 'bold' }, styles: { cellPadding: 4, fontSize: 11 }, alternateRowStyles: { fillColor: [245, 247, 250] } });
     const balance = entries.filter(e => e.type === 'income').reduce((a, b) => a + Number(b.amount), 0) - entries.filter(e => e.type === 'expense').reduce((a, b) => a + Number(b.amount), 0);
@@ -90,7 +87,7 @@ export const DaySheet = () => {
           initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.08 }}
           className="lg:col-span-1 space-y-5"
         >
-          <div className="bg-white/80 backdrop-blur-xl rounded-[2.5rem] p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white">
+          <div className="bg-gradient-to-br from-[#eef2f7] to-[#d3d8df] rounded-3xl p-6 shadow-[10px_10px_24px_rgba(163,177,198,0.5),-10px_-10px_24px_rgba(255,255,255,0.8)] border border-white/50">
             <div className="flex items-center gap-3 mb-5">
               <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-blue-600 flex items-center justify-center shadow-lg">
                 <FileText size={18} className="text-white" />
@@ -100,7 +97,7 @@ export const DaySheet = () => {
 
             <form onSubmit={handleAdd} className="space-y-4">
               {/* Type Toggle */}
-              <div className="flex gap-2 p-1.5 bg-slate-100 rounded-2xl shadow-inner border border-slate-200">
+              <div className="flex gap-2 p-1.5 bg-[#e0e5ec] rounded-2xl shadow-[inset_4px_4px_8px_rgba(163,177,198,0.5),inset_-4px_-4px_8px_rgba(255,255,255,0.7)]">
                 {(['income', 'expense'] as const).map((t) => (
                   <button
                     key={t}
@@ -157,7 +154,7 @@ export const DaySheet = () => {
                     exit={{ opacity: 0, scale: 0.95 }}
                     transition={{ duration: 0.25, delay: index * 0.04 }}
                     className={clsx(
-                      'flex items-center gap-4 p-4 bg-white/80 backdrop-blur-xl rounded-2xl shadow-[0_4px_20px_rgb(0,0,0,0.03)] border-l-4 border border-white',
+                      'flex items-center gap-4 p-4 bg-gradient-to-br from-[#eef2f7] to-[#d3d8df] rounded-2xl shadow-[6px_6px_14px_rgba(163,177,198,0.4),-6px_-6px_14px_rgba(255,255,255,0.7)] border-l-4 border border-white/50',
                     )}
                     style={{ borderLeftColor: currentType === 'income' ? '#10b981' : '#ef4444' }}
                   >
@@ -240,7 +237,7 @@ export const DaySheet = () => {
       <motion.div
         initial={{ y: 100 }}
         animate={{ y: 0 }}
-        className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-xl border-t border-slate-200 p-4 grid grid-cols-3 gap-4 z-40 shadow-[0_-10px_30px_rgba(0,0,0,0.05)] lg:static lg:shadow-none lg:border-0 lg:bg-transparent lg:mt-4 lg:p-0 pb-[calc(1rem+env(safe-area-inset-bottom))] lg:pb-0"
+        className="fixed bottom-0 left-0 right-0 bg-[#e0e5ec]/90 backdrop-blur-md border-t border-white/50 p-4 grid grid-cols-3 gap-4 z-40 shadow-[0_-10px_20px_rgba(163,177,198,0.3)] lg:static lg:shadow-none lg:border-0 lg:bg-transparent lg:mt-4 lg:p-0 pb-[calc(1rem+env(safe-area-inset-bottom))] lg:pb-0"
       >
         <div className="bg-gradient-to-br from-emerald-50 to-green-50 border border-emerald-200 p-3 rounded-2xl text-center shadow-inner">
           <p className="text-emerald-600 text-xs font-bold uppercase tracking-wide mb-1">Income</p>
