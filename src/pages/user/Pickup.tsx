@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../context/AuthContext';
+import { useToast } from '../../components/ui/Toast';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
@@ -12,6 +13,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 export const Pickup = () => {
   const { user } = useAuth();
+  const toast = useToast();
   const navigate = useNavigate();
   const [step, setStep] = useState<1 | 2>(1);
   const [companies, setCompanies] = useState<any[]>([]);
@@ -64,8 +66,9 @@ export const Pickup = () => {
       setNewShopLocation('');
       setIsAddModalOpen(false);
       setSearch(''); // Clear search to show the new shop
+      toast.success('Shop added & selected!');
     } catch (error: any) {
-      alert('Error adding shop: ' + error.message);
+      toast.error('Failed to add shop', error.message);
     } finally {
       setAddingShop(false);
     }
@@ -94,10 +97,10 @@ export const Pickup = () => {
       const { error: itemsError } = await supabase.from('pickup_items').insert(items);
       if (itemsError) throw itemsError;
 
-      alert('Pickup saved successfully!');
-      navigate('/');
+      toast.success('Pickup saved!', `${shopIds.length} shop${shopIds.length > 1 ? 's' : ''} recorded successfully.`);
+      setTimeout(() => navigate('/'), 1000);
     } catch (error: any) {
-      alert('Error saving pickup: ' + error.message);
+      toast.error('Failed to save pickup', error.message);
     } finally {
       setLoading(false);
     }

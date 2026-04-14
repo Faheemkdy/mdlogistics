@@ -1,17 +1,28 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase, getEmailFromUsername } from '../lib/supabase';
+import { useToast } from '../components/ui/Toast';
 import { motion } from 'framer-motion';
 import { AlertCircle, LogIn, Eye, EyeOff } from 'lucide-react';
 import { Logo } from '../components/ui/Logo';
 
 export const Login = () => {
+  const toast = useToast();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
+
+  // Show any auth notices from redirects (e.g., deactivated account)
+  useEffect(() => {
+    const notice = sessionStorage.getItem('auth_notice');
+    if (notice) {
+      sessionStorage.removeItem('auth_notice');
+      setTimeout(() => toast.error('Access Denied', notice), 300);
+    }
+  }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();

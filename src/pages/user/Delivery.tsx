@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../context/AuthContext';
+import { useToast } from '../../components/ui/Toast';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Modal } from '../../components/ui/Modal';
@@ -11,6 +12,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 export const Delivery = () => {
   const { user } = useAuth();
+  const toast = useToast();
   const navigate = useNavigate();
   const [shops, setShops] = useState<any[]>([]);
   const [search, setSearch] = useState('');
@@ -56,8 +58,9 @@ export const Delivery = () => {
       setNewShopLocation('');
       setIsAddModalOpen(false);
       setSearch(''); // Clear search to show the new shop
+      toast.success('Shop added!', `"${data.name}" selected for delivery.`);
     } catch (error: any) {
-      alert('Error adding shop: ' + error.message);
+      toast.error('Failed to add shop', error.message);
     } finally {
       setAddingShop(false);
     }
@@ -80,10 +83,10 @@ export const Delivery = () => {
       const { error } = await supabase.from('deliveries').insert(deliveries);
 
       if (error) throw error;
-      alert('Deliveries recorded successfully!');
-      navigate('/');
+      toast.success('Deliveries recorded!', `${shopIds.length} shop${shopIds.length > 1 ? 's' : ''} delivered successfully.`);
+      setTimeout(() => navigate('/'), 1000);
     } catch (error: any) {
-      alert('Error: ' + error.message);
+      toast.error('Failed to save deliveries', error.message);
     } finally {
       setLoading(false);
     }

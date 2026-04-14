@@ -132,7 +132,7 @@ export const Layout = () => {
     <div className="min-h-screen bg-[#e0e5ec] flex overflow-hidden">
 
       {/* Mobile Header */}
-      <div className="lg:hidden fixed top-0 left-0 right-0 z-40 flex items-center justify-between px-4 py-3 pt-[calc(env(safe-area-inset-top)+12px)]"
+      <div className="lg:hidden fixed top-0 left-0 right-0 z-40 flex items-center justify-between px-4 py-2 pt-[calc(env(safe-area-inset-top)+8px)] landscape:py-1.5"
         style={{
           background: 'rgba(15,23,42,0.95)',
           backdropFilter: 'blur(16px)',
@@ -140,16 +140,16 @@ export const Layout = () => {
         }}
       >
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-blue-600 flex items-center justify-center p-1.5">
+          <div className="w-8 h-8 landscape:w-7 landscape:h-7 rounded-lg bg-gradient-to-br from-indigo-500 to-blue-600 flex items-center justify-center p-1.5 landscape:p-1">
             <Logo showText={false} className="filter brightness-0 invert" />
           </div>
-          <span className="font-black text-white tracking-wider text-sm">MD LOGISTICS</span>
+          <span className="font-black text-white tracking-wider text-sm landscape:text-xs">MD LOGISTICS</span>
         </div>
         <button
           onClick={() => setIsSidebarOpen(true)}
-          className="p-2 text-slate-300 bg-white/10 rounded-xl hover:bg-white/20 transition-colors"
+          className="p-2 landscape:p-1.5 text-slate-300 bg-white/10 rounded-xl hover:bg-white/20 transition-colors"
         >
-          <Menu size={20} />
+          <Menu size={20} className="landscape:w-4 landscape:h-4" />
         </button>
       </div>
 
@@ -182,7 +182,7 @@ export const Layout = () => {
       </motion.aside>
 
       {/* Main Content */}
-      <main className="flex-1 min-w-0 pt-[calc(56px+env(safe-area-inset-top))] lg:pt-0 relative overflow-y-auto h-screen">
+      <main className="flex-1 min-w-0 pt-[calc(52px+env(safe-area-inset-top))] landscape:pt-[calc(44px+env(safe-area-inset-top))] lg:pt-0 relative overflow-y-auto h-screen">
         <AnimatePresence mode="wait">
           <motion.div
             key={location.pathname}

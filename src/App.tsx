@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { ToastProvider } from './components/ui/Toast';
 import { Layout } from './components/Layout';
 import { Login } from './pages/Login';
 import { AdminDashboard } from './pages/admin/AdminDashboard';
@@ -15,16 +16,19 @@ import { Pickup } from './pages/user/Pickup';
 import { Delivery } from './pages/user/Delivery';
 import { Profile } from './pages/Profile';
 
-// Bike Shop Imports
-import { BikeLayout } from './pages/bike-shop/BikeLayout';
-import { BikeHome } from './pages/bike-shop/BikeHome';
-import { BikeDetails } from './pages/bike-shop/BikeDetails';
-import { BikeCart } from './pages/bike-shop/BikeCart';
+
 
 const ProtectedRoute = ({ children, allowedRoles }: { children: React.ReactNode, allowedRoles?: string[] }) => {
   const { user, profile, loading } = useAuth();
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center bg-slate-50">Loading...</div>;
+  if (loading) return (
+    <div className="min-h-screen flex flex-col items-center justify-center" style={{ background: '#e0e5ec' }}>
+      <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-500 to-blue-600 flex items-center justify-center shadow-xl mb-4">
+        <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+      </div>
+      <p className="text-slate-500 font-semibold text-sm tracking-wider">MD LOGISTICS</p>
+    </div>
+  );
   
   if (!user) return <Navigate to="/login" />;
   
@@ -42,13 +46,7 @@ function AppRoutes() {
     <Routes>
       <Route path="/login" element={<Login />} />
       
-      {/* Bike Shop Demo Routes (Public for demo) */}
-      <Route path="/bike-shop" element={<BikeLayout />}>
-        <Route index element={<BikeHome />} />
-        <Route path="product/:id" element={<BikeDetails />} />
-        <Route path="cart" element={<BikeCart />} />
-        <Route path="*" element={<div className="p-8 text-white">Page under construction</div>} />
-      </Route>
+
 
       <Route path="/" element={
         <ProtectedRoute>
@@ -79,7 +77,9 @@ function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
-        <AppRoutes />
+        <ToastProvider>
+          <AppRoutes />
+        </ToastProvider>
       </AuthProvider>
     </BrowserRouter>
   );

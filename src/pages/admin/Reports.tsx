@@ -174,26 +174,26 @@ export const Reports = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <div>
-          <h1 className="text-3xl font-black text-slate-800 tracking-tight">Reports</h1>
-          <p className="text-slate-500 font-medium mt-1">View and export daily logistics data</p>
+          <h1 className="text-2xl sm:text-3xl font-black text-slate-800 tracking-tight">Reports</h1>
+          <p className="text-slate-500 font-medium mt-1 text-sm">View and export daily logistics data</p>
         </div>
         <Input
           type="date"
           value={date}
           onChange={(e) => setDate(e.target.value)}
-          className="w-auto"
+          className="w-full sm:w-auto"
         />
       </div>
 
       {/* Tab Toggle */}
-      <div className="flex gap-1.5 p-1.5 bg-[#e0e5ec] rounded-2xl shadow-[inset_4px_4px_8px_rgba(163,177,198,0.5),inset_-4px_-4px_8px_rgba(255,255,255,0.7)] w-fit">
+      <div className="flex gap-1.5 p-1.5 bg-[#e0e5ec] rounded-2xl shadow-[inset_4px_4px_8px_rgba(163,177,198,0.5),inset_-4px_-4px_8px_rgba(255,255,255,0.7)] w-full sm:w-fit">
         {(['pickups', 'deliveries'] as const).map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
-            className={`px-5 py-2.5 rounded-xl text-sm font-bold transition-all duration-300 capitalize ${
+            className={`flex-1 sm:flex-none px-5 py-2.5 rounded-xl text-sm font-bold transition-all duration-300 capitalize ${
               activeTab === tab
                 ? tab === 'pickups'
                   ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg shadow-blue-500/30'
@@ -210,7 +210,7 @@ export const Reports = () => {
         <div className="space-y-4">
           <div className="flex justify-between items-center">
             <p className="text-slate-500 font-medium text-sm">{pickupData.length} compan{pickupData.length !== 1 ? 'ies' : 'y'} found</p>
-            <Button variant="primary" onClick={downloadAllPickupsPDF} disabled={pickupData.length === 0} className="!py-2 !px-4 text-sm">
+            <Button variant="primary" onClick={downloadAllPickupsPDF} disabled={pickupData.length === 0} className="!py-2 !px-4 text-sm whitespace-nowrap">
               <FileText size={16} /> Master PDF
             </Button>
           </div>
@@ -276,7 +276,7 @@ export const Reports = () => {
         <div className="space-y-4">
           <div className="flex justify-between items-center">
             <p className="text-slate-500 font-medium text-sm">{deliveryData.length} deliveries recorded</p>
-            <Button variant="secondary" onClick={downloadDeliveryPDF} disabled={deliveryData.length === 0} className="!py-2 !px-4 text-sm">
+            <Button variant="secondary" onClick={downloadDeliveryPDF} disabled={deliveryData.length === 0} className="!py-2 !px-4 text-sm whitespace-nowrap">
               <Download size={15} /> Download PDF
             </Button>
           </div>

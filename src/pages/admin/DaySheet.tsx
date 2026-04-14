@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
+import { useAuth } from '../../context/AuthContext';
+import { useToast } from '../../components/ui/Toast';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Download, Trash2, Edit2, Check, X, TrendingUp, TrendingDown, FileText } from 'lucide-react';
@@ -11,6 +13,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { clsx } from 'clsx';
 
 export const DaySheet = () => {
+  const { user } = useAuth();
+  const toast = useToast();
   const [entries, setEntries] = useState<any[]>([]);
   const [type, setType] = useState<'income' | 'expense'>('expense');
   const [amount, setAmount] = useState('');
@@ -36,8 +40,16 @@ export const DaySheet = () => {
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!amount) return;
-    const { error } = await supabase.from('day_sheets').insert([{ type, amount: parseFloat(amount), description: description || 'No description', date }]);
-    if (!error) { setAmount(''); setDescription(''); fetchEntries(); }
+    const { error } = await supabase.from('day_sheets').insert([{ 
+      type, 
+      amount: parseFloat(amount), 
+      description: description || 'No description', 
+      date,
+      created_by: user?.id ?? null
+    }]);
+    if (error) { toast.error('Failed to add entry', error.message); return; }
+    toast.success('Entry saved!');
+    setAmount(''); setDescription(''); fetchEntries();
   };
 
   const startEdit = (entry: any) => { setEditingId(entry.id); setEditAmount(entry.amount.toString()); setEditDescription(entry.description); setEditType(entry.type); };
@@ -46,18 +58,20 @@ export const DaySheet = () => {
   const saveEdit = async () => {
     if (!editAmount || !editingId) return;
     const { error } = await supabase.from('day_sheets').update({ amount: parseFloat(editAmount), description: editDescription || 'No description', type: editType }).eq('id', editingId);
-    if (!error) { setEditingId(null); fetchEntries(); }
+    if (error) { toast.error('Update failed', error.message); return; }
+    toast.success('Entry updated!');
+    setEditingId(null); fetchEntries();
   };
 
   const handleDelete = async (id: string) => {
-    if (confirm('Delete this entry?')) {
-      const { error } = await supabase.from('day_sheets').delete().eq('id', id);
-      if (!error) fetchEntries();
-    }
+    const { error } = await supabase.from('day_sheets').delete().eq('id', id);
+    if (error) { toast.error('Delete failed', error.message); return; }
+    toast.success('Entry deleted');
+    fetchEntries();
   };
 
   const downloadPDF = () => {
-    if (entries.length === 0) { alert('No data to download'); return; }
+    if (entries.length === 0) { toast.warning('Nothing to download', 'No entries found for this date.'); return; }
     const doc = new jsPDF();
     drawPDFHeader(doc);
     drawCustomerInfo(doc, "Report Type:", "Day Sheet Statement", format(new Date(filterDate), 'dd/MM/yyyy'));
@@ -76,8 +90,8 @@ export const DaySheet = () => {
     <div className="space-y-6 pb-28">
       {/* Header */}
       <motion.div initial={{ opacity: 0, y: -16 }} animate={{ opacity: 1, y: 0 }}>
-        <h1 className="text-3xl font-black text-slate-800 tracking-tight">Day Sheet</h1>
-        <p className="text-slate-500 font-medium mt-1">Track daily income & expenses</p>
+        <h1 className="text-xl lg:text-3xl font-black text-slate-800 tracking-tight">Day Sheet</h1>
+        <p className="text-xs lg:text-slate-500 font-medium mt-1 landscape:hidden">Track daily income & expenses</p>
       </motion.div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -88,11 +102,11 @@ export const DaySheet = () => {
           className="lg:col-span-1 space-y-5"
         >
           <div className="bg-gradient-to-br from-[#eef2f7] to-[#d3d8df] rounded-3xl p-6 shadow-[10px_10px_24px_rgba(163,177,198,0.5),-10px_-10px_24px_rgba(255,255,255,0.8)] border border-white/50">
-            <div className="flex items-center gap-3 mb-5">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-blue-600 flex items-center justify-center shadow-lg">
-                <FileText size={18} className="text-white" />
+            <div className="flex items-center gap-3 mb-3 lg:mb-5">
+              <div className="w-8 h-8 lg:w-10 lg:h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-blue-600 flex items-center justify-center shadow-lg">
+                <FileText size={16} className="text-white" />
               </div>
-              <h3 className="font-black text-lg text-slate-800">Add Entry</h3>
+              <h3 className="font-black text-base lg:text-lg text-slate-800">Add Entry</h3>
             </div>
 
             <form onSubmit={handleAdd} className="space-y-4">
@@ -132,11 +146,11 @@ export const DaySheet = () => {
           className="lg:col-span-2 space-y-4"
         >
           {/* Filter + Download */}
-          <div className="flex gap-3">
+          <div className="flex gap-3 sticky top-0 bg-[#e0e5ec] z-10 py-1">
             <div className="flex-1">
-              <Input type="date" value={filterDate} onChange={(e) => setFilterDate(e.target.value)} />
+              <Input type="date" value={filterDate} onChange={(e) => setFilterDate(e.target.value)} className="!py-2" />
             </div>
-            <Button variant="secondary" onClick={downloadPDF} className="px-5 flex-shrink-0">
+            <Button variant="secondary" onClick={downloadPDF} className="p-2 lg:px-5 flex-shrink-0">
               <Download size={18} />
             </Button>
           </div>

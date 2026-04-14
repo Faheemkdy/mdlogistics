@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase, createTempClient, getEmailFromUsername } from '../../lib/supabase';
+import { useToast } from '../../components/ui/Toast';
 import { UserPlus, CheckCircle, AlertCircle, Ban, Edit2, X, Check, User, KeyRound, Users, Search, Crown, CheckCircle2, Mail } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -85,6 +86,7 @@ const DeactivateModal: React.FC<DeactivateModalProps> = ({ user, onConfirm, onCa
 };
 
 export const UserManagement = () => {
+  const toast = useToast();
   const [users, setUsers] = useState<any[]>([]);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -155,10 +157,12 @@ export const UserManagement = () => {
       setUsername('');
       setPassword('');
       setRole('user');
+      toast.success('User created!', `"${username}" can now log in.`);
       setTimeout(fetchUsers, 1000);
 
     } catch (err: any) {
       setMessage({ type: 'error', text: err.message });
+      toast.error('Create failed', err.message);
     } finally {
       setLoading(false);
     }
@@ -169,7 +173,7 @@ export const UserManagement = () => {
     
     // Safety check - cannot deactivate 'md' master admin
     if (actionUser.username === 'md') {
-      alert("Master Admin ('md') cannot be deactivated.");
+      toast.warning('Protected account', "Master Admin 'md' cannot be deactivated.");
       setActionUser(null);
       return;
     }
@@ -179,10 +183,14 @@ export const UserManagement = () => {
       const newStatus = actionUser.is_active === false ? true : false;
       const { error } = await supabase.from('profiles').update({ is_active: newStatus }).eq('id', actionUser.id);
       if (error) throw error;
+      toast.success(
+        newStatus ? 'User activated' : 'User deactivated',
+        `"${actionUser.username}" has been ${newStatus ? 'granted' : 'revoked'} access.`
+      );
       setActionUser(null);
       fetchUsers();
     } catch (err: any) {
-      alert('Error updating user status: ' + err.message);
+      toast.error('Action failed', err.message);
     } finally {
       setActionLoading(false);
     }
@@ -197,16 +205,15 @@ export const UserManagement = () => {
   const saveEdit = async () => {
     if (!editUsername.trim() || !editingId) return;
     const { error } = await supabase.from('profiles').update({ username: editUsername }).eq('id', editingId);
-    if (error) alert('Error: ' + error.message);
-    else {
-      setEditingId(null);
-      fetchUsers();
-    }
+    if (error) { toast.error('Update failed', error.message); return; }
+    toast.success('Username updated!');
+    setEditingId(null);
+    fetchUsers();
   };
 
   const handlePasswordReset = async (userId: string) => {
     if (!newPassword || newPassword.length < 6) {
-      alert('Password must be at least 6 characters');
+      toast.warning('Password too short', 'Must be at least 6 characters.');
       return;
     }
     try {
@@ -217,25 +224,22 @@ export const UserManagement = () => {
       if (error) throw error;
       setResetId(null);
       setNewPassword('');
-      setMessage({ type: 'success', text: 'Password updated successfully!' });
-      setTimeout(() => setMessage(null), 3000);
+      toast.success('Password updated!', 'The user can now log in with the new password.');
     } catch (error: any) {
-      alert('Failed to update password. It could be due to permission restrictions or missing DB functions. Original error: ' + error.message);
+      toast.error('Password update failed', error.message);
     }
   };
   
   const sendMasterAdminOTPLink = async () => {
-    // Uses Supabase's built in magic-link / password reset flow directly to this email
     try {
       const { error } = await supabase.auth.resetPasswordForEmail('mdcourierkdy@gmail.com', {
         redirectTo: window.location.origin + '/login',
       });
       if (error) throw error;
-      setMessage({ type: 'success', text: `OTP/Reset link sent to mdcourierkdy@gmail.com` });
+      toast.success('Reset link sent!', 'Check mdcourierkdy@gmail.com for the reset link.');
       setResetId(null);
-      setTimeout(() => setMessage(null), 5000);
     } catch (err: any) {
-       alert("Failed to send reset email: " + err.message);
+      toast.error('Failed to send email', err.message);
     }
   };
 
@@ -381,17 +385,18 @@ export const UserManagement = () => {
           transition={{ duration: 0.6, delay: 0.2, ease: [0.23, 1, 0.32, 1] }}
           className="lg:col-span-2 bg-gradient-to-br from-[#eef2f7] to-[#d3d8df] rounded-3xl p-6 border border-white/50 shadow-[9px_9px_16px_rgb(163,177,198,0.6),-9px_-9px_16px_rgba(255,255,255,0.7)]"
         >
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="font-bold text-xl text-slate-800">All Users
+          <div className="flex items-center justify-between mb-6 gap-3">
+            <h3 className="font-bold text-lg sm:text-xl text-slate-800 truncate">
+              All Users
               <span className="ml-2 text-sm font-medium text-slate-400">({filteredUsers.length})</span>
             </h3>
-            <div className="relative">
+            <div className="relative flex-shrink-0">
               <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
               <input
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search..."
-                className="pl-8 pr-4 py-2 bg-white/70 border border-white/80 rounded-xl text-sm text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-400/40 w-32 focus:w-48 transition-all"
+                className="pl-8 pr-3 py-2 bg-white/70 border border-white/80 rounded-xl text-sm text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-400/40 w-28"
               />
             </div>
           </div>
@@ -470,7 +475,7 @@ export const UserManagement = () => {
                           ) : (
                             <div>
                               <div className="flex items-center gap-2">
-                                <p className="font-bold text-slate-800">{user.username}</p>
+                                <p className="font-bold text-slate-800 truncate max-w-[140px] sm:max-w-[200px]">{user.username}</p>
                                 {isDeactivated && (
                                   <span className="text-[9px] font-bold bg-slate-300 text-slate-600 px-1.5 py-0.5 rounded text-uppercase tracking-wider">Deactivated</span>
                                 )}

@@ -2,15 +2,35 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <!-- Added viewport-fit=cover for handling notches/status bars on phones -->
+    <!-- Full-screen mobile with notch support -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-    <title>MD LOGISTICS</title>
 
-    <meta name="description" content="MD Logistics Management System" />
+    <title>MD Logistics – Courier Management</title>
+
+    <!-- SEO -->
+    <meta name="description" content="MD Logistics – A fast, secure courier and delivery management system for tracking pickups, deliveries, billing, and daily reports." />
+    <meta name="keywords" content="MD Logistics, courier management, delivery tracking, billing, pickup, logistics app" />
     <meta name="author" content="MD Logistics" />
-    <meta name="theme-color" content="#ffffff" />
+    <meta name="robots" content="noindex, nofollow" />
 
-    <link rel="icon" type="image/png" sizes="16x16" href="https://i.ibb.co/HLfD5wgf/dualite-favicon.png" />
+    <!-- PWA / Mobile Web App -->
+    <meta name="theme-color" content="#e0e5ec" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="MD Logistics" />
+
+    <!-- Open Graph -->
+    <meta property="og:title" content="MD Logistics – Courier Management" />
+    <meta property="og:description" content="Fast, secure courier and delivery management." />
+    <meta property="og:type" content="website" />
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" sizes="32x32" href="https://i.ibb.co/HLfD5wgf/dualite-favicon.png" />
+    <link rel="apple-touch-icon" href="https://i.ibb.co/HLfD5wgf/dualite-favicon.png" />
+
+    <!-- Performance: preconnect to Supabase -->
+    <link rel="preconnect" href="https://prahbbodynevpioaosuh.supabase.co" crossorigin />
   </head>
   <body>
     <div id="root"></div>

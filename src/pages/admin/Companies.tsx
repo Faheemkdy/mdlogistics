@@ -2,10 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
+import { useToast } from '../../components/ui/Toast';
 import { Trash2, Plus, Edit2, Check, X, Building2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export const Companies = () => {
+  const toast = useToast();
   const [companies, setCompanies] = useState<any[]>([]);
   const [newCompany, setNewCompany] = useState('');
   const [loading, setLoading] = useState(false);
@@ -23,7 +25,9 @@ export const Companies = () => {
     e.preventDefault();
     if (!newCompany.trim()) return;
     setLoading(true);
-    await supabase.from('companies').insert([{ name: newCompany }]);
+    const { error } = await supabase.from('companies').insert([{ name: newCompany }]);
+    if (error) { toast.error('Failed to add company', error.message); }
+    else { toast.success('Company added!', `"${newCompany}" has been registered.`); }
     setNewCompany('');
     fetchCompanies();
     setLoading(false);
@@ -32,16 +36,18 @@ export const Companies = () => {
   const startEdit = (company: any) => { setEditingId(company.id); setEditName(company.name); };
   const saveEdit = async () => {
     if (!editName.trim() || !editingId) return;
-    await supabase.from('companies').update({ name: editName }).eq('id', editingId);
+    const { error } = await supabase.from('companies').update({ name: editName }).eq('id', editingId);
+    if (error) { toast.error('Update failed', error.message); return; }
+    toast.success('Company updated!');
     setEditingId(null);
     fetchCompanies();
   };
 
-  const handleDelete = async (id: string) => {
-    if (confirm('Delete this company? All associated pickup history will also be removed.')) {
-      await supabase.from('companies').delete().eq('id', id);
-      fetchCompanies();
-    }
+  const handleDelete = async (id: string, companyName: string) => {
+    const { error } = await supabase.from('companies').delete().eq('id', id);
+    if (error) { toast.error('Delete failed', error.message); return; }
+    toast.success('Company removed', `"${companyName}" has been deleted.`);
+    fetchCompanies();
   };
 
   return (
@@ -121,7 +127,7 @@ export const Companies = () => {
                 ) : (
                   <>
                     <Button onClick={() => startEdit(company)} className="!p-2.5 text-blue-500 !rounded-xl"><Edit2 size={17} /></Button>
-                    <Button onClick={() => handleDelete(company.id)} className="!p-2.5 text-red-500 !rounded-xl" variant="danger"><Trash2 size={17} /></Button>
+                    <Button onClick={() => handleDelete(company.id, company.name)} className="!p-2.5 text-red-500 !rounded-xl" variant="danger"><Trash2 size={17} /></Button>
                   </>
                 )}
               </div>

@@ -71,7 +71,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (data && data.is_active === false) {
         setProfile(null);
         await supabase.auth.signOut();
-        alert('Your account has been deactivated. Please contact the administrator.');
+        // Store message for login page to show as toast after redirect
+        sessionStorage.setItem('auth_notice', 'Your account has been deactivated. Please contact the administrator.');
         return;
       }
       

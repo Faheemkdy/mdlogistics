@@ -42,3 +42,36 @@ input[type="password"]::-webkit-credentials-auto-fill-button {
   position: absolute;
   right: 0;
 }
+
+@layer utilities {
+  @media (orientation: landscape) and (max-height: 500px) {
+    .landscape-condensed {
+      @apply py-2 px-3 gap-2;
+    }
+    
+    .landscape-hide {
+      @apply hidden;
+    }
+
+    .landscape-text-xs {
+      @apply text-xs;
+    }
+
+    /* Reduce vertical padding for all main layouts and cards */
+    .p-4, .p-5, .p-6, .p-8 {
+      padding: 0.75rem !important;
+    }
+    
+    .space-y-6 > :not([hidden]) ~ :not([hidden]) {
+      margin-top: 0.75rem !important;
+    }
+    
+    .space-y-4 > :not([hidden]) ~ :not([hidden]) {
+      margin-top: 0.5rem !important;
+    }
+
+    h1 {
+      @apply text-xl !important;
+    }
+  }
+}

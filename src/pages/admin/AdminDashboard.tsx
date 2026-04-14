@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
+import { useToast } from '../../components/ui/Toast';
 import { Building2, Store, Package, Truck, ArrowRight, Download, Receipt, TrendingUp, TrendingDown, Activity } from 'lucide-react';
 import { format } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
@@ -11,6 +12,7 @@ import { useAuth } from '../../context/AuthContext';
 
 export const AdminDashboard = () => {
   const navigate = useNavigate();
+  const toast = useToast();
   const { } = useAuth();
   const [stats, setStats] = useState({
     companies: 0,
@@ -73,7 +75,7 @@ export const AdminDashboard = () => {
   };
 
   const downloadDaySheetPDF = () => {
-    if (todayDaySheets.length === 0) { alert('No data for today to download.'); return; }
+    if (todayDaySheets.length === 0) { toast.warning('No data today', 'No day sheet entries found for today.'); return; }
     const doc = new jsPDF();
     const today = new Date().toISOString().split('T')[0];
     drawPDFHeader(doc);
@@ -88,7 +90,7 @@ export const AdminDashboard = () => {
   const downloadPickupsReport = async () => {
     const today = new Date().toISOString().split('T')[0];
     const { data, error } = await supabase.from('pickups').select(`id, created_at, companies (name), pickup_items ( item_number, shops (name, location) )`).eq('date', today);
-    if (error || !data || data.length === 0) { alert('No pickups found for today.'); return; }
+    if (error || !data || data.length === 0) { toast.warning('No pickups today', 'No pickup records found for today.'); return; }
     const doc = new jsPDF();
     drawPDFHeader(doc);
     drawCustomerInfo(doc, "Report Type:", "Daily Pickups Report", format(new Date(today), 'dd/MM/yyyy'));
@@ -107,7 +109,7 @@ export const AdminDashboard = () => {
   const downloadDeliveriesReport = async () => {
     const today = new Date().toISOString().split('T')[0];
     const { data, error } = await supabase.from('deliveries').select(`created_at, item_number, shops (name, location), profiles (username)`).eq('date', today);
-    if (error || !data || data.length === 0) { alert('No deliveries found for today.'); return; }
+    if (error || !data || data.length === 0) { toast.warning('No deliveries today', 'No delivery records found for today.'); return; }
     const doc = new jsPDF();
     drawPDFHeader(doc);
     drawCustomerInfo(doc, "Report Type:", "Daily Deliveries Report", format(new Date(today), 'dd/MM/yyyy'));
@@ -201,22 +203,22 @@ export const AdminDashboard = () => {
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="flex justify-between items-start gap-4"
+        className="flex flex-wrap justify-between items-start gap-3"
       >
-        <div>
-          <h1 className="text-3xl font-black text-slate-800 tracking-tight">Dashboard</h1>
-          <p className="text-slate-500 font-medium mt-1">
-            {format(new Date(), 'EEEE, MMMM do yyyy')}
+        <div className="min-w-0">
+          <h1 className="text-2xl sm:text-3xl font-black text-slate-800 tracking-tight">Dashboard</h1>
+          <p className="text-slate-500 font-medium mt-1 text-sm sm:text-base">
+            {format(new Date(), 'EEE, MMM do yyyy')}
           </p>
         </div>
-        <div className="flex flex-col items-end gap-2">
-          <span className="px-4 py-1.5 bg-gradient-to-r from-indigo-600 to-blue-600 text-white rounded-full text-xs font-bold shadow-lg shadow-indigo-500/30">
+        <div className="flex flex-wrap items-center gap-2 mt-1">
+          <span className="px-3 py-1.5 bg-gradient-to-r from-indigo-600 to-blue-600 text-white rounded-full text-xs font-bold shadow-lg shadow-indigo-500/30">
             Admin Access
           </span>
           {/* Balance chip */}
-          <div className={`px-4 py-1.5 rounded-full text-xs font-bold flex items-center gap-1.5 ${balance >= 0 ? 'bg-emerald-100 text-emerald-700 border border-emerald-200' : 'bg-red-100 text-red-700 border border-red-200'}`}>
+          <div className={`px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-1.5 ${balance >= 0 ? 'bg-emerald-100 text-emerald-700 border border-emerald-200' : 'bg-red-100 text-red-700 border border-red-200'}`}>
             <Activity size={12} />
-            Balance: ₹{balance.toLocaleString()}
+            ₹{balance.toLocaleString()}
           </div>
         </div>
       </motion.div>

@@ -3,11 +3,13 @@ import { clsx } from 'clsx';
 import { supabase } from '../../lib/supabase';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
+import { useToast } from '../../components/ui/Toast';
 import { Trash2, Plus, MapPin, Edit2, X, Check, Upload, Search, Store } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import * as XLSX from 'xlsx';
 
 export const Shops = () => {
+  const toast = useToast();
   const [shops, setShops] = useState<any[]>([]);
   const [name, setName] = useState('');
   const [location, setLocation] = useState('');
@@ -30,7 +32,9 @@ export const Shops = () => {
     e.preventDefault();
     if (!name.trim()) return;
     setLoading(true);
-    await supabase.from('shops').insert([{ name, location }]);
+    const { error } = await supabase.from('shops').insert([{ name, location }]);
+    if (error) { toast.error('Failed to add shop', error.message); }
+    else { toast.success('Shop added!', `"${name}" has been registered.`); }
     setName(''); setLocation('');
     fetchShops();
     setLoading(false);
@@ -40,16 +44,18 @@ export const Shops = () => {
   const cancelEdit = () => { setEditingId(null); setEditName(''); setEditLocation(''); };
   const saveEdit = async () => {
     if (!editName.trim() || !editingId) return;
-    await supabase.from('shops').update({ name: editName, location: editLocation }).eq('id', editingId);
+    const { error } = await supabase.from('shops').update({ name: editName, location: editLocation }).eq('id', editingId);
+    if (error) { toast.error('Update failed', error.message); return; }
+    toast.success('Shop updated!');
     setEditingId(null);
     fetchShops();
   };
 
-  const handleDelete = async (id: string) => {
-    if (confirm('Delete this shop?')) {
-      await supabase.from('shops').delete().eq('id', id);
-      fetchShops();
-    }
+  const handleDelete = async (id: string, shopName: string) => {
+    const { error } = await supabase.from('shops').delete().eq('id', id);
+    if (error) { toast.error('Delete failed', error.message); return; }
+    toast.success('Shop removed', `"${shopName}" has been deleted.`);
+    fetchShops();
   };
 
   const handleExcelUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -64,7 +70,7 @@ export const Shops = () => {
         const wb = XLSX.read(bstr, { type: 'binary' });
         const ws = wb.Sheets[wb.SheetNames[0]];
         const data = XLSX.utils.sheet_to_json(ws) as any[];
-        if (data.length === 0) { alert('Excel file is empty.'); setImporting(false); return; }
+        if (data.length === 0) { toast.warning('Empty file', 'The Excel file has no data rows.'); setImporting(false); return; }
         const { data: existingShops } = await supabase.from('shops').select('name, location');
         const existingSet = new Set((existingShops || []).map(s => `${s.name.toLowerCase().trim()}|${(s.location || '').toLowerCase().trim()}`));
         const newShops: any[] = [];
@@ -83,9 +89,10 @@ export const Shops = () => {
         });
         if (newShops.length > 0) { const { error } = await supabase.from('shops').insert(newShops); if (error) throw error; }
         setImportSummary({ added: newShops.length, skipped: skippedCount });
+        toast.success('Import complete!', `Added: ${newShops.length}, Skipped: ${skippedCount}`);
         fetchShops();
       } catch (err: any) {
-        alert('Error importing Excel: ' + err.message);
+        toast.error('Import failed', err.message);
       } finally {
         setImporting(false);
         e.target.value = '';
@@ -227,7 +234,7 @@ export const Shops = () => {
                     ) : (
                       <>
                         <Button onClick={() => startEdit(shop)} className="!p-2.5 text-blue-500 !rounded-xl"><Edit2 size={17} /></Button>
-                        <Button onClick={() => handleDelete(shop.id)} className="!p-2.5 text-red-500 !rounded-xl" variant="danger"><Trash2 size={17} /></Button>
+                        <Button onClick={() => handleDelete(shop.id, shop.name)} className="!p-2.5 text-red-500 !rounded-xl" variant="danger"><Trash2 size={17} /></Button>
                       </>
                     )}
                   </div>
