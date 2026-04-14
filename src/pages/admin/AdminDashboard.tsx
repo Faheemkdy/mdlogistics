@@ -13,7 +13,7 @@ import { useAuth } from '../../context/AuthContext';
 export const AdminDashboard = () => {
   const navigate = useNavigate();
   const toast = useToast();
-  const { } = useAuth();
+  const { profile } = useAuth();
   const [stats, setStats] = useState({
     companies: 0,
     shops: 0,
@@ -193,8 +193,8 @@ export const AdminDashboard = () => {
     { label: 'Add Shop', desc: 'Create new destination', to: '/shops', icon: Store, gradient: 'from-indigo-500 to-purple-600', shadow: 'shadow-indigo-500/20' },
     { label: 'Add Pickup', desc: 'Record daily pickups', to: '/pickup', icon: Package, gradient: 'from-orange-500 to-red-600', shadow: 'shadow-orange-500/20' },
     { label: 'Add Delivery', desc: 'Record daily deliveries', to: '/delivery', icon: Truck, gradient: 'from-green-500 to-emerald-600', shadow: 'shadow-green-500/20' },
-    { label: 'Billing & Invoice', desc: 'Create instant bills', to: '/billing', icon: Receipt, gradient: 'from-emerald-500 to-teal-600', shadow: 'shadow-emerald-500/20' },
-  ];
+    { label: 'Billing & Invoice', desc: 'Create instant bills', to: '/billing', icon: Receipt, gradient: 'from-emerald-500 to-teal-600', shadow: 'shadow-emerald-500/20', access: 'master' },
+  ].filter(action => action.access !== 'master' || profile?.username === 'md');
 
   return (
     <div className="space-y-8">
@@ -245,7 +245,7 @@ export const AdminDashboard = () => {
             </div>
 
             {/* Download button */}
-            {card.action && (
+            {card.action && profile?.username === 'md' && (
               <motion.button
                 whileHover={{ scale: 1.1, rotate: 10 }}
                 whileTap={{ scale: 0.9 }}

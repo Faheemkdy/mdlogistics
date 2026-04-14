@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
-import { Lock, User, KeyRound, CheckCircle2, XCircle, ShieldCheck } from 'lucide-react';
+import { Lock, User, KeyRound, CheckCircle2, XCircle, ShieldCheck, Eye, EyeOff } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { clsx } from 'clsx';
 
@@ -11,6 +11,7 @@ export const Profile = () => {
   const { profile } = useAuth();
   const [username, setUsername] = useState(profile?.username || '');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
 
@@ -133,13 +134,25 @@ export const Profile = () => {
                 </div>
                 <h3 className="font-black text-slate-700">Change Password</h3>
               </div>
-              <Input
-                type="password"
-                label="New Password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Leave blank to keep current"
-              />
+              <div className="relative">
+                <label className="block text-sm font-bold text-slate-600 mb-2 ml-1">New Password</label>
+                <div className="relative">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Leave blank to keep current"
+                    className="w-full px-4 py-3 rounded-xl bg-[#e0e5ec] text-slate-700 placeholder-slate-400 outline-none transition-all text-base border border-transparent shadow-[inset_5px_5px_10px_rgb(163,177,198,0.6),inset_-5px_-5px_10px_rgba(255,255,255,0.7)] focus:shadow-[inset_7px_7px_14px_rgb(163,177,198,0.7),inset_-7px_-7px_14px_rgba(255,255,255,0.8)] focus:border-white/40 focus:bg-[#e6ebf0] pr-12"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                  >
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
+              </div>
               <p className="text-xs text-slate-400 font-medium mt-2 ml-1">Minimum 6 characters</p>
             </div>
           )}

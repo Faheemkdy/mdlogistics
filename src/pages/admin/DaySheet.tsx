@@ -7,13 +7,13 @@ import { Input } from '../../components/ui/Input';
 import { Download, Trash2, Edit2, Check, X, TrendingUp, TrendingDown, FileText } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { drawPDFHeader, drawCustomerInfo, drawGreenFooter, savePDF } from '../../utils/pdfGenerator';
+import { savePDF } from '../../utils/pdfGenerator';
 import { format } from 'date-fns';
 import { motion, AnimatePresence } from 'framer-motion';
 import { clsx } from 'clsx';
 
 export const DaySheet = () => {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const toast = useToast();
   const [entries, setEntries] = useState<any[]>([]);
   const [type, setType] = useState<'income' | 'expense'>('expense');
@@ -73,12 +73,167 @@ export const DaySheet = () => {
   const downloadPDF = () => {
     if (entries.length === 0) { toast.warning('Nothing to download', 'No entries found for this date.'); return; }
     const doc = new jsPDF();
-    drawPDFHeader(doc);
-    drawCustomerInfo(doc, "Report Type:", "Day Sheet Statement", format(new Date(filterDate), 'dd/MM/yyyy'));
-    const tableData = entries.map(e => [e.type.toUpperCase(), e.description, e.amount]);
-    autoTable(doc, { head: [['Type', 'Description', 'Amount']], body: tableData, startY: 80, theme: 'grid', headStyles: { fillColor: [79, 70, 229], textColor: 255, fontStyle: 'bold' }, styles: { cellPadding: 4, fontSize: 11 }, alternateRowStyles: { fillColor: [245, 247, 250] } });
-    const balance = entries.filter(e => e.type === 'income').reduce((a, b) => a + Number(b.amount), 0) - entries.filter(e => e.type === 'expense').reduce((a, b) => a + Number(b.amount), 0);
-    drawGreenFooter(doc, "TOTAL BALANCE:", `Rs. ${balance}`);
+    const pageWidth = doc.internal.pageSize.width;
+    const pageHeight = doc.internal.pageSize.height;
+
+    // ── HEADER BACKGROUND ──
+    doc.setFillColor(30, 27, 75); // Deep indigo
+    doc.rect(0, 0, pageWidth, 42, 'F');
+
+    // Accent strip
+    doc.setFillColor(99, 102, 241); // indigo-500
+    doc.rect(0, 38, pageWidth, 4, 'F');
+
+    // Company name
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(28);
+    doc.setFont('helvetica', 'bold');
+    doc.text('MD LOGISTICS', pageWidth / 2, 20, { align: 'center' });
+
+    // Address
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(199, 210, 254); // indigo-200
+    doc.text('Kondotty, Malappuram Dt.  |  +91 9633606862  |  mdcourierkdy@gmail.com', pageWidth / 2, 31, { align: 'center' });
+
+    // ── DATE & REFERENCE SECTION ──
+    doc.setFillColor(243, 244, 246);
+    doc.rect(14, 48, pageWidth - 28, 15, 'F');
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(55, 65, 81);
+    doc.text('Date:', 20, 56);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(79, 70, 229);
+    doc.text(format(new Date(filterDate + 'T12:00:00'), 'dd MMMM yyyy'), 38, 56);
+
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(55, 65, 81);
+    doc.text('Entries:', pageWidth - 50, 56);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(55, 65, 81);
+    doc.text(String(entries.length), pageWidth - 28, 56);
+
+    // ── SUMMARY CARDS ──
+    const cardY = 70;
+    const cardH = 22;
+    const cardW = (pageWidth - 28 - 8) / 3;
+
+    // Income Card (Green)
+    doc.setFillColor(209, 250, 229);
+    doc.roundedRect(14, cardY, cardW, cardH, 3, 3, 'F');
+    doc.setFillColor(16, 185, 129);
+    doc.roundedRect(14, cardY, 4, cardH, 2, 2, 'F');
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(6, 95, 70);
+    doc.text('TOTAL INCOME', 22, cardY + 7);
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(4, 120, 87);
+    doc.text(`Rs. ${totalIncome.toFixed(2)}`, 22, cardY + 17);
+
+    // Expense Card (Red)
+    const card2X = 14 + cardW + 4;
+    doc.setFillColor(254, 226, 226);
+    doc.roundedRect(card2X, cardY, cardW, cardH, 3, 3, 'F');
+    doc.setFillColor(239, 68, 68);
+    doc.roundedRect(card2X, cardY, 4, cardH, 2, 2, 'F');
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(153, 27, 27);
+    doc.text('TOTAL EXPENSE', card2X + 8, cardY + 7);
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(185, 28, 28);
+    doc.text(`Rs. ${totalExpense.toFixed(2)}`, card2X + 8, cardY + 17);
+
+    // Balance Card (Blue or Amber)
+    const card3X = 14 + (cardW + 4) * 2;
+    const isProfit = balance >= 0;
+    doc.setFillColor(isProfit ? 219 : 254, isProfit ? 234 : 243, isProfit ? 254 : 199);
+    doc.roundedRect(card3X, cardY, cardW, cardH, 3, 3, 'F');
+    doc.setFillColor(isProfit ? 99 : 245, isProfit ? 102 : 158, isProfit ? 241 : 11);
+    doc.roundedRect(card3X, cardY, 4, cardH, 2, 2, 'F');
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(isProfit ? 55 : 120, isProfit ? 48 : 53, isProfit ? 163 : 15);
+    doc.text('NET BALANCE', card3X + 8, cardY + 7);
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(isProfit ? 67 : 161, isProfit ? 56 : 98, isProfit ? 202 : 7);
+    doc.text(`Rs. ${Math.abs(balance).toFixed(2)}${isProfit ? '' : ' (-)'}`, card3X + 8, cardY + 17);
+
+    // ── TABLE SECTION TITLE ──
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(30, 27, 75);
+    doc.text('Transaction Entries', 14, 100);
+    doc.setDrawColor(99, 102, 241);
+    doc.setLineWidth(0.5);
+    doc.line(14, 102, 55, 102);
+
+    // ── ENTRIES TABLE ──
+    const tableBody = entries.map(e => [
+      e.type.toUpperCase(),
+      e.description || 'No description',
+      `Rs. ${Number(e.amount).toFixed(2)}`,
+    ]);
+
+    autoTable(doc, {
+      startY: 106,
+      head: [['Type', 'Description', 'Amount']],
+      body: tableBody,
+      theme: 'plain',
+      headStyles: {
+        fillColor: [30, 27, 75],
+        textColor: [255, 255, 255],
+        fontStyle: 'bold',
+        fontSize: 10,
+        cellPadding: { top: 5, bottom: 5, left: 6, right: 6 },
+      },
+      columnStyles: {
+        0: { cellWidth: 30, fontStyle: 'bold' },
+        1: { cellWidth: 'auto' },
+        2: { cellWidth: 40, halign: 'right', fontStyle: 'bold' },
+      },
+      styles: {
+        fontSize: 10,
+        cellPadding: { top: 4, bottom: 4, left: 6, right: 6 },
+        lineColor: [229, 231, 235],
+        lineWidth: 0.3,
+      },
+      alternateRowStyles: { fillColor: [249, 250, 251] },
+      didParseCell: (data) => {
+        if (data.section === 'body') {
+          const entry = entries[data.row.index];
+          if (entry?.type === 'income') {
+            data.cell.styles.textColor = [4, 120, 87];
+            if (data.column.index === 2) {
+              data.cell.styles.fillColor = [209, 250, 229];
+            }
+          } else if (entry?.type === 'expense') {
+            data.cell.styles.textColor = [185, 28, 28];
+            if (data.column.index === 2) {
+              data.cell.styles.fillColor = [254, 226, 226];
+            }
+          }
+        }
+      },
+    });
+
+    // ── FOOTER ──
+    const footerY = pageHeight - 16;
+    doc.setDrawColor(229, 231, 235);
+    doc.setLineWidth(0.3);
+    doc.line(14, footerY - 4, pageWidth - 14, footerY - 4);
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(156, 163, 175);
+    doc.text(`Generated on ${format(new Date(), 'dd MMM yyyy, hh:mm a')}`, 14, footerY);
+    doc.text('MD Logistics — Confidential', pageWidth / 2, footerY, { align: 'center' });
+    doc.text('Page 1', pageWidth - 14, footerY, { align: 'right' });
+
     savePDF(doc, `daysheet_${filterDate}.pdf`);
   };
 
@@ -150,9 +305,11 @@ export const DaySheet = () => {
             <div className="flex-1">
               <Input type="date" value={filterDate} onChange={(e) => setFilterDate(e.target.value)} className="!py-2" />
             </div>
-            <Button variant="secondary" onClick={downloadPDF} className="p-2 lg:px-5 flex-shrink-0">
-              <Download size={18} />
-            </Button>
+            {profile?.username === 'md' && (
+              <Button variant="secondary" onClick={downloadPDF} className="p-2 lg:px-5 flex-shrink-0">
+                <Download size={18} />
+              </Button>
+            )}
           </div>
 
           <div className="space-y-3">

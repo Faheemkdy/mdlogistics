@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase, createTempClient, getEmailFromUsername } from '../../lib/supabase';
 import { useToast } from '../../components/ui/Toast';
-import { UserPlus, CheckCircle, AlertCircle, Ban, Edit2, X, Check, User, KeyRound, Users, Search, Crown, CheckCircle2, Mail } from 'lucide-react';
+import { UserPlus, CheckCircle, AlertCircle, Ban, Edit2, X, Check, User, KeyRound, Users, Search, Crown, CheckCircle2, Mail, Eye, EyeOff, Trash2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface DeactivateModalProps {
@@ -95,6 +95,8 @@ export const UserManagement = () => {
   const [fetchLoading, setFetchLoading] = useState(true);
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showResetPassword, setShowResetPassword] = useState(false);
 
   // Edit State
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -243,6 +245,22 @@ export const UserManagement = () => {
     }
   };
 
+  const handleDeleteUser = async (userId: string) => {
+    if (!window.confirm("Are you sure you want to permanently delete this user? This cannot be undone.")) return;
+    setLoading(true);
+    try {
+      const { data, error } = await supabase.rpc('delete_user_account', { target_user_id: userId });
+      if (error) throw error;
+      if (!data) throw new Error("Could not delete user.");
+      toast.success('User Deleted', 'The user account has been permanently removed.');
+      fetchUsers();
+    } catch (error: any) {
+      toast.error('Deletion Failed', error.message || 'Could not delete user.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const filteredUsers = users.filter(u =>
     u.username?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     u.role?.toLowerCase().includes(searchQuery.toLowerCase())
@@ -319,14 +337,23 @@ export const UserManagement = () => {
             </div>
             <div className="space-y-1.5">
               <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Password</label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Min 6 characters"
-                required
-                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all"
-              />
+              <div className="relative">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Min 6 characters"
+                  required
+                  className="w-full pl-4 pr-12 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200 transition-colors p-1"
+                >
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
             </div>
             <div className="space-y-1.5">
               <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Access Level</label>
@@ -536,18 +563,28 @@ export const UserManagement = () => {
                               )}
                               
                               {!isMasterAdmin && !isSelf && (
-                                <motion.button
-                                  whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
-                                  onClick={() => setActionUser(user)}
-                                  className={`p-2 rounded-xl transition-colors ${
-                                    isDeactivated 
-                                      ? 'bg-emerald-100 text-emerald-500 hover:bg-emerald-200'
-                                      : 'bg-orange-100 text-orange-500 hover:bg-orange-200'
-                                  }`}
-                                  title={isDeactivated ? "Activate User" : "Deactivate User"}
-                                >
-                                  {isDeactivated ? <CheckCircle2 size={16} /> : <Ban size={16} />}
-                                </motion.button>
+                                <>
+                                  <motion.button
+                                    whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
+                                    onClick={() => setActionUser(user)}
+                                    className={`p-2 rounded-xl transition-colors ${
+                                      isDeactivated 
+                                        ? 'bg-emerald-100 text-emerald-500 hover:bg-emerald-200'
+                                        : 'bg-orange-100 text-orange-500 hover:bg-orange-200'
+                                    }`}
+                                    title={isDeactivated ? "Activate User" : "Deactivate User"}
+                                  >
+                                    {isDeactivated ? <CheckCircle2 size={16} /> : <Ban size={16} />}
+                                  </motion.button>
+                                  <motion.button
+                                    whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
+                                    onClick={() => handleDeleteUser(user.id)}
+                                    className="p-2 rounded-xl bg-red-100 text-red-500 hover:bg-red-200 transition-colors"
+                                    title="Delete User"
+                                  >
+                                    <Trash2 size={16} />
+                                  </motion.button>
+                                </>
                               )}
                             </>
                           )}
@@ -581,14 +618,23 @@ export const UserManagement = () => {
                               ) : (
                                 <>
                                   <div className="flex items-center gap-2 flex-1">
-                                    <KeyRound size={14} className="text-orange-400 shrink-0" />
-                                    <input
-                                      type="password"
-                                      placeholder="New Password (min 6 chars)"
-                                      value={newPassword}
-                                      onChange={(e) => setNewPassword(e.target.value)}
-                                      className="flex-1 px-3 py-2 bg-white border border-orange-200 rounded-xl text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-orange-400/50"
-                                    />
+                                    <div className="relative flex-1">
+                                      <input
+                                        type={showResetPassword ? "text" : "password"}
+                                        placeholder="New Password (min 6 chars)"
+                                        value={newPassword}
+                                        onChange={(e) => setNewPassword(e.target.value)}
+                                        className="w-full px-3 py-2 pl-9 pr-10 bg-white border border-orange-200 rounded-xl text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-orange-400/50"
+                                      />
+                                      <KeyRound size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-orange-400" />
+                                      <button
+                                        type="button"
+                                        onClick={() => setShowResetPassword(!showResetPassword)}
+                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors p-1"
+                                      >
+                                        {showResetPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                                      </button>
+                                    </div>
                                   </div>
                                   <motion.button
                                     whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}

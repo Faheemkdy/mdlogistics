@@ -2,15 +2,18 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
-import { Download, ChevronDown, ChevronUp, Clock, User, FileText, Box } from 'lucide-react';
+import { Download, ChevronDown, ChevronUp, Clock, User, FileText, Box, Trash2, Search } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { format } from 'date-fns';
 import { drawPDFHeader, drawCustomerInfo, drawGreenFooter, savePDF } from '../../utils/pdfGenerator';
+import { useToast } from '../../components/ui/Toast';
 
 export const Reports = () => {
+  const toast = useToast();
   const [activeTab, setActiveTab] = useState<'pickups' | 'deliveries'>('pickups');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  const [searchQuery, setSearchQuery] = useState('');
   
   const [pickupData, setPickupData] = useState<any[]>([]);
   const [deliveryData, setDeliveryData] = useState<any[]>([]);
@@ -29,7 +32,7 @@ export const Reports = () => {
         id, created_at,
         companies (id, name),
         profiles (username),
-        pickup_items ( item_number, shops (id, name, location) )
+        pickup_items ( id, item_number, shops (id, name, location) )
       `)
       .eq('date', date);
     
@@ -48,6 +51,7 @@ export const Reports = () => {
       const user = curr.profiles?.username || 'Unknown';
       const shops = curr.pickup_items?.map((pi: any) => ({
         ...pi.shops,
+        itemId: pi.id,
         itemNumber: pi.item_number, // Capture item number
         pickupTime: time,
         pickupUser: user
@@ -171,6 +175,34 @@ export const Reports = () => {
     savePDF(doc, `Delivery_Report_${date}.pdf`);
   };
 
+  const handleDeletePickupItem = async (itemId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!window.confirm("Delete this pickup item?")) return;
+    const { error } = await supabase.from('pickup_items').delete().eq('id', itemId);
+    if (error) toast.error("Error", error.message);
+    else { toast.success("Deleted", "Pickup item removed."); fetchPickups(); }
+  };
+
+  const handleDeleteDelivery = async (deliveryId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!window.confirm("Delete this delivery?")) return;
+    const { error } = await supabase.from('deliveries').delete().eq('id', deliveryId);
+    if (error) toast.error("Error", error.message);
+    else { toast.success("Deleted", "Delivery removed."); fetchDeliveries(); }
+  };
+  const lowerQuery = searchQuery.toLowerCase();
+
+  const filteredPickupData = pickupData.map(company => {
+    const matchesCompany = company.name.toLowerCase().includes(lowerQuery);
+    const filteredItems = company.items.filter((item: any) => item.name.toLowerCase().includes(lowerQuery) || matchesCompany);
+    return { ...company, items: filteredItems };
+  }).filter(company => company.items.length > 0);
+
+  const filteredDeliveryData = deliveryData.filter(d => 
+    (d.shops?.name || '').toLowerCase().includes(lowerQuery) || 
+    (d.shops?.location || '').toLowerCase().includes(lowerQuery)
+  );
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -187,35 +219,48 @@ export const Reports = () => {
         />
       </div>
 
-      {/* Tab Toggle */}
-      <div className="flex gap-1.5 p-1.5 bg-[#e0e5ec] rounded-2xl shadow-[inset_4px_4px_8px_rgba(163,177,198,0.5),inset_-4px_-4px_8px_rgba(255,255,255,0.7)] w-full sm:w-fit">
-        {(['pickups', 'deliveries'] as const).map((tab) => (
-          <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
-            className={`flex-1 sm:flex-none px-5 py-2.5 rounded-xl text-sm font-bold transition-all duration-300 capitalize ${
-              activeTab === tab
-                ? tab === 'pickups'
-                  ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg shadow-blue-500/30'
-                  : 'bg-gradient-to-r from-green-500 to-emerald-600 text-white shadow-lg shadow-green-500/30'
-                : 'text-slate-500 hover:text-slate-700'
-            }`}
-          >
-            {tab}
-          </button>
-        ))}
+      {/* Tab Toggle & Search */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div className="flex gap-1.5 p-1.5 bg-[#e0e5ec] rounded-2xl shadow-[inset_4px_4px_8px_rgba(163,177,198,0.5),inset_-4px_-4px_8px_rgba(255,255,255,0.7)] w-full sm:w-fit">
+          {(['pickups', 'deliveries'] as const).map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              className={`flex-1 sm:flex-none px-5 py-2.5 rounded-xl text-sm font-bold transition-all duration-300 capitalize ${
+                activeTab === tab
+                  ? tab === 'pickups'
+                    ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg shadow-blue-500/30'
+                    : 'bg-gradient-to-r from-green-500 to-emerald-600 text-white shadow-lg shadow-green-500/30'
+                  : 'text-slate-500 hover:text-slate-700'
+              }`}
+            >
+              {tab}
+            </button>
+          ))}
+        </div>
+        
+        <div className="relative w-full sm:max-w-xs">
+          <Search className="absolute left-3.5 top-3 text-slate-400" size={18} />
+          <Input 
+            type="text"
+            placeholder={`Search ${activeTab}...`}
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10 !bg-white/60"
+          />
+        </div>
       </div>
 
       {activeTab === 'pickups' && (
         <div className="space-y-4">
           <div className="flex justify-between items-center">
-            <p className="text-slate-500 font-medium text-sm">{pickupData.length} compan{pickupData.length !== 1 ? 'ies' : 'y'} found</p>
+            <p className="text-slate-500 font-medium text-sm">{filteredPickupData.length} compan{filteredPickupData.length !== 1 ? 'ies' : 'y'} found {searchQuery && '(filtered)'}</p>
             <Button variant="primary" onClick={downloadAllPickupsPDF} disabled={pickupData.length === 0} className="!py-2 !px-4 text-sm whitespace-nowrap">
               <FileText size={16} /> Master PDF
             </Button>
           </div>
 
-          {pickupData.map((company) => (
+          {filteredPickupData.map((company) => (
             <div key={company.id} className="bg-gradient-to-br from-[#eef2f7] to-[#d3d8df] rounded-2xl shadow-[6px_6px_14px_rgba(163,177,198,0.4),-6px_-6px_14px_rgba(255,255,255,0.7)] border border-white/50 overflow-hidden">
               <div
                 className="flex items-center justify-between p-5 cursor-pointer hover:bg-white/20 transition-colors"
@@ -245,7 +290,10 @@ export const Reports = () => {
                       <div key={idx} className="bg-white/60 backdrop-blur-sm p-3.5 rounded-xl border border-white/50 shadow-sm">
                         <div className="flex justify-between items-start gap-2 mb-2">
                           <span className="font-bold text-slate-800 text-sm leading-tight">{item.name}</span>
-                          <span className="text-[10px] text-slate-400 bg-slate-100 px-2 py-0.5 rounded-lg whitespace-nowrap flex-shrink-0">{item.location || '-'}</span>
+                          <div className="flex items-center gap-2 flex-shrink-0">
+                            <span className="text-[10px] text-slate-400 bg-slate-100 px-2 py-0.5 rounded-lg whitespace-nowrap">{item.location || '-'}</span>
+                            <button onClick={(e) => handleDeletePickupItem(item.itemId, e)} className="text-red-400 hover:text-red-600 transition-colors bg-red-50 p-1.5 rounded-lg border border-red-100 shadow-[inset_0_-2px_0_rgba(0,0,0,0.05)] hover:shadow-none"><Trash2 size={13} /></button>
+                          </div>
                         </div>
                         {item.itemNumber && (
                           <span className="inline-flex items-center gap-1 text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-medium">
@@ -263,10 +311,10 @@ export const Reports = () => {
               )}
             </div>
           ))}
-          {pickupData.length === 0 && (
+          {filteredPickupData.length === 0 && (
             <div className="text-center py-16 text-slate-400">
               <FileText size={40} className="mx-auto mb-3 opacity-30" />
-              <p className="font-bold">No pickups found for this date</p>
+              <p className="font-bold">{searchQuery ? 'No pickups match your search' : 'No pickups found for this date'}</p>
             </div>
           )}
         </div>
@@ -275,13 +323,13 @@ export const Reports = () => {
       {activeTab === 'deliveries' && (
         <div className="space-y-4">
           <div className="flex justify-between items-center">
-            <p className="text-slate-500 font-medium text-sm">{deliveryData.length} deliveries recorded</p>
+            <p className="text-slate-500 font-medium text-sm">{filteredDeliveryData.length} deliveries recorded {searchQuery && '(filtered)'}</p>
             <Button variant="secondary" onClick={downloadDeliveryPDF} disabled={deliveryData.length === 0} className="!py-2 !px-4 text-sm whitespace-nowrap">
               <Download size={15} /> Download PDF
             </Button>
           </div>
           <div className="space-y-3">
-            {deliveryData.map((delivery) => (
+            {filteredDeliveryData.map((delivery) => (
               <div
                 key={delivery.id}
                 className="flex items-center gap-4 p-4 bg-gradient-to-br from-[#eef2f7] to-[#d3d8df] rounded-2xl shadow-[6px_6px_14px_rgba(163,177,198,0.4),-6px_-6px_14px_rgba(255,255,255,0.7)] border-l-4 border border-white/50"
@@ -302,15 +350,18 @@ export const Reports = () => {
                   </div>
                 </div>
                 <div className="text-right flex-shrink-0">
-                  <p className="text-sm font-bold text-slate-600 flex items-center justify-end gap-1"><Clock size={13} /> {format(new Date(delivery.created_at), 'hh:mm a')}</p>
+                  <div className="flex items-center gap-2 justify-end">
+                    <p className="text-sm font-bold text-slate-600 flex items-center gap-1"><Clock size={13} /> {format(new Date(delivery.created_at), 'hh:mm a')}</p>
+                    <button onClick={(e) => handleDeleteDelivery(delivery.id, e)} className="text-red-400 hover:text-red-600 transition-colors bg-red-50 p-1.5 rounded-lg border border-red-100 shadow-[inset_0_-2px_0_rgba(0,0,0,0.05)] hover:shadow-none"><Trash2 size={14} /></button>
+                  </div>
                   <p className="text-xs text-slate-400 flex items-center justify-end gap-1 mt-0.5"><User size={11} /> {delivery.profiles?.username}</p>
                 </div>
               </div>
             ))}
-            {deliveryData.length === 0 && (
+            {filteredDeliveryData.length === 0 && (
               <div className="text-center py-16 text-slate-400">
                 <FileText size={40} className="mx-auto mb-3 opacity-30" />
-                <p className="font-bold">No deliveries recorded for this date</p>
+                <p className="font-bold">{searchQuery ? 'No deliveries match your search' : 'No deliveries recorded for this date'}</p>
               </div>
             )}
           </div>

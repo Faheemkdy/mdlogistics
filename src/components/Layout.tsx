@@ -82,13 +82,19 @@ export const Layout = () => {
               <NavItem to="/pickup" icon={Package} label="Pickup" />
               <NavItem to="/delivery" icon={Truck} label="Delivery" />
               <NavItem to="/day-sheet" icon={FileText} label="Day Sheet" />
-              <NavItem to="/reports" icon={FileText} label="Reports" />
-              <NavItem to="/billing" icon={Receipt} label="Billing & Invoice" />
+              {profile?.username === 'md' && (
+                <>
+                  <NavItem to="/reports" icon={FileText} label="Reports" />
+                  <NavItem to="/billing" icon={Receipt} label="Billing & Invoice" />
+                </>
+              )}
             </div>
-            <div className="mb-2 pt-2 border-t border-white/10">
-              <p className="px-3 text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1">Admin</p>
-              <NavItem to="/users" icon={Users} label="User Management" />
-            </div>
+            {profile?.username === 'md' && (
+              <div className="mb-2 pt-2 border-t border-white/10">
+                <p className="px-3 text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1">Admin</p>
+                <NavItem to="/users" icon={Users} label="User Management" />
+              </div>
+            )}
           </>
         ) : (
           <>

@@ -84,7 +84,7 @@ export const Delivery = () => {
 
       if (error) throw error;
       toast.success('Deliveries recorded!', `${shopIds.length} shop${shopIds.length > 1 ? 's' : ''} delivered successfully.`);
-      setTimeout(() => navigate('/'), 1000);
+      setSelections({});
     } catch (error: any) {
       toast.error('Failed to save deliveries', error.message);
     } finally {
