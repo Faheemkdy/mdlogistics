@@ -110,8 +110,8 @@ export const Delivery = () => {
 
   return (
     <div className="max-w-2xl mx-auto pb-24 relative min-h-[80vh]">
-      <div className="sticky top-[calc(64px+env(safe-area-inset-top))] lg:top-0 z-30 bg-[#e0e5ec]/90 backdrop-blur-md pt-4 pb-4 -mx-4 px-4 shadow-[0_4px_10px_rgba(163,177,198,0.2)] transition-all">
-        <h1 className="text-2xl font-black text-slate-800 tracking-tight">Select Shops</h1>
+      <div className="sticky top-0 z-30 bg-[#e0e5ec]/90 backdrop-blur-md pt-2 pb-4 -mx-4 px-4 shadow-[0_4px_10px_rgba(163,177,198,0.2)] transition-all">
+        <h1 className="text-2xl font-black text-slate-800 tracking-tight mt-1">Select Shops</h1>
         
         <div className="relative mt-4 flex gap-2">
             <div className="relative flex-1">

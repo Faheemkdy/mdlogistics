@@ -188,7 +188,7 @@ export const Layout = () => {
       </motion.aside>
 
       {/* Main Content */}
-      <main className="flex-1 min-w-0 pt-[calc(52px+env(safe-area-inset-top))] landscape:pt-[calc(44px+env(safe-area-inset-top))] lg:pt-0 relative overflow-y-auto h-screen">
+      <main className="flex-1 min-w-0 pt-[calc(60px+env(safe-area-inset-top))] landscape:pt-[calc(48px+env(safe-area-inset-top))] lg:pt-0 relative overflow-y-auto overflow-x-hidden h-screen scroll-smooth">
         <AnimatePresence mode="wait">
           <motion.div
             key={location.pathname}
@@ -196,7 +196,7 @@ export const Layout = () => {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -12, scale: 0.99 }}
             transition={{ duration: 0.35, ease: [0.23, 1, 0.32, 1] }}
-            className="p-4 lg:p-8 max-w-7xl mx-auto pb-24 lg:pb-8 min-h-full"
+            className="p-4 lg:p-8 max-w-7xl mx-auto pb-8 min-h-full"
           >
             <Outlet />
           </motion.div>

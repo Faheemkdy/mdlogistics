@@ -124,18 +124,18 @@ export const Pickup = () => {
 
   return (
     <div className="max-w-2xl mx-auto pb-24">
-      <div className="sticky top-[calc(64px+env(safe-area-inset-top))] lg:top-0 z-30 bg-[#e0e5ec]/90 backdrop-blur-md pt-4 pb-4 -mx-4 px-4 shadow-[0_4px_10px_rgba(163,177,198,0.2)] transition-all">
+      <div className="sticky top-0 z-30 bg-[#e0e5ec]/90 backdrop-blur-md pt-2 pb-4 -mx-4 px-4 shadow-[0_4px_10px_rgba(163,177,198,0.2)] transition-all">
          <div className="flex items-center gap-3">
              {step === 2 && (
                  <motion.button 
                     whileTap={{ scale: 0.9 }}
-                    className="p-2 bg-white rounded-xl shadow-sm text-slate-600 shrink-0 -ml-2" 
+                    className="p-2 bg-white rounded-xl shadow-sm text-slate-600 shrink-0 -ml-1 mt-1" 
                     onClick={() => setStep(1)}
                  >
                      <ChevronLeft size={24} />
                  </motion.button>
              )}
-             <h1 className="text-2xl font-black text-slate-800 tracking-tight truncate">
+             <h1 className="text-2xl font-black text-slate-800 tracking-tight truncate mt-1">
                 {step === 1 ? 'Select Company' : 'Select Shops'}
              </h1>
          </div>
