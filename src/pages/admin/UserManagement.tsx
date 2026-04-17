@@ -3,6 +3,7 @@ import { supabase, createTempClient, getEmailFromUsername } from '../../lib/supa
 import { useToast } from '../../components/ui/Toast';
 import { UserPlus, CheckCircle, AlertCircle, Ban, Edit2, X, Check, User, KeyRound, Users, Search, Crown, CheckCircle2, Mail, Eye, EyeOff, Trash2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useAuth } from '../../context/AuthContext';
 
 interface DeactivateModalProps {
   user: any;
@@ -112,20 +113,13 @@ export const UserManagement = () => {
   
   // Current user
   const { profile, isMasterAdmin } = useAuth();
-  const [currentUserProfile, setCurrentUserProfile] = useState<any>(null);
+  // removed redundant currentUserProfile state
 
   useEffect(() => {
     fetchUsers();
-    getCurrentUser();
   }, []);
   
-  const getCurrentUser = async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (session?.user) {
-      const { data } = await supabase.from('profiles').select('*').eq('id', session.user.id).single();
-      setCurrentUserProfile(data);
-    }
-  };
+  // Redundant getCurrentUser removed
 
   const fetchUsers = async () => {
     setFetchLoading(true);
@@ -464,7 +458,7 @@ export const UserManagement = () => {
                   const isDeactivated = user.is_active === false;
                   
                   // Cannot act on self (deactivate/delete)
-                  const isSelf = currentUserProfile?.id === user.id;
+                  const isSelf = profile?.id === user.id;
 
                   return (
                     <motion.div
