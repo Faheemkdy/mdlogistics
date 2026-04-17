@@ -111,6 +111,7 @@ export const UserManagement = () => {
   const [actionLoading, setActionLoading] = useState(false);
   
   // Current user
+  const { profile, isMasterAdmin } = useAuth();
   const [currentUserProfile, setCurrentUserProfile] = useState<any>(null);
 
   useEffect(() => {
@@ -459,7 +460,7 @@ export const UserManagement = () => {
                 </motion.div>
               ) : (
                 filteredUsers.map((user, index) => {
-                  const isMasterAdmin = user.username === 'md';
+                  const isMasterUser = user.username === 'md';
                   const isDeactivated = user.is_active === false;
                   
                   // Cannot act on self (deactivate/delete)
@@ -482,13 +483,13 @@ export const UserManagement = () => {
                       <div className="flex items-center justify-between p-4">
                         <div className="flex items-center gap-3">
                           <div className={`w-11 h-11 rounded-xl flex items-center justify-center font-bold text-white overflow-hidden shadow-md flex-shrink-0 ${
-                            isMasterAdmin 
+                            isMasterUser 
                               ? 'bg-gradient-to-br from-amber-500 to-yellow-600'
                               : user.role === 'admin'
                                 ? 'bg-gradient-to-br from-purple-500 to-indigo-600'
                                 : 'bg-gradient-to-br from-blue-400 to-blue-600'
                           }`}>
-                            {isMasterAdmin ? <Crown size={20} className="text-yellow-100" /> :
+                            {isMasterUser ? <Crown size={20} className="text-yellow-100" /> :
                              user.role === 'admin' ? <Crown size={20} /> : <User size={20} />}
                           </div>
 
@@ -508,13 +509,13 @@ export const UserManagement = () => {
                                 )}
                               </div>
                               <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full mt-0.5 inline-block ${
-                                isMasterAdmin
+                                isMasterUser
                                   ? 'bg-amber-100 text-amber-700 border border-amber-200'
                                   : user.role === 'admin'
                                     ? 'bg-purple-100 text-purple-700 border border-purple-200'
                                     : 'bg-blue-100 text-blue-700 border border-blue-200'
                               }`}>
-                                {isMasterAdmin ? '👑 Master Admin' : user.role === 'admin' ? '🛡️ Admin' : '👤 Staff'}
+                                {isMasterUser ? '👑 Master Admin' : user.role === 'admin' ? '🛡️ Admin' : '👤 Staff'}
                               </span>
                             </div>
                           )}
@@ -551,7 +552,7 @@ export const UserManagement = () => {
                                 <KeyRound size={16} />
                               </motion.button>
                               
-                              {!isMasterAdmin && (
+                              {!isMasterUser && (
                                 <motion.button
                                   whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
                                   onClick={() => startEdit(user)}
@@ -562,7 +563,7 @@ export const UserManagement = () => {
                                 </motion.button>
                               )}
                               
-                              {!isMasterAdmin && !isSelf && (
+                              {!isMasterUser && !isSelf && (
                                 <>
                                   <motion.button
                                     whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
@@ -602,7 +603,7 @@ export const UserManagement = () => {
                             className="overflow-hidden bg-orange-50/50 border-t border-slate-200/60"
                           >
                             <div className="px-4 py-4 flex gap-3 flex-col sm:flex-row sm:items-center">
-                              {isMasterAdmin ? (
+                              {isMasterUser ? (
                                 <div className="flex-1 w-full">
                                   <p className="text-sm text-slate-600 mb-3 font-medium">
                                     Master Admin passwords cannot be changed directly here for security. Send an OTP magic link to the registered secure email (mdcourierkdy@gmail.com).

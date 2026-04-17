@@ -4,6 +4,7 @@ import { supabase, getEmailFromUsername } from '../lib/supabase';
 import { useToast } from '../components/ui/Toast';
 import { motion } from 'framer-motion';
 import { AlertCircle, LogIn, Eye, EyeOff } from 'lucide-react';
+import { BRAND, CONTACT_INFO } from '../constants/branding';
 import { Logo } from '../components/ui/Logo';
 
 export const Login = () => {
@@ -129,7 +130,7 @@ export const Login = () => {
         {/* Bottom Badge */}
         <div className="absolute bottom-8 left-0 right-0 text-center">
           <p className="text-slate-500 text-[10px] font-bold tracking-widest uppercase">
-            Kondotty, Malappuram Dt.  |  +91 9633606862  |  mdcourierkdy@gmail.com
+            {CONTACT_INFO.address}  |  {CONTACT_INFO.phone}  |  {CONTACT_INFO.email}
           </p>
         </div>
       </motion.div>

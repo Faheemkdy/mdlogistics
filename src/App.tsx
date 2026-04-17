@@ -40,7 +40,7 @@ const ProtectedRoute = ({ children, allowedRoles }: { children: React.ReactNode,
 };
 
 function AppRoutes() {
-  const { profile } = useAuth();
+  const { profile, isMasterAdmin } = useAuth();
 
   return (
     <Routes>
@@ -63,7 +63,7 @@ function AppRoutes() {
         <Route path="day-sheet" element={<ProtectedRoute allowedRoles={['admin']}><DaySheet /></ProtectedRoute>} />
         <Route path="users" element={<ProtectedRoute allowedRoles={['admin']}><UserManagement /></ProtectedRoute>} />
         <Route path="reports" element={<ProtectedRoute allowedRoles={['admin']}><Reports /></ProtectedRoute>} />
-        <Route path="billing" element={<ProtectedRoute allowedRoles={['admin']}><Billing /></ProtectedRoute>} />
+        <Route path="billing" element={<ProtectedRoute allowedRoles={['admin']}>{isMasterAdmin ? <Billing /> : <Navigate to="/" />}</ProtectedRoute>} />
 
         {/* User Routes */}
         <Route path="pickup" element={<ProtectedRoute allowedRoles={['admin', 'user']}><Pickup /></ProtectedRoute>} />

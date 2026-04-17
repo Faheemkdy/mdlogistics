@@ -8,11 +8,12 @@ import autoTable from 'jspdf-autotable';
 import { format } from 'date-fns';
 import { drawPDFHeader, drawCustomerInfo, drawGreenFooter, savePDF } from '../../utils/pdfGenerator';
 import { useToast } from '../../components/ui/Toast';
+import { getStandardDate, formatReportDate } from '../../utils/dateUtils';
 
 export const Reports = () => {
   const toast = useToast();
   const [activeTab, setActiveTab] = useState<'pickups' | 'deliveries'>('pickups');
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  const [date, setDate] = useState(getStandardDate());
   const [searchQuery, setSearchQuery] = useState('');
   
   const [pickupData, setPickupData] = useState<any[]>([]);
@@ -77,7 +78,7 @@ export const Reports = () => {
   const downloadPickupPDF = (companyName: string, items: any[]) => {
     const doc = new jsPDF();
     drawPDFHeader(doc);
-    drawCustomerInfo(doc, "Customer Name:", companyName, format(new Date(date), 'dd/MM/yyyy'));
+    drawCustomerInfo(doc, "Customer Name:", companyName, date);
 
     const tableData = items.map((item, index) => [
       index + 1,
@@ -104,7 +105,7 @@ export const Reports = () => {
   const downloadAllPickupsPDF = () => {
     const doc = new jsPDF();
     drawPDFHeader(doc);
-    drawCustomerInfo(doc, "Report Type:", "Master Pickup Log (All Companies)", format(new Date(date), 'dd/MM/yyyy'));
+    drawCustomerInfo(doc, "Report Type:", "Master Pickup Log (All Companies)", date);
 
     let finalY = 75;
     let totalShops = 0;
@@ -151,7 +152,7 @@ export const Reports = () => {
   const downloadDeliveryPDF = () => {
     const doc = new jsPDF();
     drawPDFHeader(doc);
-    drawCustomerInfo(doc, "Report Type:", "Daily Delivery Log", format(new Date(date), 'dd/MM/yyyy'));
+    drawCustomerInfo(doc, "Report Type:", "Daily Delivery Log", date);
 
     const tableData = deliveryData.map((d, index) => [
       index + 1,

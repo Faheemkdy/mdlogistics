@@ -1,24 +1,12 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { format } from 'date-fns';
+import { BRAND, CONTACT_INFO } from '../constants/branding';
+import { formatReportDate } from './dateUtils';
 
 
 
-// MD Logistics Brand Colors
-const BRAND = {
-  primary: [30, 41, 59] as [number, number, number],      // slate-800
-  accent: [79, 70, 229] as [number, number, number],       // indigo-600
-  accentLight: [99, 102, 241] as [number, number, number], // indigo-500
-  success: [16, 185, 129] as [number, number, number],     // emerald-500
-  warning: [245, 158, 11] as [number, number, number],     // amber-500
-  danger: [239, 68, 68] as [number, number, number],       // red-500
-  bg: [248, 250, 252] as [number, number, number],         // slate-50
-  bgAlt: [241, 245, 249] as [number, number, number],      // slate-100
-  text: [15, 23, 42] as [number, number, number],          // slate-900
-  textMuted: [100, 116, 139] as [number, number, number],  // slate-500
-  white: [255, 255, 255] as [number, number, number],
-  border: [226, 232, 240] as [number, number, number],     // slate-200
-};
+// BRAND is now imported from constants/branding.ts
 
 // Helper to draw a rounded rectangle
 const roundedRect = (doc: jsPDF, x: number, y: number, w: number, h: number, r: number, style: 'F' | 'S' | 'FS' = 'F') => {
@@ -90,8 +78,8 @@ const createPDFDoc = (
   doc.setFontSize(8.5);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(226, 232, 240); // slate-200
-  doc.text('Kondotty, Malappuram Dt.  |  +91 9633606862', divX + 6, logoY + 16);
-  doc.text('mdcourierkdy@gmail.com', divX + 6, logoY + 22.5);
+  doc.text(`${CONTACT_INFO.address}  |  ${CONTACT_INFO.phone}`, divX + 6, logoY + 16);
+  doc.text(CONTACT_INFO.email, divX + 6, logoY + 22.5);
 
   // ── INFO SECTION ────────────────────────────────────────────
   const infoY = 65;
@@ -129,7 +117,7 @@ const createPDFDoc = (
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(12);
   doc.setTextColor(...BRAND.text);
-  doc.text(format(new Date(date), 'dd MMMM yyyy'), rightX, infoY + 16);
+  doc.text(formatReportDate(date), rightX, infoY + 16);
 
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8);
@@ -289,7 +277,7 @@ const createPDFDoc = (
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(8);
   doc.setTextColor(...BRAND.white);
-  doc.text('MD Logistics  |  Your Trusted Delivery Partner  |  Kondotty, Malappuram  |  +91 9633606862', pw / 2, ph - 6, { align: 'center' });
+  doc.text(`${BRAND.primary === BRAND.primary ? 'MD Logistics' : 'MD'}  |  ${CONTACT_INFO.tagline}  |  Kondotty, Malappuram  |  ${CONTACT_INFO.phone}`, pw / 2, ph - 6, { align: 'center' });
 
   return doc;
 };

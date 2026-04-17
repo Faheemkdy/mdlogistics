@@ -9,11 +9,13 @@ import autoTable from 'jspdf-autotable';
 import { drawPDFHeader, drawCustomerInfo, drawGreenFooter, savePDF } from '../../utils/pdfGenerator';
 import { motion } from 'framer-motion';
 import { useAuth } from '../../context/AuthContext';
+import { getStandardDate, formatReportDate } from '../../utils/dateUtils';
+import { BRAND, CONTACT_INFO } from '../../constants/branding';
 
 export const AdminDashboard = () => {
   const navigate = useNavigate();
   const toast = useToast();
-  const { profile } = useAuth();
+  const { profile, isMasterAdmin } = useAuth();
   const [stats, setStats] = useState({
     companies: 0,
     shops: 0,
@@ -45,7 +47,7 @@ export const AdminDashboard = () => {
   };
 
   const fetchStats = async () => {
-    const today = new Date().toISOString().split('T')[0];
+    const today = getStandardDate();
     const [
       { count: companiesCount },
       { count: shopsCount },
@@ -77,9 +79,9 @@ export const AdminDashboard = () => {
   const downloadDaySheetPDF = () => {
     if (todayDaySheets.length === 0) { toast.warning('No data today', 'No day sheet entries found for today.'); return; }
     const doc = new jsPDF();
-    const today = new Date().toISOString().split('T')[0];
+    const today = getStandardDate();
     drawPDFHeader(doc);
-    drawCustomerInfo(doc, "Report Type:", "Day Sheet Statement", format(new Date(today), 'dd/MM/yyyy'));
+    drawCustomerInfo(doc, "Report Type:", "Day Sheet Statement", formatReportDate(today));
     const tableData = todayDaySheets.map(e => [e.type.toUpperCase(), e.description, e.amount]);
     autoTable(doc, { head: [['Type', 'Description', 'Amount']], body: tableData, startY: 80, theme: 'grid', headStyles: { fillColor: [79, 70, 229], textColor: 255, fontStyle: 'bold' }, styles: { cellPadding: 4, fontSize: 11 }, alternateRowStyles: { fillColor: [245, 247, 250] } });
     const balance = stats.todayIncome - stats.todayExpense;
@@ -88,12 +90,12 @@ export const AdminDashboard = () => {
   };
 
   const downloadPickupsReport = async () => {
-    const today = new Date().toISOString().split('T')[0];
+    const today = getStandardDate();
     const { data, error } = await supabase.from('pickups').select(`id, created_at, companies (name), pickup_items ( item_number, shops (name, location) )`).eq('date', today);
     if (error || !data || data.length === 0) { toast.warning('No pickups today', 'No pickup records found for today.'); return; }
     const doc = new jsPDF();
     drawPDFHeader(doc);
-    drawCustomerInfo(doc, "Report Type:", "Daily Pickups Report", format(new Date(today), 'dd/MM/yyyy'));
+    drawCustomerInfo(doc, "Report Type:", "Daily Pickups Report", formatReportDate(today));
     let tableData: any[] = [];
     data.forEach((pickup: any) => {
       const companyName = pickup.companies?.name || 'Unknown';
@@ -107,12 +109,12 @@ export const AdminDashboard = () => {
   };
 
   const downloadDeliveriesReport = async () => {
-    const today = new Date().toISOString().split('T')[0];
+    const today = getStandardDate();
     const { data, error } = await supabase.from('deliveries').select(`created_at, item_number, shops (name, location), profiles (username)`).eq('date', today);
     if (error || !data || data.length === 0) { toast.warning('No deliveries today', 'No delivery records found for today.'); return; }
     const doc = new jsPDF();
     drawPDFHeader(doc);
-    drawCustomerInfo(doc, "Report Type:", "Daily Deliveries Report", format(new Date(today), 'dd/MM/yyyy'));
+    drawCustomerInfo(doc, "Report Type:", "Daily Deliveries Report", formatReportDate(today));
     const tableData = data.map((d: any) => [d.shops?.name || 'Unknown', d.shops?.location || '-', d.item_number || '-', format(new Date(d.created_at), 'hh:mm a')]);
     autoTable(doc, { head: [['Shop Name', 'Location', 'Item No.', 'Time']], body: tableData, startY: 80, theme: 'grid', headStyles: { fillColor: [34, 197, 94], textColor: 255, fontStyle: 'bold' }, styles: { cellPadding: 4, fontSize: 11 }, alternateRowStyles: { fillColor: [240, 253, 244] } });
     drawGreenFooter(doc, "TOTAL DELIVERIES:", data.length);
@@ -194,7 +196,7 @@ export const AdminDashboard = () => {
     { label: 'Add Pickup', desc: 'Record daily pickups', to: '/pickup', icon: Package, gradient: 'from-orange-500 to-red-600', shadow: 'shadow-orange-500/20' },
     { label: 'Add Delivery', desc: 'Record daily deliveries', to: '/delivery', icon: Truck, gradient: 'from-green-500 to-emerald-600', shadow: 'shadow-green-500/20' },
     { label: 'Billing & Invoice', desc: 'Create instant bills', to: '/billing', icon: Receipt, gradient: 'from-emerald-500 to-teal-600', shadow: 'shadow-emerald-500/20', access: 'master' },
-  ].filter(action => action.access !== 'master' || profile?.username === 'md');
+  ].filter(action => action.access !== 'master' || isMasterAdmin);
 
   return (
     <div className="space-y-8">
@@ -208,7 +210,7 @@ export const AdminDashboard = () => {
         <div className="min-w-0">
           <h1 className="text-2xl sm:text-3xl font-black text-slate-800 tracking-tight">Dashboard</h1>
           <p className="text-slate-500 font-medium mt-1 text-sm sm:text-base">
-            {format(new Date(), 'EEE, MMM do yyyy')}
+            {formatReportDate(getStandardDate())}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2 mt-1">
@@ -245,7 +247,7 @@ export const AdminDashboard = () => {
             </div>
 
             {/* Download button */}
-            {card.action && profile?.username === 'md' && (
+            {card.action && isMasterAdmin && (
               <motion.button
                 whileHover={{ scale: 1.1, rotate: 10 }}
                 whileTap={{ scale: 0.9 }}

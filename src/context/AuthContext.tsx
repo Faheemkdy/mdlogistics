@@ -14,6 +14,7 @@ interface AuthContextType {
   user: User | null;
   profile: Profile | null;
   loading: boolean;
+  isMasterAdmin: boolean;
   signOut: () => Promise<void>;
 }
 
@@ -93,8 +94,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     await supabase.auth.signOut();
   };
 
+  const isMasterAdmin = profile?.username === 'md';
+  
   return (
-    <AuthContext.Provider value={{ session, user, profile, loading, signOut }}>
+    <AuthContext.Provider value={{ session, user, profile, loading, isMasterAdmin, signOut }}>
       {children}
     </AuthContext.Provider>
   );

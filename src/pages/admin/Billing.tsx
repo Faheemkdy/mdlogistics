@@ -3,6 +3,7 @@ import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { useToast } from '../../components/ui/Toast';
 import { Plus, Trash2, Download, Share2, Package, ShoppingCart, FileText, Search, Calendar, Edit3, Trash } from 'lucide-react';
+import { getStandardDate } from '../../utils/dateUtils';
 import { generateBillingPDF, getBillingPDFFile } from '../../utils/billingPdfGenerator';
 import { motion, AnimatePresence } from 'framer-motion';
 import { clsx } from 'clsx';
@@ -13,7 +14,7 @@ export const Billing = () => {
   const toast = useToast();
   const [mode, setMode] = useState<'delivery' | 'product' | 'history'>('delivery');
   const [customerName, setCustomerName] = useState('');
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  const [date, setDate] = useState(getStandardDate());
   
   const [savedBills, setSavedBills] = useState<any[]>([]);
   const [searchName, setSearchName] = useState('');

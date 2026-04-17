@@ -11,6 +11,9 @@ import { savePDF } from '../../utils/pdfGenerator';
 import { format } from 'date-fns';
 import { motion, AnimatePresence } from 'framer-motion';
 import { clsx } from 'clsx';
+import { getStandardDate, formatReportDate } from '../../utils/dateUtils';
+import { drawPDFHeader, drawCustomerInfo, drawGreenFooter } from '../../utils/pdfGenerator';
+import { BRAND, CONTACT_INFO } from '../../constants/branding';
 
 export const DaySheet = () => {
   const { user, profile } = useAuth();
@@ -19,8 +22,8 @@ export const DaySheet = () => {
   const [type, setType] = useState<'income' | 'expense'>('expense');
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
-  const [filterDate, setFilterDate] = useState(new Date().toISOString().split('T')[0]);
+  const [date, setDate] = useState(getStandardDate());
+  const [filterDate, setFilterDate] = useState(getStandardDate());
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editAmount, setEditAmount] = useState('');
   const [editDescription, setEditDescription] = useState('');
@@ -76,43 +79,8 @@ export const DaySheet = () => {
     const pageWidth = doc.internal.pageSize.width;
     const pageHeight = doc.internal.pageSize.height;
 
-    // ── HEADER BACKGROUND ──
-    doc.setFillColor(30, 27, 75); // Deep indigo
-    doc.rect(0, 0, pageWidth, 42, 'F');
-
-    // Accent strip
-    doc.setFillColor(99, 102, 241); // indigo-500
-    doc.rect(0, 38, pageWidth, 4, 'F');
-
-    // Company name
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(28);
-    doc.setFont('helvetica', 'bold');
-    doc.text('MD LOGISTICS', pageWidth / 2, 20, { align: 'center' });
-
-    // Address
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(199, 210, 254); // indigo-200
-    doc.text('Kondotty, Malappuram Dt.  |  +91 9633606862  |  mdcourierkdy@gmail.com', pageWidth / 2, 31, { align: 'center' });
-
-    // ── DATE & REFERENCE SECTION ──
-    doc.setFillColor(243, 244, 246);
-    doc.rect(14, 48, pageWidth - 28, 15, 'F');
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(55, 65, 81);
-    doc.text('Date:', 20, 56);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(79, 70, 229);
-    doc.text(format(new Date(filterDate + 'T12:00:00'), 'dd MMMM yyyy'), 38, 56);
-
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(55, 65, 81);
-    doc.text('Entries:', pageWidth - 50, 56);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(55, 65, 81);
-    doc.text(String(entries.length), pageWidth - 28, 56);
+    drawPDFHeader(doc);
+    drawCustomerInfo(doc, "Report Type:", "Daily Day Sheet Statement", filterDate);
 
     // ── SUMMARY CARDS ──
     const cardY = 70;
@@ -181,12 +149,12 @@ export const DaySheet = () => {
     ]);
 
     autoTable(doc, {
-      startY: 106,
+      startY: (doc as any).lastAutoTable?.finalY ? (doc as any).lastAutoTable.finalY + 15 : 106,
       head: [['Type', 'Description', 'Amount']],
       body: tableBody,
       theme: 'plain',
       headStyles: {
-        fillColor: [30, 27, 75],
+        fillColor: BRAND.primary,
         textColor: [255, 255, 255],
         fontStyle: 'bold',
         fontSize: 10,
@@ -200,7 +168,7 @@ export const DaySheet = () => {
       styles: {
         fontSize: 10,
         cellPadding: { top: 4, bottom: 4, left: 6, right: 6 },
-        lineColor: [229, 231, 235],
+        lineColor: BRAND.border,
         lineWidth: 0.3,
       },
       alternateRowStyles: { fillColor: [249, 250, 251] },
@@ -222,18 +190,9 @@ export const DaySheet = () => {
       },
     });
 
-    // ── FOOTER ──
-    const footerY = pageHeight - 16;
-    doc.setDrawColor(229, 231, 235);
-    doc.setLineWidth(0.3);
-    doc.line(14, footerY - 4, pageWidth - 14, footerY - 4);
-    doc.setFontSize(8);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(156, 163, 175);
-    doc.text(`Generated on ${format(new Date(), 'dd MMM yyyy, hh:mm a')}`, 14, footerY);
-    doc.text('MD Logistics — Confidential', pageWidth / 2, footerY, { align: 'center' });
-    doc.text('Page 1', pageWidth - 14, footerY, { align: 'right' });
+    drawGreenFooter(doc, 'TOTAL BALANCE', `Rs. ${balance.toFixed(2)}${balance >= 0 ? '' : ' (-)'}`);
 
+    // Footer is handled by savePDF or added here if needed
     savePDF(doc, `daysheet_${filterDate}.pdf`);
   };
 
