@@ -113,20 +113,20 @@ export const Delivery = () => {
       <div className="sticky top-0 z-30 bg-[#e0e5ec]/90 backdrop-blur-md pt-2 pb-4 -mx-4 px-4 shadow-[0_4px_10px_rgba(163,177,198,0.2)] transition-all">
         <h1 className="text-2xl font-black text-slate-800 tracking-tight mt-1">Select Shops</h1>
         
-        <div className="relative mt-4 flex gap-2">
+        <div className="flex gap-2 w-full mt-4">
             <div className="relative flex-1">
-              <Search className="absolute left-4 top-3.5 text-slate-400" size={20} />
-              <Input 
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
+              <input 
                 placeholder="Search shops..." 
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="pl-12 !bg-white/60 backdrop-blur-sm"
+                className="w-full h-[46px] pl-12 pr-4 bg-white/60 backdrop-blur-sm border border-transparent rounded-xl text-slate-700 placeholder-slate-400 focus:outline-none focus:bg-white/80 focus:shadow-md focus:border-white transition-all shadow-[inset_2px_2px_5px_rgba(163,177,198,0.3),inset_-2px_-2px_5px_rgba(255,255,255,0.6)]"
               />
             </div>
             <Button 
                 variant="primary" 
                 onClick={() => setIsAddModalOpen(true)}
-                className="!px-4 !py-0 !rounded-xl shadow-sm bg-white"
+                className="!px-4 !py-0 !rounded-xl shadow-sm bg-white h-[46px] flex-shrink-0"
               >
                 <Plus size={24} />
             </Button>
