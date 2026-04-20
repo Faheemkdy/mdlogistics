@@ -82,6 +82,7 @@ export const Layout = () => {
               <NavItem to="/pickup" icon={Package} label="Pickup" />
               <NavItem to="/delivery" icon={Truck} label="Delivery" />
               <NavItem to="/day-sheet" icon={FileText} label="Day Sheet" />
+              <NavItem to="/vouchers" icon={Receipt} label="Voucher" />
               {profile?.username === 'md' && (
                 <>
                   <NavItem to="/reports" icon={FileText} label="Reports" />

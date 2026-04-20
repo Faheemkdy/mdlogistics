@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { Button } from '../../components/ui/Button';
+import { Modal } from '../../components/ui/Modal';
 import { Input } from '../../components/ui/Input';
 import { useToast } from '../../components/ui/Toast';
-import { Plus, Trash2, Download, Share2, Package, ShoppingCart, FileText, Search, Calendar, Edit3, Trash } from 'lucide-react';
+import { Plus, Trash2, Download, Share2, Package, ShoppingCart, FileText, Search, Calendar, Edit3, Trash, Clock, CheckCircle } from 'lucide-react';
 import { getStandardDate } from '../../utils/dateUtils';
 import { generateBillingPDF, getBillingPDFFile } from '../../utils/billingPdfGenerator';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -24,8 +26,25 @@ export const Billing = () => {
   const [deliveryItems, setDeliveryItems] = useState([
     { id: 1, description: '', q20: '', q25: '', q30: '', q35: '', q40: '', q50: '', total: 0, amount: '' }
   ]);
+  const [vouchersImportOpen, setVouchersImportOpen] = useState(false);
+  const [pendingVouchers, setPendingVouchers] = useState<any[]>([]);
+  const [importingVoucherId, setImportingVoucherId] = useState<string | null>(null);
+  const location = useLocation();
 
-  // Product State: no rate field, only amount
+  useEffect(() => {
+    if (location.state?.importVoucherId) {
+      handleAutoImport(location.state.importVoucherId);
+    }
+  }, [location.state]);
+
+  const handleAutoImport = async (id: string) => {
+    const { data } = await supabase
+      .from('vouchers')
+      .select('*, voucher_items(*)')
+      .eq('id', id)
+      .single();
+    if (data) importVoucher(data);
+  };
   const [productItems, setProductItems] = useState([
     { id: 1, name: '', qty: 1, amount: 0 }
   ]);
@@ -106,6 +125,38 @@ export const Billing = () => {
     if (!editingBillId && data && data[0]) {
       setEditingBillId(data[0].id);
     }
+
+    // Mark voucher as billed if importing
+    if (importingVoucherId) {
+      await supabase.from('vouchers').update({ status: 'billed' }).eq('id', importingVoucherId);
+      
+      // Sync items back to voucher_items
+      const finalItems = mode === 'delivery' ? deliveryItems : productItems;
+      
+      // Delete old items for this voucher
+      await supabase.from('voucher_items').delete().eq('voucher_id', importingVoucherId);
+      
+      // Insert new items
+      const newVoucherItems = finalItems.filter(i => {
+        if (mode === 'delivery') return i.total > 0;
+        return i.name && i.qty > 0;
+      }).map(i => ({
+        voucher_id: importingVoucherId,
+        date: mode === 'delivery' ? (i.description || date) : date,
+        rate: mode === 'delivery' ? null : null, // Rates are complex because they are columns
+        quantity: mode === 'delivery' ? i.total : i.qty,
+        product_name: mode === 'product' ? i.name : null,
+        amount: mode === 'product' ? i.amount : null,
+        // Since delivery rows are aggregated, we store the total quantity. 
+        // For product, it's direct.
+      }));
+
+      // For delivery mode, specific mapping is already done in bills.items (JSONB).
+      // We update the voucher record to reflect the final state if possible.
+      
+      setImportingVoucherId(null);
+    }
+
     return true;
   };
 
@@ -144,6 +195,70 @@ export const Billing = () => {
     setEditingBillId(bill.id);
     if (bill.type === 'delivery') setDeliveryItems(bill.items);
     else setProductItems(bill.items);
+  };
+
+  const fetchPendingVouchers = async () => {
+    const { data } = await supabase
+      .from('vouchers')
+      .select('*, voucher_items(*)')
+      .eq('status', 'pending')
+      .order('created_at', { ascending: false });
+    setPendingVouchers(data || []);
+  };
+
+  const importVoucher = (voucher: any) => {
+    setCustomerName(voucher.customer_name);
+    setMode(voucher.type);
+    
+    if (voucher.type === 'delivery') {
+      const itemsByDate: Record<string, any> = {};
+      voucher.voucher_items.forEach((item: any) => {
+        const dateStr = item.date;
+        if (!itemsByDate[dateStr]) {
+          itemsByDate[dateStr] = { 
+            id: Date.now() + Math.random(), 
+            description: dateStr, 
+            q20: '', q25: '', q30: '', q35: '', q40: '', q50: '', 
+            total: 0, amount: '0' 
+          };
+        }
+        const row = itemsByDate[dateStr];
+        if (item.rate) {
+          const rateKey = `q${item.rate}` as keyof typeof row;
+          // @ts-ignore
+          row[rateKey] = (Number(row[rateKey]) || 0) + item.quantity;
+        }
+      });
+
+      const newRows = Object.values(itemsByDate).map((row: any) => {
+        const q20 = Number(row.q20) || 0;
+        const q25 = Number(row.q25) || 0;
+        const q30 = Number(row.q30) || 0;
+        const q35 = Number(row.q35) || 0;
+        const q40 = Number(row.q40) || 0;
+        const q50 = Number(row.q50) || 0;
+        
+        return {
+          ...row,
+          total: q20 + q25 + q30 + q35 + q40 + q50,
+          amount: ((q20 * 20) + (q25 * 25) + (q30 * 30) + (q35 * 35) + (q40 * 40) + (q50 * 50)).toFixed(2)
+        };
+      });
+      setDeliveryItems(newRows.length > 0 ? newRows : [{ id: 1, description: '', q20: '', q25: '', q30: '', q35: '', q40: '', q50: '', total: 0, amount: '' }]);
+    } else {
+      // Product Mode
+      const newProdRows = voucher.voucher_items.map((item: any) => ({
+        id: item.id,
+        name: item.product_name,
+        qty: item.quantity,
+        amount: item.amount
+      }));
+      setProductItems(newProdRows.length > 0 ? newProdRows : [{ id: 1, name: '', qty: 1, amount: 0 }]);
+    }
+
+    setImportingVoucherId(voucher.id);
+    setVouchersImportOpen(false);
+    toast.success('Voucher imported!', `Data loaded from ${voucher.customer_name}`);
   };
 
   // --- PDF / Share Logic ---
@@ -264,6 +379,19 @@ export const Billing = () => {
                   onChange={(e) => setCustomerName(e.target.value)}
                   placeholder="Enter customer name"
                 />
+                {mode !== 'history' && (
+                  <Button 
+                    type="button" 
+                    variant="secondary" 
+                    className="w-full text-xs py-2 bg-indigo-50 text-indigo-600 border-indigo-100"
+                    onClick={() => {
+                      fetchPendingVouchers();
+                      setVouchersImportOpen(true);
+                    }}
+                  >
+                    <Package size={14} className="mr-2" /> Import from Vouchers
+                  </Button>
+                )}
                 <Input
                   type="date"
                   label="Date"
@@ -557,6 +685,46 @@ export const Billing = () => {
           </Button>
         </motion.div>
       )}
+      {/* ── Voucher Import Modal ── */}
+      <Modal 
+        isOpen={vouchersImportOpen} 
+        onClose={() => setVouchersImportOpen(false)}
+        title="Import from Pending Vouchers"
+      >
+        <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">
+          {pendingVouchers.length === 0 ? (
+            <div className="text-center py-10 text-slate-400 font-medium">No pending vouchers found.</div>
+          ) : (
+            pendingVouchers.map((v) => (
+              <div 
+                key={v.id} 
+                className="p-4 bg-white/70 border border-white/80 rounded-2xl flex items-center justify-between hover:bg-white hover:shadow-md transition-all group"
+              >
+                <div>
+                  <h4 className="font-black text-slate-800">{v.customer_name}</h4>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <span className={clsx("px-1.5 py-0.5 text-[8px] font-bold uppercase rounded", 
+                      v.type === 'product' ? 'bg-teal-100 text-teal-700' : 'bg-blue-100 text-blue-700'
+                    )}>{v.type}</span>
+                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+                      {v.voucher_items.length} rows · {v.voucher_items.reduce((acc: number, curr: any) => acc + Number(curr.quantity || 0), 0)} items
+                    </p>
+                  </div>
+                  <p className="text-[9px] text-slate-400 font-medium mt-1">
+                    <Clock size={10} className="inline mr-1" /> {format(new Date(v.created_at), 'dd MMM, hh:mm a')}
+                  </p>
+                </div>
+                <Button 
+                  onClick={() => importVoucher(v)}
+                  className="bg-indigo-500 hover:bg-indigo-600 text-white text-xs h-9 px-4 rounded-xl"
+                >
+                  Import
+                </Button>
+              </div>
+            ))
+          )}
+        </div>
+      </Modal>
     </div>
   );
 };
