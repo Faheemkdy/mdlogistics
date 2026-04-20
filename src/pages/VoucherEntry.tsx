@@ -161,7 +161,7 @@ export const VoucherEntry = () => {
 
   return (
     <div className="min-h-screen bg-[#e0e5ec] p-4 lg:p-8">
-      <div className="max-w-4xl mx-auto space-y-8 pb-20">
+      <div className="max-w-4xl mx-auto space-y-8 pb-40 sm:pb-20">
         
         {/* Header */}
         <div className="flex flex-col items-center gap-4 text-center mb-10">
@@ -406,7 +406,7 @@ export const VoucherEntry = () => {
           </div>
 
           {/* Grand Total & Submit */}
-          <div className="sticky bottom-6 left-0 right-0 z-10 flex flex-col sm:flex-row gap-4 items-center justify-between bg-slate-800/90 backdrop-blur-lg p-6 rounded-[32px] shadow-2xl border border-white/10">
+          <div className="fixed sm:sticky bottom-0 sm:bottom-6 left-0 right-0 z-20 flex flex-col sm:flex-row gap-4 items-center justify-between bg-slate-800/90 backdrop-blur-lg p-4 sm:p-6 rounded-t-[24px] sm:rounded-[32px] shadow-2xl border-t sm:border border-white/10">
             <div className="flex flex-col">
               <span className="text-white/50 text-[10px] font-black uppercase tracking-widest">Grand Total Qty</span>
               <span className="text-2xl font-black text-white">{calculateGrandTotal()} Items</span>
