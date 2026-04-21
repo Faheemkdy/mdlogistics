@@ -239,7 +239,9 @@ export const VoucherAdmin = () => {
                       <h4 className="font-black text-slate-800 text-lg">{voucher.customer_name}</h4>
                       <span className={clsx("px-2 py-0.5 text-[10px] font-bold uppercase rounded-md", 
                         voucher.type === 'product' ? 'bg-teal-100 text-teal-700' : 'bg-blue-100 text-blue-700'
-                      )}>{voucher.type}</span>
+                      )}>
+                        {voucher.type === 'product' ? 'Product Bill' : 'Item Bill'}
+                      </span>
                     </div>
                     <p className="text-slate-500 text-xs font-medium">
                       {format(new Date(voucher.created_at), 'dd MMM yyyy, hh:mm a')}

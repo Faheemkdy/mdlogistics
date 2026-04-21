@@ -184,7 +184,7 @@ export const VoucherEntry = () => {
                 type === 'delivery' ? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-lg shadow-blue-500/30' : 'text-slate-500 hover:text-slate-700'
               )}
             >
-              <Package size={16} /> Delivery
+              <Package size={16} /> Item Bill
             </button>
             <button
               onClick={() => setType('product')}
@@ -193,7 +193,7 @@ export const VoucherEntry = () => {
                 type === 'product' ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-lg shadow-emerald-500/30' : 'text-slate-500 hover:text-slate-700'
               )}
             >
-              <Calculator size={16} /> Product
+              <Calculator size={16} /> Product Bill
             </button>
           </div>
         </div>

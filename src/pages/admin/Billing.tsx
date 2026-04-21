@@ -348,7 +348,9 @@ export const Billing = () => {
               )}
             >
               {m === 'delivery' ? <Package size={16} /> : m === 'product' ? <ShoppingCart size={16} /> : <FileText size={16} />}
-              <span className="capitalize">{m}</span>
+              <span className="capitalize">
+                {m === 'delivery' ? 'Item Bill' : m === 'product' ? 'Product Bill' : m}
+              </span>
             </button>
           ))}
         </div>
@@ -705,7 +707,7 @@ export const Billing = () => {
                   <div className="flex items-center gap-2 mt-0.5">
                     <span className={clsx("px-1.5 py-0.5 text-[8px] font-bold uppercase rounded", 
                       v.type === 'product' ? 'bg-teal-100 text-teal-700' : 'bg-blue-100 text-blue-700'
-                    )}>{v.type}</span>
+                    )}>{v.type === 'product' ? 'Product Bill' : 'Item Bill'}</span>
                     <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
                       {v.voucher_items.length} rows · {v.voucher_items.reduce((acc: number, curr: any) => acc + Number(curr.quantity || 0), 0)} items
                     </p>
