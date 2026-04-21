@@ -124,7 +124,7 @@ export const VoucherAdmin = () => {
     <div className="space-y-8">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-black text-slate-800 tracking-tight">Voucher Submissions</h1>
+          <h1 className="text-3xl font-black text-slate-800 tracking-tight">Voucher</h1>
           <p className="text-slate-500 font-medium mt-1">Review vouchers submitted via the public link</p>
         </div>
         
@@ -160,12 +160,19 @@ export const VoucherAdmin = () => {
               )}
            </div>
 
-           <button 
-             onClick={fetchVouchers}
-             className="p-3 bg-white rounded-2xl text-slate-600 hover:bg-slate-800 hover:text-white transition-all shadow-sm border border-white/50"
-           >
-             <Clock size={20} />
-           </button>
+            <button 
+              onClick={() => navigate('/entry')}
+              className="flex-1 sm:flex-none justify-center bg-blue-600 hover:bg-blue-700 text-white font-black px-8 py-3 rounded-2xl transition-all shadow-lg shadow-blue-500/30 flex items-center gap-2"
+            >
+              <Plus size={18} /> Create Entry
+            </button>
+
+            <button 
+              onClick={fetchVouchers}
+              className="p-3 bg-white rounded-2xl text-slate-600 hover:bg-slate-800 hover:text-white transition-all shadow-sm border border-white/50"
+            >
+              <Clock size={20} />
+            </button>
         </div>
       </div>
 
@@ -205,7 +212,7 @@ export const VoucherAdmin = () => {
                 navigator.clipboard.writeText(VERCEL_URL);
                 toast.success('Link copied to clipboard!');
               }}
-              className="bg-blue-500 hover:bg-blue-600 text-white font-black px-8 py-3 rounded-2xl transition-all shadow-lg shadow-blue-500/30 whitespace-nowrap"
+              className="flex-1 sm:flex-none justify-center bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 border border-blue-200 font-black px-8 py-3 rounded-2xl transition-all flex items-center gap-2"
             >
               Copy Link
             </button>
