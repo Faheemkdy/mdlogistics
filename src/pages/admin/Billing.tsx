@@ -244,6 +244,10 @@ export const Billing = () => {
           amount: ((q20 * 20) + (q25 * 25) + (q30 * 30) + (q35 * 35) + (q40 * 40) + (q50 * 50)).toFixed(2)
         };
       });
+      
+      // Sort rows chronologically by date
+      newRows.sort((a, b) => new Date(a.description).getTime() - new Date(b.description).getTime());
+
       setDeliveryItems(newRows.length > 0 ? newRows : [{ id: 1, description: '', q20: '', q25: '', q30: '', q35: '', q40: '', q50: '', total: 0, amount: '' }]);
     } else {
       // Product Mode
