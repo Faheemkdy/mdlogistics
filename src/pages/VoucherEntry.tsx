@@ -288,12 +288,7 @@ export const VoucherEntry = () => {
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
                     <div className="flex items-center gap-3">
                       <div className="p-2 bg-blue-100 text-blue-600 rounded-xl">
-                        <Calendar size={20} />Your video is ready!
-                        
-                        
-                        
-                        
-                        
+                        <Calendar size={20} />
                       </div>
                       <div className="flex flex-col sm:flex-row sm:items-center gap-2">
                          <h3 className="font-black text-slate-800">Section {sIdx + 1}</h3>
