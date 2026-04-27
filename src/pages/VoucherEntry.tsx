@@ -7,6 +7,7 @@ import { Plus, Trash2, Send, Calendar, User, Package, Calculator, CheckCircle2, 
 import { motion, AnimatePresence } from 'framer-motion';
 import { Logo } from '../components/ui/Logo';
 import { clsx } from 'clsx';
+import { ShieldCheck, ShieldAlert, Fingerprint } from 'lucide-react';
 
 interface VoucherItem {
   id: string;
@@ -31,6 +32,12 @@ export const VoucherEntry = () => {
   ]);
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  
+  // Security States
+  const [honeypot, setHoneypot] = useState('');
+  const [isHuman, setIsHuman] = useState(false);
+  const [lastSubmitTime, setLastSubmitTime] = useState<number>(0);
+  const [securityCheckPassed, setSecurityCheckPassed] = useState(true);
 
   const addSection = () => {
     setSections([...sections, { 
@@ -97,6 +104,27 @@ export const VoucherEntry = () => {
       return;
     }
 
+    // 1. Honeypot check
+    if (honeypot) {
+      console.warn('Bot detected via honeypot');
+      setSecurityCheckPassed(false);
+      toast.error('Security Check Failed', 'Automated submission detected.');
+      return;
+    }
+
+    // 2. Human verification check
+    if (!isHuman) {
+      toast.warning('Verification Required', 'Please confirm you are human.');
+      return;
+    }
+
+    // 3. Rate limiting (5 second cooldown)
+    const now = Date.now();
+    if (now - lastSubmitTime < 5000) {
+      toast.warning('Slow down', 'Please wait a few seconds before submitting again.');
+      return;
+    }
+
     setLoading(true);
     try {
       const voucherId = crypto.randomUUID();
@@ -130,6 +158,7 @@ export const VoucherEntry = () => {
       if (iError) throw iError;
 
       setSubmitted(true);
+      setLastSubmitTime(Date.now());
       toast.success('Submitted successfully!', 'Admin will process your voucher soon.');
     } catch (err: any) {
       toast.error('Submission failed', err.message);
@@ -219,6 +248,20 @@ export const VoucherEntry = () => {
               className="bg-white/80 border-slate-200"
               required
             />
+
+            {/* Honeypot Field (Hidden from humans) */}
+            <div className="absolute opacity-0 -z-10 pointer-events-none h-0 w-0 overflow-hidden">
+              <label htmlFor="website_url">Leave this field blank if you are human</label>
+              <input
+                id="website_url"
+                type="text"
+                name="website_url"
+                value={honeypot}
+                onChange={(e) => setHoneypot(e.target.value)}
+                tabIndex={-1}
+                autoComplete="off"
+              />
+            </div>
           </motion.div>
 
           {/* Date Sections */}
@@ -245,7 +288,12 @@ export const VoucherEntry = () => {
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
                     <div className="flex items-center gap-3">
                       <div className="p-2 bg-blue-100 text-blue-600 rounded-xl">
-                        <Calendar size={20} />
+                        <Calendar size={20} />Your video is ready!
+                        
+                        
+                        
+                        
+                        
                       </div>
                       <div className="flex flex-col sm:flex-row sm:items-center gap-2">
                          <h3 className="font-black text-slate-800">Section {sIdx + 1}</h3>
@@ -411,17 +459,43 @@ export const VoucherEntry = () => {
               <span className="text-white/50 text-[10px] font-black uppercase tracking-widest">Grand Total Qty</span>
               <span className="text-2xl font-black text-white">{calculateGrandTotal()} Items</span>
             </div>
-            <Button
-              type="submit"
-              disabled={loading}
-              className="w-full sm:w-auto px-10 py-4 bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-black rounded-2xl shadow-lg shadow-blue-500/30 hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-3"
-            >
-              {loading ? (
-                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-              ) : (
-                <><Send size={18} /> Submit Voucher</>
-              )}
-            </Button>
+
+            <div className="flex flex-col sm:flex-row items-center gap-6">
+              {/* Human Verification */}
+              <div 
+                onClick={() => setIsHuman(!isHuman)}
+                className={clsx(
+                  "flex items-center gap-3 px-4 py-3 rounded-xl cursor-pointer transition-all border select-none",
+                  isHuman 
+                    ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400" 
+                    : "bg-white/5 border-white/10 text-white/40 hover:bg-white/10"
+                )}
+              >
+                <div className={clsx(
+                  "w-5 h-5 rounded border-2 flex items-center justify-center transition-all",
+                  isHuman ? "bg-emerald-500 border-emerald-500" : "border-white/20"
+                )}>
+                  {isHuman && <CheckCircle2 size={14} className="text-white" />}
+                </div>
+                <span className="text-xs font-bold whitespace-nowrap">I am human</span>
+                <Fingerprint size={16} className={clsx("transition-colors", isHuman ? "text-emerald-400" : "text-white/20")} />
+              </div>
+
+              <Button
+                type="submit"
+                disabled={loading || !securityCheckPassed}
+                className="w-full sm:w-auto px-10 py-4 bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-black rounded-2xl shadow-lg shadow-blue-500/30 hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-3"
+              >
+                {loading ? (
+                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                ) : (
+                  <>
+                    {!securityCheckPassed ? <ShieldAlert size={18} /> : <ShieldCheck size={18} />}
+                    Submit Voucher
+                  </>
+                )}
+              </Button>
+            </div>
           </div>
         </form>
       </div>
