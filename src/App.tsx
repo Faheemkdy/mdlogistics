@@ -17,6 +17,8 @@ import { Delivery } from './pages/user/Delivery';
 import { Profile } from './pages/Profile';
 import { VoucherEntry } from './pages/VoucherEntry';
 import { VoucherAdmin } from './pages/admin/VoucherAdmin';
+import { Dispatch } from './pages/admin/Dispatch';
+import { Reconciliation } from './pages/admin/Reconciliation';
 
 
 
@@ -68,6 +70,8 @@ function AppRoutes() {
         <Route path="reports" element={<ProtectedRoute allowedRoles={['admin']}><Reports /></ProtectedRoute>} />
         <Route path="billing" element={<ProtectedRoute allowedRoles={['admin']}>{isMasterAdmin ? <Billing /> : <Navigate to="/" />}</ProtectedRoute>} />
         <Route path="vouchers" element={<ProtectedRoute allowedRoles={['admin']}><VoucherAdmin /></ProtectedRoute>} />
+        <Route path="dispatch" element={<ProtectedRoute allowedRoles={['admin']}><Dispatch /></ProtectedRoute>} />
+        <Route path="reconciliation" element={<ProtectedRoute allowedRoles={['admin']}>{isMasterAdmin ? <Reconciliation /> : <Navigate to="/" />}</ProtectedRoute>} />
 
         {/* User Routes */}
         <Route path="pickup" element={<ProtectedRoute allowedRoles={['admin', 'user']}><Pickup /></ProtectedRoute>} />

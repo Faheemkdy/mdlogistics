@@ -1,7 +1,7 @@
 import React from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { LogOut, User, LayoutDashboard, Building2, Store, FileText, Users, Menu, X, Truck, Package, Receipt, ChevronRight } from 'lucide-react';
+import { LogOut, User, LayoutDashboard, Building2, Store, FileText, Users, Menu, X, Truck, Package, Receipt, ChevronRight, ClipboardList, BarChart2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { clsx } from 'clsx';
 import { Logo } from './ui/Logo';
@@ -81,10 +81,12 @@ export const Layout = () => {
               <p className="px-3 text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1">Operations</p>
               <NavItem to="/pickup" icon={Package} label="Pickup" />
               <NavItem to="/delivery" icon={Truck} label="Delivery" />
+              <NavItem to="/dispatch" icon={ClipboardList} label="Dispatch" />
               <NavItem to="/day-sheet" icon={FileText} label="Day Sheet" />
               <NavItem to="/vouchers" icon={Receipt} label="Voucher" />
               {profile?.username === 'md' && (
                 <>
+                  <NavItem to="/reconciliation" icon={BarChart2} label="Reconciliation" />
                   <NavItem to="/reports" icon={FileText} label="Reports" />
                   <NavItem to="/billing" icon={Receipt} label="Billing & Invoice" />
                 </>
