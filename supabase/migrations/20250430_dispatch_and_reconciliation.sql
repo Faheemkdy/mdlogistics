@@ -10,8 +10,7 @@ CREATE TABLE IF NOT EXISTS public.dispatches (
 -- Enable RLS
 ALTER TABLE public.dispatches ENABLE ROW LEVEL SECURITY;
 
--- Policies for dispatches (Admin only full access, others view)
-CREATE POLICY "Dispatches viewable by authenticated users" ON public.dispatches FOR SELECT TO authenticated USING (true);
+-- Policies for dispatches (Admin only full access)
 CREATE POLICY "Admin full access dispatches" ON public.dispatches FOR ALL TO authenticated USING (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin'));
 
 -- Update auto-delete history function to include Dispatches
