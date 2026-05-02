@@ -8,7 +8,7 @@ import { motion } from 'framer-motion';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { drawPDFHeader, drawCustomerInfo, drawGreenFooter, savePDF } from '../../utils/pdfGenerator';
-import { formatReportDate } from '../../utils/dateUtils';
+import { formatReportDate, getDateRange } from '../../utils/dateUtils';
 import { format } from 'date-fns';
 
 export const Reconciliation = () => {
@@ -140,6 +140,64 @@ export const Reconciliation = () => {
     }
   };
 
+  const handleRangeExport = async (days: number) => {
+    const { start, end } = getDateRange(days);
+    toast.info("Generating Report", `Fetching reconciliation data from ${start} to ${end}...`);
+    
+    try {
+      const { data: shops } = await supabase.from('shops').select('id, name, location').eq('is_active', true);
+      const { data: dispatches } = await supabase.from('dispatches').select('*').gte('date', start).lte('date', end);
+      const { data: deliveries } = await supabase.from('deliveries').select('*').gte('date', start).lte('date', end);
+
+      const rangeReconciliation = (shops || []).map(shop => {
+        const shopDispatches = (dispatches || []).filter(d => d.shop_id === shop.id);
+        const shopDeliveries = (deliveries || []).filter(d => d.shop_id === shop.id);
+        
+        const totalDispatched = shopDispatches.reduce((acc, d) => acc + (parseFloat(d.item_number) || 0), 0);
+        const totalDelivered = shopDeliveries.reduce((acc, d) => acc + (parseFloat(d.item_number) || 0), 0);
+        
+        return {
+          ...shop,
+          totalDispatched,
+          totalDelivered,
+          diff: totalDispatched - totalDelivered
+        };
+      }).filter(d => d.totalDispatched > 0 || d.totalDelivered > 0);
+
+      if (rangeReconciliation.length === 0) {
+        toast.error("No data", "No records found in this range.");
+        return;
+      }
+
+      const doc = new jsPDF();
+      drawPDFHeader(doc);
+      drawCustomerInfo(doc, "Report Type:", `${days} Days Reconciliation`, `${format(new Date(start), 'dd MMM')} to ${format(new Date(end), 'dd MMM yyyy')}`);
+
+      const tableData = rangeReconciliation.map(d => [
+        d.name,
+        d.location || '-',
+        d.totalDispatched.toString(),
+        d.totalDelivered.toString(),
+        d.diff === 0 ? 'Match' : (d.diff > 0 ? `+${d.diff} Short` : `${Math.abs(d.diff)} Extra`)
+      ]);
+
+      autoTable(doc, {
+        head: [['Shop Name', 'Location', 'Total Dispatched', 'Total Delivered', 'Status']],
+        body: tableData,
+        startY: 100,
+        theme: 'grid',
+        headStyles: { fillColor: [30, 41, 59], textColor: 255, fontStyle: 'bold' },
+        styles: { cellPadding: 4, fontSize: 10 },
+      });
+
+      const mismatches = rangeReconciliation.filter(d => d.diff !== 0).length;
+      drawGreenFooter(doc, "SHOPS WITH MISMATCH:", mismatches);
+      savePDF(doc, `Reconciliation_${days}days_${end}.pdf`);
+    } catch (error: any) {
+      toast.error("Export failed", error.message);
+    }
+  };
+
   return (
     <div className="max-w-6xl mx-auto pb-12 px-4 sm:px-6">
       <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6 mb-6">
@@ -158,12 +216,17 @@ export const Reconciliation = () => {
               className="bg-transparent border-none focus:ring-0 text-slate-700 font-bold pr-2 text-sm"
             />
           </div>
-          <div className="flex gap-2 w-full sm:w-auto">
+          <div className="flex flex-wrap gap-2 w-full sm:w-auto">
+            <div className="flex gap-1.5 p-1 bg-white rounded-xl shadow-sm border border-slate-200">
+               <button onClick={() => handleRangeExport(7)} className="px-3 py-1.5 text-[10px] font-black uppercase hover:bg-slate-50 rounded-lg transition-colors">7 Days</button>
+               <button onClick={() => handleRangeExport(15)} className="px-3 py-1.5 text-[10px] font-black uppercase hover:bg-slate-50 rounded-lg transition-colors">15 Days</button>
+               <button onClick={() => handleRangeExport(30)} className="px-3 py-1.5 text-[10px] font-black uppercase hover:bg-slate-50 rounded-lg transition-colors">1 Month</button>
+            </div>
             <Button variant="ghost" onClick={fetchData} className="flex-1 sm:flex-none bg-white shadow-sm border border-slate-200 text-sm h-11">
                 Refresh
             </Button>
             <Button variant="primary" onClick={handleExport} className="flex-1 sm:flex-none bg-slate-800 text-white hover:bg-slate-900 border-none text-sm h-11 px-4">
-                <Share2 size={16} className="mr-2" /> Share PDF
+                <Share2 size={16} className="mr-2" /> Share Today
             </Button>
           </div>
         </div>

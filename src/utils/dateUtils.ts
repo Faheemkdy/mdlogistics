@@ -33,3 +33,17 @@ export const formatTime = (date: Date | string = new Date()) => {
   const d = typeof date === 'string' ? new Date(date) : date;
   return format(d, 'hh:mm a');
 };
+
+/**
+ * Gets a date range starting from N days ago until today
+ */
+export const getDateRange = (days: number) => {
+  const end = new Date();
+  const start = new Date();
+  start.setDate(end.getDate() - (days - 1)); // -6 for 7 days (including today)
+  
+  return {
+    start: start.toISOString().split('T')[0],
+    end: end.toISOString().split('T')[0]
+  };
+};

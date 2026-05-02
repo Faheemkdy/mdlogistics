@@ -11,7 +11,7 @@ import { savePDF } from '../../utils/pdfGenerator';
 import { format } from 'date-fns';
 import { motion, AnimatePresence } from 'framer-motion';
 import { clsx } from 'clsx';
-import { getStandardDate, formatReportDate } from '../../utils/dateUtils';
+import { getStandardDate, formatReportDate, getDateRange } from '../../utils/dateUtils';
 import { drawPDFHeader, drawCustomerInfo, drawGreenFooter } from '../../utils/pdfGenerator';
 import { BRAND, CONTACT_INFO } from '../../constants/branding';
 
@@ -196,6 +196,53 @@ export const DaySheet = () => {
     savePDF(doc, `daysheet_${filterDate}.pdf`);
   };
 
+  const downloadRangePDF = async (days: number) => {
+    const { start, end } = getDateRange(days);
+    toast.info("Generating Report", `Fetching day sheet entries from ${start} to ${end}...`);
+
+    const { data, error } = await supabase
+      .from('day_sheets')
+      .select('*, profiles(username)')
+      .gte('date', start)
+      .lte('date', end)
+      .order('date', { ascending: false });
+
+    if (error || !data || data.length === 0) {
+      toast.error("No data", "No entries found in this range.");
+      return;
+    }
+
+    const doc = new jsPDF();
+    drawPDFHeader(doc);
+    drawCustomerInfo(doc, "Report Type:", `${days} Days Financial Statement`, `${format(new Date(start), 'dd MMM')} to ${format(new Date(end), 'dd MMM yyyy')}`);
+
+    const rangeIncome = data.filter(e => e.type === 'income').reduce((a, b) => a + Number(b.amount), 0);
+    const rangeExpense = data.filter(e => e.type === 'expense').reduce((a, b) => a + Number(b.amount), 0);
+    const rangeBalance = rangeIncome - rangeExpense;
+
+    const tableData = data.map(e => [
+      format(new Date(e.date), 'dd/MM/yy'),
+      e.type.toUpperCase(),
+      e.description || 'No description',
+      `Rs. ${Number(e.amount).toFixed(2)}`
+    ]);
+
+    autoTable(doc, {
+      startY: 100,
+      head: [['Date', 'Type', 'Description', 'Amount']],
+      body: tableData,
+      theme: 'grid',
+      headStyles: { fillColor: [30, 41, 59], textColor: [255, 255, 255], fontStyle: 'bold' },
+      columnStyles: {
+        3: { halign: 'right', fontStyle: 'bold' },
+      },
+      styles: { fontSize: 9, cellPadding: 3 },
+    });
+
+    drawGreenFooter(doc, 'NET BALANCE', `Rs. ${rangeBalance.toFixed(2)}`);
+    savePDF(doc, `DaySheet_${days}days_${end}.pdf`);
+  };
+
   const totalIncome = entries.filter(e => e.type === 'income').reduce((a, b) => a + Number(b.amount), 0);
   const totalExpense = entries.filter(e => e.type === 'expense').reduce((a, b) => a + Number(b.amount), 0);
   const balance = totalIncome - totalExpense;
@@ -260,14 +307,19 @@ export const DaySheet = () => {
           className="lg:col-span-2 space-y-4"
         >
           {/* Filter + Download */}
-          <div className="flex gap-3 sticky top-0 bg-[#e0e5ec] z-10 py-1">
+          <div className="flex gap-2 sticky top-0 bg-[#e0e5ec] z-10 py-1 items-center">
             <div className="flex-1">
               <Input type="date" value={filterDate} onChange={(e) => setFilterDate(e.target.value)} className="!py-2" />
             </div>
             {profile?.username === 'md' && (
-              <Button variant="secondary" onClick={downloadPDF} className="p-2 lg:px-5 flex-shrink-0">
-                <Download size={18} />
-              </Button>
+              <div className="flex gap-1.5 overflow-x-auto">
+                 <Button variant="ghost" onClick={() => downloadRangePDF(7)} className="!py-1.5 !px-3 text-[10px] h-9 border-slate-200 bg-white whitespace-nowrap">7 Days</Button>
+                 <Button variant="ghost" onClick={() => downloadRangePDF(15)} className="!py-1.5 !px-3 text-[10px] h-9 border-slate-200 bg-white whitespace-nowrap">15 Days</Button>
+                 <Button variant="ghost" onClick={() => downloadRangePDF(30)} className="!py-1.5 !px-3 text-[10px] h-9 border-slate-200 bg-white whitespace-nowrap">1 Month</Button>
+                 <Button variant="secondary" onClick={downloadPDF} className="p-2 lg:px-5 flex-shrink-0 h-9">
+                    <Download size={16} />
+                 </Button>
+              </div>
             )}
           </div>
 

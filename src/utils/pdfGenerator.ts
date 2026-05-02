@@ -94,7 +94,13 @@ export const drawCustomerInfo = (doc: jsPDF, label: string, value: string, date:
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(11);
   doc.setTextColor(...BRAND.text);
-  doc.text(formatReportDate(date), rightX, startY + 16);
+  
+  if (date.includes(' to ')) {
+    doc.setFontSize(9); // Smaller font for range
+    doc.text(date, rightX, startY + 16);
+  } else {
+    doc.text(formatReportDate(date), rightX, startY + 16);
+  }
 
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8);
