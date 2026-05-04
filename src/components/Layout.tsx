@@ -1,18 +1,22 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { LogOut, User, LayoutDashboard, Building2, Store, FileText, Users, Menu, X, Truck, Package, Receipt, ChevronRight, ClipboardList, BarChart2 } from 'lucide-react';
+import { LogOut, User, LayoutDashboard, Building2, Store, FileText, Users, Menu, X, Truck, Package, Receipt, ChevronRight, ClipboardList, BarChart2, AlertCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { clsx } from 'clsx';
 import { Logo } from './ui/Logo';
+import { Modal } from './ui/Modal';
+import { Button } from './ui/Button';
 
 export const Layout = () => {
   const { profile, signOut } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [isSidebarOpen, setIsSidebarOpen] = React.useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   const handleSignOut = async () => {
+    setShowLogoutConfirm(false);
     await signOut();
     navigate('/login');
   };
@@ -50,7 +54,6 @@ export const Layout = () => {
 
   const SidebarContent = () => (
     <>
-      {/* Logo Area */}
       <div className="flex items-center gap-3 mb-8 px-2 pt-4 pb-2 border-b border-white/10">
         <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-blue-600 flex items-center justify-center shadow-lg flex-shrink-0 overflow-hidden p-2">
           <Logo showText={false} className="w-full h-full filter brightness-0 invert" />
@@ -67,7 +70,6 @@ export const Layout = () => {
         </button>
       </div>
 
-      {/* Navigation */}
       <nav className="flex-1 space-y-1 overflow-y-auto pr-1">
         {profile?.role === 'admin' ? (
           <>
@@ -108,11 +110,8 @@ export const Layout = () => {
         )}
       </nav>
 
-      {/* User Profile Footer */}
       <div className="pt-4 border-t border-white/10 space-y-2 mt-auto pb-[env(safe-area-inset-bottom)]">
         <NavItem to="/profile" icon={User} label="Profile" />
-
-        {/* User Card */}
         <div className="mx-1 p-3 bg-white/5 border border-white/10 rounded-xl flex items-center gap-3">
           <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-blue-600 flex items-center justify-center text-xs font-bold text-white overflow-hidden shadow-md flex-shrink-0">
             {profile?.username?.charAt(0).toUpperCase()}
@@ -122,10 +121,8 @@ export const Layout = () => {
             <p className="text-xs text-indigo-300 font-medium capitalize">{profile?.role}</p>
           </div>
         </div>
-
-        {/* Logout */}
         <button
-          onClick={handleSignOut}
+          onClick={() => setShowLogoutConfirm(true)}
           className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-all font-semibold text-sm"
         >
           <div className="w-8 h-8 rounded-lg bg-red-500/10 flex items-center justify-center">
@@ -139,28 +136,44 @@ export const Layout = () => {
 
   return (
     <div className="min-h-screen bg-[#e0e5ec] flex overflow-hidden">
-
       {/* Mobile Header */}
-      <div className="lg:hidden fixed top-0 left-0 right-0 z-40 flex items-center justify-between px-4 py-2 pt-[calc(env(safe-area-inset-top)+8px)] landscape:py-1.5"
-        style={{
-          background: 'rgba(15,23,42,0.95)',
-          backdropFilter: 'blur(16px)',
-          borderBottom: '1px solid rgba(255,255,255,0.1)'
-        }}
-      >
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 landscape:w-7 landscape:h-7 rounded-lg bg-gradient-to-br from-indigo-500 to-blue-600 flex items-center justify-center p-1.5 landscape:p-1">
-            <Logo showText={false} className="filter brightness-0 invert" />
-          </div>
-          <span className="font-black text-white tracking-wider text-sm landscape:text-xs">MD LOGISTICS</span>
-        </div>
-        <button
-          onClick={() => setIsSidebarOpen(true)}
-          className="p-2 landscape:p-1.5 text-slate-300 bg-white/10 rounded-xl hover:bg-white/20 transition-colors"
+      {(profile?.role === 'admin' || (profile?.role !== 'admin' && location.pathname !== '/')) && (
+        <div className="lg:hidden fixed top-0 left-0 right-0 z-40 flex items-center justify-between px-4 py-2 pt-[calc(env(safe-area-inset-top)+8px)] landscape:py-1.5"
+          style={{
+            background: profile?.role === 'admin' ? 'rgba(15,23,42,0.95)' : 'rgba(255,255,255,0.8)',
+            backdropFilter: 'blur(16px)',
+            borderBottom: profile?.role === 'admin' ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.05)'
+          }}
         >
-          <Menu size={20} className="landscape:w-4 landscape:h-4" />
-        </button>
-      </div>
+          <div className="flex items-center gap-2.5">
+            <div className={clsx(
+              "w-8 h-8 landscape:w-7 landscape:h-7 rounded-lg flex items-center justify-center p-1.5 landscape:p-1",
+              profile?.role === 'admin' ? "bg-gradient-to-br from-indigo-500 to-blue-600" : "bg-slate-800"
+            )}>
+              <Logo showText={false} className="filter brightness-0 invert" />
+            </div>
+            <span className={clsx(
+              "font-black tracking-wider text-sm landscape:text-xs",
+              profile?.role === 'admin' ? "text-white" : "text-slate-800"
+            )}>MD LOGISTICS</span>
+          </div>
+          {profile?.role === 'admin' ? (
+            <button
+              onClick={() => setIsSidebarOpen(true)}
+              className="p-2 landscape:p-1.5 text-slate-300 bg-white/10 rounded-xl hover:bg-white/20 transition-colors"
+            >
+              <Menu size={20} className="landscape:w-4 landscape:h-4" />
+            </button>
+          ) : (
+            <button
+              onClick={() => navigate('/')}
+              className="p-2 text-slate-500 bg-slate-100 rounded-xl hover:bg-slate-200 transition-colors"
+            >
+              <LayoutDashboard size={20} />
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Mobile Overlay */}
       <AnimatePresence>
@@ -175,23 +188,30 @@ export const Layout = () => {
         )}
       </AnimatePresence>
 
-      {/* Sidebar */}
-      <motion.aside
-        className={clsx(
-          "fixed lg:sticky top-0 left-0 h-screen w-64 z-[100] flex flex-col p-4 pt-[env(safe-area-inset-top)]",
-          "transform transition-transform duration-300 ease-in-out lg:translate-x-0 shadow-2xl",
-          isSidebarOpen ? "translate-x-0" : "-translate-x-full"
-        )}
-        style={{
-          background: 'linear-gradient(160deg, #0f172a 0%, #1e293b 60%, #1a1f3a 100%)',
-          borderRight: '1px solid rgba(255,255,255,0.08)'
-        }}
-      >
-        <SidebarContent />
-      </motion.aside>
+      {/* Sidebar - Only for Admin */}
+      {profile?.role === 'admin' && (
+        <motion.aside
+          className={clsx(
+            "fixed lg:sticky top-0 left-0 h-screen w-64 z-[100] flex flex-col p-4 pt-[env(safe-area-inset-top)]",
+            "transform transition-transform duration-300 ease-in-out lg:translate-x-0 shadow-2xl",
+            isSidebarOpen ? "translate-x-0" : "-translate-x-full"
+          )}
+          style={{
+            background: 'linear-gradient(160deg, #0f172a 0%, #1e293b 60%, #1a1f3a 100%)',
+            borderRight: '1px solid rgba(255,255,255,0.08)'
+          }}
+        >
+          <SidebarContent />
+        </motion.aside>
+      )}
 
       {/* Main Content */}
-      <main className="flex-1 min-w-0 pt-[calc(60px+env(safe-area-inset-top))] landscape:pt-[calc(48px+env(safe-area-inset-top))] lg:pt-0 relative overflow-y-auto overflow-x-hidden h-screen scroll-smooth">
+      <main className={clsx(
+        "flex-1 min-w-0 relative overflow-y-auto overflow-x-hidden h-screen scroll-smooth",
+        (profile?.role === 'admin' || location.pathname !== '/')
+          ? "pt-[calc(60px+env(safe-area-inset-top))] landscape:pt-[calc(48px+env(safe-area-inset-top))] lg:pt-0"
+          : "pt-0"
+      )}>
         <AnimatePresence mode="wait">
           <motion.div
             key={location.pathname}
@@ -199,12 +219,48 @@ export const Layout = () => {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -12, scale: 0.99 }}
             transition={{ duration: 0.35, ease: [0.23, 1, 0.32, 1] }}
-            className="p-4 lg:p-8 max-w-7xl mx-auto pb-8 min-h-full"
+            className={clsx(
+              "max-w-7xl mx-auto pb-8 min-h-full",
+              (profile?.role === 'admin' || location.pathname !== '/') ? "p-4 lg:p-8" : "p-0"
+            )}
           >
             <Outlet />
           </motion.div>
         </AnimatePresence>
       </main>
+
+      {/* Logout Confirmation Modal */}
+      <Modal 
+        isOpen={showLogoutConfirm} 
+        onClose={() => setShowLogoutConfirm(false)}
+        title="Confirm Logout"
+      >
+        <div className="text-center space-y-6">
+          <div className="w-20 h-20 bg-red-50 rounded-3xl flex items-center justify-center mx-auto text-red-500 shadow-inner">
+            <AlertCircle size={40} />
+          </div>
+          <div>
+            <h3 className="text-xl font-black text-slate-800">Are you sure?</h3>
+            <p className="text-slate-500 font-medium mt-1">You will need to login again to access your account.</p>
+          </div>
+          <div className="flex gap-3">
+            <Button 
+              variant="secondary" 
+              onClick={() => setShowLogoutConfirm(false)}
+              className="flex-1 py-4 font-bold"
+            >
+              Cancel
+            </Button>
+            <Button 
+              variant="danger" 
+              onClick={handleSignOut}
+              className="flex-1 py-4 font-bold bg-red-500 text-white shadow-lg shadow-red-500/30"
+            >
+              Logout
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 };

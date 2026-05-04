@@ -2,8 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useToast } from '../../components/ui/Toast';
 import { Button } from '../../components/ui/Button';
-import { Input } from '../../components/ui/Input';
-import { Search, Check, MapPin, Send, Package } from 'lucide-react';
+import { Search, Check, MapPin, Send, Package, X, Hash, ClipboardList } from 'lucide-react';
 import { clsx } from 'clsx';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -15,9 +14,7 @@ export const Dispatch = () => {
   const [selections, setSelections] = useState<Record<string, string>>({});
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
 
-  useEffect(() => {
-    fetchShops();
-  }, []);
+  useEffect(() => { fetchShops(); }, []);
 
   const fetchShops = async () => {
     const { data } = await supabase.from('shops').select('*').eq('is_active', true).order('name');
@@ -30,159 +27,257 @@ export const Dispatch = () => {
       toast.error('No items', 'Please enter item counts for at least one shop.');
       return;
     }
-    
     setLoading(true);
-
     try {
       const dispatchRecords = shopIds.map(shopId => ({
-        shop_id: shopId,
-        date: date,
-        item_number: selections[shopId]
+        shop_id: shopId, date, item_number: selections[shopId]
       }));
-
       const { error } = await supabase.from('dispatches').insert(dispatchRecords);
-
       if (error) throw error;
       toast.success('Dispatches recorded!', `${shopIds.length} shop dispatches saved successfully.`);
       setSelections({});
     } catch (error: any) {
       toast.error('Failed to save dispatches', error.message);
-    } finally {
-      setLoading(false);
-    }
+    } finally { setLoading(false); }
   };
 
   const toggleShop = (id: string) => {
     setSelections(prev => {
-      const newSelections = { ...prev };
-      if (newSelections[id] !== undefined) delete newSelections[id];
-      else newSelections[id] = '';
-      return newSelections;
+      const next = { ...prev };
+      if (next[id] !== undefined) delete next[id];
+      else next[id] = '';
+      return next;
     });
   };
 
-  const updateItemNumber = (id: string, val: string) => {
+  const updateItemNumber = (id: string, val: string) =>
     setSelections(prev => ({ ...prev, [id]: val }));
-  };
 
-  const filteredShops = shops.filter(s => s.name.toLowerCase().includes(search.toLowerCase()));
+  const filteredShops = shops.filter(s =>
+    s.name.toLowerCase().includes(search.toLowerCase()) ||
+    (s.location || '').toLowerCase().includes(search.toLowerCase())
+  );
   const selectedCount = Object.keys(selections).length;
+  const filledCount = Object.keys(selections).filter(id => selections[id].trim() !== '').length;
 
   return (
-    <div className="max-w-4xl mx-auto pb-32 px-4 sm:px-6 relative min-h-[80vh]">
-      <div className="sticky top-0 z-30 bg-[#f8fafc]/95 backdrop-blur-md pt-4 pb-6 px-4 -mx-4 sm:-mx-6 shadow-sm border-b border-slate-200/50">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-            <div>
-                <h1 className="text-2xl sm:text-3xl font-black text-slate-800 tracking-tight">Record Dispatch</h1>
-                <p className="text-slate-500 text-xs sm:text-sm font-medium">Record items sent to shops from hub</p>
+    <div className="max-w-4xl mx-auto pb-32">
+
+      {/* ── Sticky Header ── */}
+      <div
+        className="sticky top-0 z-30 -mx-4 px-4 pt-3 pb-4"
+        style={{ background: 'rgba(224,229,236,0.95)', backdropFilter: 'blur(14px)', boxShadow: '0 4px 20px rgba(163,177,198,0.25)' }}
+      >
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-3">
+          <div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <h1 className="text-2xl font-black text-slate-800 tracking-tight leading-tight">
+                Record Dispatch
+              </h1>
+              <div className="flex items-center gap-1.5 px-3 py-1 bg-blue-600 rounded-full shadow-md shadow-blue-600/30">
+                <ClipboardList size={12} className="text-white" />
+                <span className="text-[10px] font-bold text-white uppercase tracking-wider">Hub → Shops</span>
+              </div>
             </div>
-            <div className="flex items-center gap-2 bg-white p-1 rounded-xl shadow-inner border border-slate-200 w-full sm:w-auto">
-                <span className="pl-3 text-xs font-bold text-slate-400 uppercase tracking-wider">Date</span>
-                <input 
-                    type="date" 
-                    value={date}
-                    onChange={(e) => setDate(e.target.value)}
-                    className="bg-transparent border-none focus:ring-0 text-slate-700 font-bold p-2 text-sm flex-1 sm:flex-none"
-                />
-            </div>
+            <p className="text-xs text-slate-500 font-medium mt-0.5">
+              {selectedCount > 0 ? `${filledCount} of ${selectedCount} shop(s) ready to dispatch` : 'Select shops and enter item counts'}
+            </p>
+          </div>
+
+          {/* Date picker */}
+          <div className="flex items-center gap-2 bg-white/70 border border-white/80 px-3 py-2 rounded-xl shadow-[inset_2px_2px_5px_rgba(163,177,198,0.2)] self-start sm:self-auto">
+            <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Date</span>
+            <input
+              type="date"
+              value={date}
+              onChange={e => setDate(e.target.value)}
+              className="bg-transparent border-none outline-none text-slate-700 font-bold text-sm"
+            />
+          </div>
         </div>
-        
+
+        {/* Search */}
         <div className="relative">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-          <input 
-            placeholder="Search shops..." 
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={17} />
+          <input
+            placeholder="Search shops by name or area..."
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full h-11 sm:h-12 pl-12 pr-4 bg-white border border-slate-200 rounded-xl text-sm sm:text-base text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm"
+            onChange={e => setSearch(e.target.value)}
+            className="w-full h-11 pl-10 pr-10 bg-white/70 border border-white/80 rounded-xl text-sm text-slate-700 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-blue-300 focus:ring-2 focus:ring-blue-200 transition-all shadow-[inset_2px_2px_5px_rgba(163,177,198,0.25),inset_-2px_-2px_5px_rgba(255,255,255,0.5)]"
           />
+          {search && (
+            <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+              <X size={15} />
+            </button>
+          )}
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
-        <AnimatePresence>
-          {filteredShops.map((shop, index) => {
-            const isSelected = selections[shop.id] !== undefined;
-            return (
-              <motion.div 
-                key={shop.id}
-                layout
-                initial={{ opacity: 0, scale: 0.98 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: index * 0.01 }}
-                className={clsx(
-                  "p-4 sm:p-5 rounded-2xl transition-all duration-300 border-2 cursor-pointer",
-                  isSelected 
-                    ? "bg-blue-50 border-blue-200 shadow-md" 
-                    : "bg-white border-slate-100 hover:border-slate-200 hover:shadow-sm"
-                )}
-                onClick={() => !isSelected && toggleShop(shop.id)}
-              >
-                <div className="flex items-center gap-3 sm:gap-4">
-                    <div className={clsx(
-                        "w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center transition-all duration-300 flex-shrink-0 shadow-sm",
-                        isSelected ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-400"
-                    )} onClick={(e) => { e.stopPropagation(); toggleShop(shop.id); }}>
-                        <Check size={18} strokeWidth={3} />
-                    </div>
-                    
-                    <div className="flex-1 min-w-0">
-                      <p className={clsx("font-bold text-base sm:text-lg truncate", isSelected ? "text-blue-900" : "text-slate-700")}>{shop.name}</p>
-                      <div className="flex items-center gap-1.5 text-slate-500 text-xs sm:text-sm font-medium mt-0.5">
-                          <MapPin size={12} className="flex-shrink-0" /> <span className="truncate">{shop.location}</span>
-                      </div>
-                    </div>
-                </div>
+      {/* ── Shop Grid ── */}
+      <div className="mt-5">
+        {selectedCount > 0 && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}
+            className="flex items-center justify-between px-4 py-2.5 bg-blue-50 border border-blue-200 rounded-xl mb-3"
+          >
+            <span className="text-xs font-bold text-blue-700">{selectedCount} selected · {filledCount} with count entered</span>
+            <button onClick={() => setSelections({})} className="text-[11px] text-blue-600 font-bold hover:underline">Clear all</button>
+          </motion.div>
+        )}
 
-                <AnimatePresence>
-                  {isSelected && (
-                      <motion.div 
-                        initial={{ opacity: 0, height: 0 }} 
+        <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest px-1 mb-3">
+          {filteredShops.length} Active Shop{filteredShops.length !== 1 ? 's' : ''}
+        </p>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <AnimatePresence>
+            {filteredShops.map((shop, index) => {
+              const isSelected = selections[shop.id] !== undefined;
+              const hasCount = isSelected && selections[shop.id].trim() !== '';
+              return (
+                <motion.div
+                  key={shop.id} layout
+                  initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.97 }} transition={{ delay: index * 0.01 }}
+                  className={clsx(
+                    'rounded-2xl overflow-hidden transition-all duration-300',
+                    isSelected ? 'border-2 border-blue-300' : 'border border-white/60'
+                  )}
+                  style={isSelected
+                    ? { background: 'linear-gradient(135deg, #eff6ff, #bfdbfe20)', boxShadow: 'inset 3px 3px 8px rgba(59,130,246,0.1), inset -3px -3px 8px rgba(255,255,255,0.6)' }
+                    : { background: 'linear-gradient(135deg, #eef2f7, #d8dfe8)', boxShadow: '6px 6px 14px rgba(163,177,198,0.45), -6px -6px 14px rgba(255,255,255,0.75)' }
+                  }
+                >
+                  {/* Shop row */}
+                  <div
+                    className="flex items-center gap-3 p-4 cursor-pointer"
+                    onClick={() => toggleShop(shop.id)}
+                  >
+                    <div className={clsx(
+                      'w-8 h-8 rounded-xl flex items-center justify-center transition-all duration-300 flex-shrink-0',
+                      hasCount
+                        ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30 scale-105'
+                        : isSelected
+                        ? 'bg-blue-200 text-blue-600'
+                        : 'bg-white/80 text-transparent shadow-[inset_2px_2px_5px_rgba(163,177,198,0.3)]'
+                    )}>
+                      <Check size={16} strokeWidth={3} />
+                    </div>
+
+                    <div className="flex-1 min-w-0">
+                      <p className={clsx('font-bold text-base leading-tight truncate transition-colors', isSelected ? 'text-blue-800' : 'text-slate-700')}>
+                        {shop.name}
+                      </p>
+                      {shop.location && (
+                        <div className="flex items-center gap-1 mt-0.5">
+                          <MapPin size={11} className={clsx('flex-shrink-0', isSelected ? 'text-blue-400' : 'text-slate-400')} />
+                          <span className="text-xs text-slate-500 font-medium truncate">{shop.location}</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {hasCount && (
+                      <motion.div
+                        initial={{ scale: 0 }} animate={{ scale: 1 }}
+                        className="flex-shrink-0 text-[10px] font-bold text-blue-700 bg-blue-100 px-2 py-0.5 rounded-full"
+                      >
+                        ×{selections[shop.id]}
+                      </motion.div>
+                    )}
+                  </div>
+
+                  {/* Item count input */}
+                  <AnimatePresence>
+                    {isSelected && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
                         animate={{ opacity: 1, height: 'auto' }}
                         exit={{ opacity: 0, height: 0 }}
-                        className="mt-4 pt-4 border-t border-blue-100"
-                        onClick={(e) => e.stopPropagation()}
+                        className="px-4 pb-4"
+                        onClick={e => e.stopPropagation()}
                       >
-                          <label className="block text-[10px] font-black uppercase tracking-wider text-blue-600 mb-1.5">Item Count / Batch</label>
-                          <Input 
+                        <div className="bg-white/70 rounded-xl p-3 border border-blue-100">
+                          <label className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider text-blue-600 mb-2">
+                            <Hash size={10} /> Item Count / Batch
+                          </label>
+                          <input
                             type="tel"
                             inputMode="numeric"
-                            placeholder="Enter count (e.g. 10)" 
-                            value={selections[shop.id]} 
-                            onChange={(e) => updateItemNumber(shop.id, e.target.value)}
-                            className="bg-white !py-2.5 sm:!py-3 !text-base sm:!text-lg font-black text-blue-700 border-blue-200 focus:border-blue-500 focus:ring-blue-500"
+                            placeholder="Enter count (e.g. 10)"
+                            value={selections[shop.id]}
+                            onChange={e => updateItemNumber(shop.id, e.target.value)}
                             autoFocus
+                            className="w-full h-10 px-3 bg-white border border-blue-200 rounded-lg text-base font-bold text-blue-700 placeholder-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-300 focus:border-blue-400 transition-all"
                           />
+                        </div>
                       </motion.div>
-                  )}
-                </AnimatePresence>
-              </motion.div>
-            );
-          })}
-        </AnimatePresence>
+                    )}
+                  </AnimatePresence>
+                </motion.div>
+              );
+            })}
+          </AnimatePresence>
+        </div>
+
+        {filteredShops.length === 0 && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+            className="text-center py-14 px-6"
+          >
+            <div className="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center mx-auto mb-4">
+              <Search size={26} className="text-slate-300" />
+            </div>
+            <p className="text-slate-600 font-bold text-base">No shops found</p>
+            <p className="text-slate-400 text-sm mt-1">Try a different search term.</p>
+          </motion.div>
+        )}
       </div>
 
-      <motion.div 
-        initial={{ y: 100 }}
-        animate={{ y: 0 }}
-        className="fixed bottom-4 sm:bottom-6 left-1/2 -translate-x-1/2 w-[92%] max-w-md p-3 sm:p-4 bg-slate-900/95 backdrop-blur-md rounded-2xl sm:rounded-3xl z-30 flex items-center justify-between shadow-2xl border border-white/10 pb-[calc(0.75rem+env(safe-area-inset-bottom))] sm:pb-4"
+      {/* ── Bottom Action Bar ── */}
+      <motion.div
+        initial={{ y: 100, opacity: 0 }} animate={{ y: 0, opacity: 1 }}
+        transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+        className="fixed bottom-0 left-0 right-0 z-40"
+        style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
       >
-        <div className="flex items-center gap-2 sm:gap-3 pl-1 sm:pl-2">
-            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-blue-500/20 flex items-center justify-center text-blue-400">
-                <Package size={18} />
+        <div className="mx-auto max-w-4xl px-4 pb-4">
+          <div
+            className="p-3 rounded-2xl flex items-center gap-3"
+            style={{ background: 'rgba(15,23,42,0.94)', backdropFilter: 'blur(16px)', boxShadow: '0 -4px 30px rgba(0,0,0,0.15), 0 20px 40px rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.08)' }}
+          >
+            {/* Count pill */}
+            <div className="flex items-center gap-2.5 pl-1 flex-1">
+              <div className="w-10 h-10 rounded-xl bg-blue-500/20 flex items-center justify-center flex-shrink-0">
+                <Package size={18} className="text-blue-400" />
+              </div>
+              <div>
+                <p className="text-white font-black text-lg leading-none">{filledCount}</p>
+                <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mt-0.5">
+                  Ready to Dispatch
+                </p>
+              </div>
             </div>
-            <div>
-                <p className="text-white font-bold text-base sm:text-lg leading-tight">{selectedCount}</p>
-                <p className="text-slate-400 text-[9px] sm:text-[10px] font-black uppercase tracking-widest">Selected</p>
-            </div>
+
+            <motion.button
+              whileTap={{ scale: 0.96 }}
+              onClick={handleDispatch}
+              disabled={filledCount === 0 || loading}
+              className={clsx(
+                'flex items-center gap-2 px-7 h-12 rounded-xl font-bold text-sm transition-all',
+                filledCount > 0
+                  ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/40 hover:bg-blue-700'
+                  : 'bg-white/10 text-white/40 cursor-not-allowed'
+              )}
+            >
+              {loading ? (
+                <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              ) : (
+                <Send size={16} />
+              )}
+              Confirm Dispatch
+            </motion.button>
+          </div>
         </div>
-        <Button 
-            onClick={handleDispatch} 
-            isLoading={loading} 
-            className="bg-blue-600 text-white hover:bg-blue-700 border-none px-6 sm:px-8 h-11 sm:h-12 rounded-xl sm:rounded-2xl shadow-lg shadow-blue-500/30 text-sm sm:text-base font-bold"
-            disabled={selectedCount === 0}
-        >
-            <Send size={16} className="mr-2" /> Confirm Dispatch
-        </Button>
       </motion.div>
     </div>
   );
