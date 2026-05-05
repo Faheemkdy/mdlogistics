@@ -4,12 +4,16 @@
 
 @layer base {
   body {
-    @apply bg-[#e0e5ec] text-slate-700;
+    @apply bg-[#e0e5ec] text-slate-700 min-h-screen;
     /* Subtle 3D-like noise/gradient pattern */
     background-image: 
       radial-gradient(at 0% 0%, rgba(255,255,255,0.5) 0px, transparent 50%),
       radial-gradient(at 100% 100%, rgba(163,177,198,0.1) 0px, transparent 50%);
-    background-attachment: fixed;
+    background-attachment: scroll;
+    background-repeat: no-repeat;
+    background-size: cover;
+    -webkit-overflow-scrolling: touch;
+    scroll-behavior: smooth;
   }
 }
 

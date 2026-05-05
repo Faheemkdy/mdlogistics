@@ -13,8 +13,14 @@ export const Dispatch = () => {
   const [loading, setLoading] = useState(false);
   const [selections, setSelections] = useState<Record<string, string>>({});
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  const [isScrolled, setIsScrolled] = useState(false);
 
-  useEffect(() => { fetchShops(); }, []);
+  useEffect(() => {
+    fetchShops();
+    const handleScroll = () => setIsScrolled(window.scrollY > 10);
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   const fetchShops = async () => {
     const { data } = await supabase.from('shops').select('*').eq('is_active', true).order('name');
@@ -65,27 +71,31 @@ export const Dispatch = () => {
 
       {/* ── Sticky Header ── */}
       <div
-        className="sticky top-0 z-30 -mx-4 px-4 pt-3 pb-4"
-        style={{ background: 'rgba(224,229,236,0.95)', backdropFilter: 'blur(14px)', boxShadow: '0 4px 20px rgba(163,177,198,0.25)' }}
+        className={clsx(
+          "sticky top-0 z-30 -mx-4 px-4 pt-4 pb-5 transition-all duration-300 ease-in-out",
+          isScrolled 
+            ? "bg-[#e0e5ec] shadow-[0_8px_30px_rgb(0,0,0,0.08)]" 
+            : "bg-transparent backdrop-blur-sm"
+        )}
       >
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-3">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
           <div>
             <div className="flex items-center gap-2 flex-wrap">
               <h1 className="text-2xl font-black text-slate-800 tracking-tight leading-tight">
                 Record Dispatch
               </h1>
-              <div className="flex items-center gap-1.5 px-3 py-1 bg-blue-600 rounded-full shadow-md shadow-blue-600/30">
+              <div className="flex items-center gap-1.5 px-3 py-1 bg-blue-600 rounded-full shadow-lg shadow-blue-600/30">
                 <ClipboardList size={12} className="text-white" />
                 <span className="text-[10px] font-bold text-white uppercase tracking-wider">Hub → Shops</span>
               </div>
             </div>
-            <p className="text-xs text-slate-500 font-medium mt-0.5">
-              {selectedCount > 0 ? `${filledCount} of ${selectedCount} shop(s) ready to dispatch` : 'Select shops and enter item counts'}
+            <p className="text-xs text-slate-500 font-medium mt-1">
+              {selectedCount > 0 ? `${filledCount} of ${selectedCount} shop(s) ready` : 'Select shops and enter item counts'}
             </p>
           </div>
 
           {/* Date picker */}
-          <div className="flex items-center gap-2 bg-white/70 border border-white/80 px-3 py-2 rounded-xl shadow-[inset_2px_2px_5px_rgba(163,177,198,0.2)] self-start sm:self-auto">
+          <div className="flex items-center gap-2 bg-white/40 border border-white/60 px-4 py-2 rounded-2xl shadow-[4px_4px_10px_rgba(163,177,198,0.3),-4px_-4px_10px_rgba(255,255,255,0.8)] self-start sm:self-auto">
             <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Date</span>
             <input
               type="date"
@@ -97,17 +107,18 @@ export const Dispatch = () => {
         </div>
 
         {/* Search */}
-        <div className="relative">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={17} />
+        <div className="relative group">
+          <div className="absolute inset-0 bg-blue-500/5 blur-xl rounded-2xl opacity-0 group-focus-within:opacity-100 transition-opacity" />
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors" size={18} />
           <input
             placeholder="Search shops by name or area..."
             value={search}
             onChange={e => setSearch(e.target.value)}
-            className="w-full h-11 pl-10 pr-10 bg-white/70 border border-white/80 rounded-xl text-sm text-slate-700 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-blue-300 focus:ring-2 focus:ring-blue-200 transition-all shadow-[inset_2px_2px_5px_rgba(163,177,198,0.25),inset_-2px_-2px_5px_rgba(255,255,255,0.5)]"
+            className="w-full h-12 pl-12 pr-12 bg-white/80 border border-white rounded-2xl text-sm text-slate-700 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-blue-400 focus:ring-4 focus:ring-blue-500/10 transition-all shadow-[6px_6px_12px_rgba(163,177,198,0.3),-6px_-6px_12px_rgba(255,255,255,0.8)]"
           />
           {search && (
-            <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
-              <X size={15} />
+            <button onClick={() => setSearch('')} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1 hover:bg-slate-100 rounded-full transition-all">
+              <X size={16} />
             </button>
           )}
         </div>
