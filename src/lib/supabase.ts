@@ -10,7 +10,13 @@ if (!supabaseUrl || !supabaseAnonKey) {
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 // Helper to create a temporary client for creating users without logging out admin
-export const createTempClient = () => createClient(supabaseUrl, supabaseAnonKey);
+export const createTempClient = () => createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    persistSession: false,
+    autoRefreshToken: false,
+    detectSessionInUrl: false
+  }
+});
 
 // Helper to map username to email for Supabase Auth
 // Using a consistent internal domain for user identification

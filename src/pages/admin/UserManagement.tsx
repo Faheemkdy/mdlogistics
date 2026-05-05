@@ -20,64 +20,70 @@ const DeactivateModal: React.FC<DeactivateModalProps> = ({ user, onConfirm, onCa
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ background: 'rgba(15, 23, 42, 0.7)', backdropFilter: 'blur(8px)' }}
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-md bg-slate-900/20"
       onClick={onCancel}
     >
       <motion.div
-        initial={{ opacity: 0, scale: 0.8, y: 30 }}
+        initial={{ opacity: 0, scale: 0.9, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.8, y: 30 }}
-        transition={{ type: 'spring', stiffness: 300, damping: 25 }}
-        className="w-full max-w-sm bg-gradient-to-br from-slate-800 to-slate-900 rounded-3xl p-8 border border-white/10 shadow-2xl"
+        exit={{ opacity: 0, scale: 0.9, y: 20 }}
+        className="w-full max-w-sm bg-white/90 backdrop-blur-2xl rounded-[2.5rem] p-10 border border-white shadow-[0_20px_50px_rgba(0,0,0,0.1)]"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex flex-col items-center text-center gap-4">
+        <div className="flex flex-col items-center text-center gap-6">
           <motion.div
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            transition={{ type: 'spring', stiffness: 400, damping: 20, delay: 0.1 }}
-            className={`w-20 h-20 rounded-2xl flex items-center justify-center ${
-              isDeactivating ? 'bg-orange-500/20 border border-orange-500/30' : 'bg-emerald-500/20 border border-emerald-500/30'
+            initial={{ scale: 0, rotate: -20 }}
+            animate={{ scale: 1, rotate: 0 }}
+            transition={{ type: 'spring', stiffness: 300, damping: 15, delay: 0.1 }}
+            className={`w-24 h-24 rounded-3xl flex items-center justify-center shadow-lg ${
+              isDeactivating 
+                ? 'bg-rose-50 text-rose-500 shadow-rose-200/50 border border-rose-100' 
+                : 'bg-emerald-50 text-emerald-500 shadow-emerald-200/50 border border-emerald-100'
             }`}
           >
-            {isDeactivating ? <Ban size={36} className="text-orange-400" /> : <CheckCircle2 size={36} className="text-emerald-400" />}
+            {isDeactivating ? <Ban size={44} strokeWidth={1.5} /> : <CheckCircle2 size={44} strokeWidth={1.5} />}
           </motion.div>
-          <div>
-            <h3 className="text-xl font-black text-white">
+          
+          <div className="space-y-2">
+            <h3 className="text-2xl font-black text-slate-800 tracking-tight">
               {isDeactivating ? 'Deactivate User?' : 'Activate User?'}
             </h3>
-            <p className="text-slate-400 mt-2 text-sm leading-relaxed">
+            <p className="text-slate-500 text-sm leading-relaxed font-medium">
               Are you sure you want to {isDeactivating ? 'deactivate' : 'activate'}{' '}
-              <span className="text-white font-bold">"{user?.username}"</span>?
+              <span className="text-slate-900 font-bold">"{user?.username}"</span>?
               <br />
-              {isDeactivating 
-                ? 'They will no longer be able to log in to the system.'
-                : 'They will be granted access to log in again.'}
+              <span className="opacity-80">
+                {isDeactivating 
+                  ? 'Access will be immediately revoked.'
+                  : 'Access will be restored to this account.'}
+              </span>
             </p>
           </div>
-          <div className="flex gap-3 w-full mt-2">
-            <button
-              onClick={onCancel}
-              className="flex-1 py-3 rounded-xl bg-white/10 text-white font-bold hover:bg-white/20 transition-colors"
-            >
-              Cancel
-            </button>
+
+          <div className="flex flex-col gap-3 w-full">
             <button
               onClick={onConfirm}
               disabled={isLoading}
-              className={`flex-1 py-3 rounded-xl text-white font-bold transition-colors disabled:opacity-60 flex items-center justify-center gap-2 ${
-                isDeactivating ? 'bg-orange-500 hover:bg-orange-600' : 'bg-emerald-500 hover:bg-emerald-600'
+              className={`w-full py-4 rounded-2xl text-white font-bold transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg ${
+                isDeactivating 
+                  ? 'bg-rose-500 hover:bg-rose-600 shadow-rose-200' 
+                  : 'bg-emerald-500 hover:bg-emerald-600 shadow-emerald-200'
               }`}
             >
               {isLoading ? (
                 <motion.div
                   animate={{ rotate: 360 }}
                   transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-                  className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full"
+                  className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full"
                 />
-              ) : (isDeactivating ? <Ban size={16} /> : <CheckCircle2 size={16} />)}
-              {isLoading ? 'Processing...' : (isDeactivating ? 'Deactivate' : 'Activate')}
+              ) : (isDeactivating ? <Ban size={18} /> : <CheckCircle2 size={18} />)}
+              {isLoading ? 'Processing...' : (isDeactivating ? 'Confirm Action' : 'Activate User')}
+            </button>
+            <button
+              onClick={onCancel}
+              className="w-full py-4 rounded-2xl bg-slate-100 text-slate-600 font-bold hover:bg-slate-200 transition-all active:scale-95"
+            >
+              Go Back
             </button>
           </div>
         </div>
@@ -283,99 +289,116 @@ export const UserManagement = () => {
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="flex items-center justify-between"
+        className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 pb-2"
       >
-        <div>
-          <h1 className="text-3xl font-black text-slate-800 tracking-tight">User Management</h1>
-          <p className="text-slate-500 font-medium mt-1">Manage staff access & permissions</p>
-        </div>
-        <div className="hidden md:flex items-center gap-3">
-          <div className="flex items-center gap-2 px-4 py-2 bg-purple-100 text-purple-700 rounded-full text-sm font-bold border border-purple-200">
-            <Crown size={14} />
-            {adminCount} Admin{adminCount !== 1 ? 's' : ''}
+        <div className="space-y-1">
+          <h1 className="text-4xl font-black text-slate-900 tracking-tight">User Management</h1>
+          <div className="flex items-center gap-2 text-slate-500 font-semibold text-sm">
+            <Users size={16} className="text-blue-500" />
+            <span>Manage organization access & permissions</span>
           </div>
-          <div className="flex items-center gap-2 px-4 py-2 bg-blue-100 text-blue-700 rounded-full text-sm font-bold border border-blue-200">
-            <Users size={14} />
-            {staffCount} Staff
+        </div>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2.5 px-5 py-2.5 bg-white/60 backdrop-blur-md text-slate-700 rounded-2xl text-xs font-black border border-white shadow-sm">
+            <Crown size={14} className="text-amber-500" />
+            <span className="opacity-70 uppercase tracking-widest">Admins:</span>
+            <span className="text-slate-900 text-sm">{adminCount}</span>
+          </div>
+          <div className="flex items-center gap-2.5 px-5 py-2.5 bg-white/60 backdrop-blur-md text-slate-700 rounded-2xl text-xs font-black border border-white shadow-sm">
+            <Users size={14} className="text-blue-500" />
+            <span className="opacity-70 uppercase tracking-widest">Staff:</span>
+            <span className="text-slate-900 text-sm">{staffCount}</span>
           </div>
         </div>
       </motion.div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Create User Form - Dark Card */}
+        {/* Create User Form - Light Card */}
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.1, ease: [0.23, 1, 0.32, 1] }}
-          className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-3xl p-6 border border-white/10 shadow-2xl h-fit"
+          className="bg-white/80 backdrop-blur-xl rounded-[2rem] p-8 border border-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] h-fit relative overflow-hidden"
         >
-          <div className="flex items-center gap-4 mb-6">
-            <div className="p-3 bg-blue-500/20 border border-blue-400/30 text-blue-400 rounded-2xl">
-              <UserPlus size={24} />
+          {/* Decorative Background Element */}
+          <div className="absolute -top-24 -right-24 w-48 h-48 bg-blue-500/5 rounded-full blur-3xl pointer-events-none" />
+          
+          <div className="flex items-center gap-4 mb-8 relative">
+            <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-indigo-600 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-blue-500/20">
+              <UserPlus size={24} strokeWidth={2.5} />
             </div>
             <div>
-              <h3 className="font-bold text-xl text-white">New Staff</h3>
-              <p className="text-slate-400 text-sm">Create a new account</p>
+              <h3 className="font-black text-xl text-slate-900 tracking-tight">New Member</h3>
+              <p className="text-slate-500 text-sm font-semibold">Onboard new staff</p>
             </div>
           </div>
 
-          <form onSubmit={handleCreateUser} className="space-y-4">
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Username</label>
-              <input
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                placeholder="Enter username"
-                required
-                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all"
-              />
+          <form onSubmit={handleCreateUser} className="space-y-6 relative">
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Account Identity</label>
+              <div className="relative group">
+                <input
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  placeholder="Username"
+                  required
+                  className="w-full px-5 py-4 bg-slate-50/50 border border-slate-100 rounded-2xl text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500/30 transition-all font-medium"
+                />
+                <User size={18} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-blue-400 transition-colors" />
+              </div>
             </div>
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Password</label>
-              <div className="relative">
+
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Security Key</label>
+              <div className="relative group">
                 <input
                   type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Min 6 characters"
+                  placeholder="Secret Password"
                   required
-                  className="w-full pl-4 pr-12 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all"
+                  className="w-full pl-5 pr-14 py-4 bg-slate-50/50 border border-slate-100 rounded-2xl text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500/30 transition-all font-medium"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200 transition-colors p-1"
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300 hover:text-blue-500 transition-colors p-1"
                 >
-                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                 </button>
               </div>
             </div>
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Access Level</label>
-              <select
-                value={role}
-                onChange={(e) => setRole(e.target.value as 'admin' | 'user')}
-                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all appearance-none cursor-pointer"
-                style={{ colorScheme: 'dark' }}
-              >
-                <option value="user" className="bg-slate-800 text-white">Standard User (Staff)</option>
-                <option value="admin" className="bg-slate-800 text-white">Administrator</option>
-              </select>
+
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Permission Level</label>
+              <div className="relative">
+                <select
+                  value={role}
+                  onChange={(e) => setRole(e.target.value as 'admin' | 'user')}
+                  className="w-full px-5 py-4 bg-slate-50/50 border border-slate-100 rounded-2xl text-slate-800 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500/30 transition-all appearance-none cursor-pointer font-bold"
+                >
+                  <option value="user">Standard Member</option>
+                  <option value="admin">Administrator</option>
+                </select>
+                <div className="absolute right-5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                  <CheckCircle size={18} />
+                </div>
+              </div>
             </div>
 
             <AnimatePresence>
               {message && (
                 <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  exit={{ opacity: 0, height: 0 }}
-                  className={`p-3 rounded-xl flex items-start gap-3 text-sm font-medium overflow-hidden ${
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  className={`p-4 rounded-2xl flex items-start gap-3 text-sm font-bold overflow-hidden shadow-sm ${
                     message.type === 'error'
-                      ? 'bg-red-500/20 text-red-300 border border-red-500/30'
-                      : 'bg-green-500/20 text-green-300 border border-green-500/30'
+                      ? 'bg-rose-50 text-rose-600 border border-rose-100'
+                      : 'bg-emerald-50 text-emerald-600 border border-emerald-100'
                   }`}
                 >
-                  {message.type === 'error' ? <AlertCircle size={18} className="shrink-0 mt-0.5" /> : <CheckCircle size={18} className="shrink-0 mt-0.5" />}
+                  {message.type === 'error' ? <AlertCircle size={20} className="shrink-0" /> : <CheckCircle size={20} className="shrink-0" />}
                   <span>{message.text}</span>
                 </motion.div>
               )}
@@ -384,9 +407,9 @@ export const UserManagement = () => {
             <motion.button
               type="submit"
               disabled={loading}
-              whileHover={{ scale: 1.02 }}
+              whileHover={{ scale: 1.02, y: -2 }}
               whileTap={{ scale: 0.98 }}
-              className="w-full py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold rounded-xl hover:from-blue-500 hover:to-indigo-500 transition-all disabled:opacity-60 flex items-center justify-center gap-2 shadow-lg shadow-blue-500/25 mt-2"
+              className="w-full py-4 bg-slate-900 text-white font-black rounded-2xl hover:bg-blue-600 transition-all disabled:opacity-50 flex items-center justify-center gap-3 shadow-xl shadow-slate-200 mt-4 tracking-tight"
             >
               {loading ? (
                 <motion.div
@@ -394,8 +417,8 @@ export const UserManagement = () => {
                   transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
                   className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full"
                 />
-              ) : <UserPlus size={18} />}
-              {loading ? 'Creating...' : 'Create User'}
+              ) : <UserPlus size={20} strokeWidth={2.5} />}
+              {loading ? 'Processing...' : 'Register Member'}
             </motion.button>
           </form>
         </motion.div>
@@ -405,20 +428,25 @@ export const UserManagement = () => {
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.2, ease: [0.23, 1, 0.32, 1] }}
-          className="lg:col-span-2 bg-gradient-to-br from-[#eef2f7] to-[#d3d8df] rounded-3xl p-6 border border-white/50 shadow-[9px_9px_16px_rgb(163,177,198,0.6),-9px_-9px_16px_rgba(255,255,255,0.7)]"
+          className="lg:col-span-2 bg-white/50 backdrop-blur-md rounded-[2rem] p-8 border border-white shadow-[0_8px_30px_rgb(0,0,0,0.02)] flex flex-col"
         >
-          <div className="flex items-center justify-between mb-6 gap-3">
-            <h3 className="font-bold text-lg sm:text-xl text-slate-800 truncate">
-              All Users
-              <span className="ml-2 text-sm font-medium text-slate-400">({filteredUsers.length})</span>
-            </h3>
-            <div className="relative flex-shrink-0">
-              <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-8 gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-1.5 h-8 bg-blue-500 rounded-full" />
+              <h3 className="font-black text-2xl text-slate-900 tracking-tight">
+                Organization
+                <span className="ml-2 text-sm font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-lg">
+                  {filteredUsers.length}
+                </span>
+              </h3>
+            </div>
+            <div className="relative group">
+              <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-blue-500 transition-colors" />
               <input
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search..."
-                className="pl-8 pr-3 py-2 bg-white/70 border border-white/80 rounded-xl text-sm text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-400/40 w-28"
+                placeholder="Find users..."
+                className="pl-12 pr-4 py-3 bg-white/80 border border-slate-100 rounded-2xl text-sm text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500/30 transition-all sm:w-64 w-full font-medium shadow-sm"
               />
             </div>
           </div>
@@ -456,189 +484,188 @@ export const UserManagement = () => {
                 filteredUsers.map((user, index) => {
                   const isMasterUser = user.username === 'md';
                   const isDeactivated = user.is_active === false;
-                  
-                  // Cannot act on self (deactivate/delete)
                   const isSelf = profile?.id === user.id;
 
                   return (
                     <motion.div
                       key={user.id}
-                      initial={{ opacity: 0, x: 20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, scale: 0.95, x: -20 }}
-                      transition={{ duration: 0.3, delay: index * 0.04 }}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.95 }}
+                      transition={{ duration: 0.4, delay: index * 0.05 }}
                       layout
-                      className={`flex flex-col gap-0 backdrop-blur-sm rounded-2xl border transition-all overflow-hidden ${
+                      className={`group flex flex-col rounded-3xl border transition-all overflow-hidden ${
                          isDeactivated 
-                          ? 'bg-slate-200/50 border-slate-300 opacity-70 grayscale-[0.5]' 
-                          : 'bg-white/60 border-white/80 shadow-sm hover:shadow-md hover:bg-white/80'
+                          ? 'bg-slate-50/50 border-slate-200 opacity-80' 
+                          : 'bg-white border-slate-100 hover:border-blue-200 hover:shadow-[0_8px_30px_rgb(0,0,0,0.04)]'
                       }`}
                     >
-                      <div className="flex items-center justify-between p-4">
-                        <div className="flex items-center gap-3">
-                          <div className={`w-11 h-11 rounded-xl flex items-center justify-center font-bold text-white overflow-hidden shadow-md flex-shrink-0 ${
+                      <div className="flex items-center justify-between p-5 gap-4">
+                        <div className="flex items-center gap-4 min-w-0">
+                          {/* User Avatar/Icon */}
+                          <div className={`w-14 h-14 rounded-2xl flex items-center justify-center font-bold text-white shadow-sm flex-shrink-0 relative ${
                             isMasterUser 
-                              ? 'bg-gradient-to-br from-amber-500 to-yellow-600'
+                              ? 'bg-gradient-to-br from-amber-400 to-orange-500 shadow-amber-200'
                               : user.role === 'admin'
-                                ? 'bg-gradient-to-br from-purple-500 to-indigo-600'
-                                : 'bg-gradient-to-br from-blue-400 to-blue-600'
+                                ? 'bg-gradient-to-br from-indigo-500 to-purple-600 shadow-indigo-200'
+                                : 'bg-gradient-to-br from-blue-400 to-blue-600 shadow-blue-200'
                           }`}>
-                            {isMasterUser ? <Crown size={20} className="text-yellow-100" /> :
-                             user.role === 'admin' ? <Crown size={20} /> : <User size={20} />}
+                            {isMasterUser ? <Crown size={24} /> :
+                             user.role === 'admin' ? <Users size={24} /> : <User size={24} />}
+                            
+                            {/* Active/Inactive Dot */}
+                            <div className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-white ${isDeactivated ? 'bg-slate-400' : 'bg-emerald-500'}`} />
                           </div>
 
-                          {editingId === user.id ? (
-                            <input
-                              value={editUsername}
-                              onChange={(e) => setEditUsername(e.target.value)}
-                              autoFocus
-                              className="px-3 py-2 bg-white border border-blue-300 rounded-lg text-slate-800 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-400/50 w-44"
-                            />
-                          ) : (
-                            <div>
-                              <div className="flex items-center gap-2">
-                                <p className="font-bold text-slate-800 truncate max-w-[140px] sm:max-w-[200px]">{user.username}</p>
-                                {isDeactivated && (
-                                  <span className="text-[9px] font-bold bg-slate-300 text-slate-600 px-1.5 py-0.5 rounded text-uppercase tracking-wider">Deactivated</span>
-                                )}
+                          <div className="min-w-0 flex-1">
+                            {editingId === user.id ? (
+                              <div className="relative">
+                                <input
+                                  value={editUsername}
+                                  onChange={(e) => setEditUsername(e.target.value)}
+                                  autoFocus
+                                  className="w-full px-3 py-1.5 bg-slate-50 border border-blue-200 rounded-xl text-slate-800 text-sm font-black focus:outline-none focus:ring-4 focus:ring-blue-500/10"
+                                />
+                                <div className="absolute right-2 top-1/2 -translate-y-1/2 flex gap-1">
+                                  <button onClick={saveEdit} className="p-1 text-emerald-500 hover:bg-emerald-50 rounded-lg transition-colors"><Check size={16} /></button>
+                                  <button onClick={() => setEditingId(null)} className="p-1 text-slate-400 hover:bg-slate-100 rounded-lg transition-colors"><X size={16} /></button>
+                                </div>
                               </div>
-                              <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full mt-0.5 inline-block ${
-                                isMasterUser
-                                  ? 'bg-amber-100 text-amber-700 border border-amber-200'
-                                  : user.role === 'admin'
-                                    ? 'bg-purple-100 text-purple-700 border border-purple-200'
-                                    : 'bg-blue-100 text-blue-700 border border-blue-200'
-                              }`}>
-                                {isMasterUser ? '👑 Master Admin' : user.role === 'admin' ? '🛡️ Admin' : '👤 Staff'}
-                              </span>
-                            </div>
-                          )}
+                            ) : (
+                              <div className="space-y-1">
+                                <div className="flex items-center gap-2">
+                                  <p className="font-black text-slate-900 truncate leading-tight tracking-tight">
+                                    {user.username}
+                                    {isSelf && <span className="ml-2 text-[10px] text-blue-500 bg-blue-50 px-1.5 py-0.5 rounded-md uppercase tracking-wider">You</span>}
+                                  </p>
+                                </div>
+                                <div className="flex flex-wrap gap-2 items-center">
+                                  <span className={`text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-lg inline-flex items-center gap-1.5 ${
+                                    isMasterUser
+                                      ? 'bg-amber-50 text-amber-600 border border-amber-100'
+                                      : user.role === 'admin'
+                                        ? 'bg-indigo-50 text-indigo-600 border border-indigo-100'
+                                        : 'bg-blue-50 text-blue-600 border border-blue-100'
+                                  }`}>
+                                    {isMasterUser ? 'Master Admin' : user.role === 'admin' ? 'Administrator' : 'Standard Staff'}
+                                  </span>
+                                  {isDeactivated && (
+                                    <span className="text-[10px] font-black uppercase tracking-widest px-2.5 py-1 bg-slate-100 text-slate-500 border border-slate-200 rounded-lg">Suspended</span>
+                                  )}
+                                </div>
+                              </div>
+                            )}
+                          </div>
                         </div>
 
-                        <div className="flex items-center gap-1.5">
-                          {editingId === user.id ? (
+                        {/* Action Buttons */}
+                        <div className="flex items-center gap-1.5 bg-slate-50/80 p-2 rounded-2xl border border-slate-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all duration-300">
+                          <motion.button
+                            whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
+                            onClick={() => { setResetId(resetId === user.id ? null : user.id); setEditingId(null); }}
+                            className={`p-2.5 rounded-xl transition-all ${resetId === user.id ? 'bg-orange-500 text-white shadow-lg shadow-orange-200' : 'text-orange-500 hover:bg-orange-100'}`}
+                            title="Reset Password"
+                          >
+                            <KeyRound size={18} />
+                          </motion.button>
+                          
+                          {!isMasterUser && (
+                            <motion.button
+                              whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
+                              onClick={() => startEdit(user)}
+                              className="p-2.5 text-blue-500 hover:bg-blue-100 rounded-xl transition-all"
+                              title="Edit Identity"
+                            >
+                              <Edit2 size={18} />
+                            </motion.button>
+                          )}
+                          
+                          {!isMasterUser && !isSelf && (
                             <>
                               <motion.button
                                 whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
-                                onClick={saveEdit}
-                                className="p-2 bg-green-100 text-green-600 rounded-xl hover:bg-green-200 transition-colors"
-                                title="Save"
+                                onClick={() => setActionUser(user)}
+                                className={`p-2.5 rounded-xl transition-all ${
+                                  isDeactivated 
+                                    ? 'text-emerald-500 hover:bg-emerald-100'
+                                    : 'text-rose-500 hover:bg-rose-100'
+                                }`}
+                                title={isDeactivated ? "Reactivate Account" : "Suspend Account"}
                               >
-                                <Check size={16} />
+                                {isDeactivated ? <CheckCircle2 size={18} /> : <Ban size={18} />}
                               </motion.button>
                               <motion.button
                                 whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
-                                onClick={() => setEditingId(null)}
-                                className="p-2 bg-slate-100 text-slate-500 rounded-xl hover:bg-slate-200 transition-colors"
-                                title="Cancel"
+                                onClick={() => handleDeleteUser(user.id)}
+                                className="p-2.5 text-slate-300 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all"
+                                title="Delete Permanently"
                               >
-                                <X size={16} />
+                                <Trash2 size={18} />
                               </motion.button>
-                            </>
-                          ) : (
-                            <>
-                              <motion.button
-                                whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
-                                onClick={() => { setResetId(resetId === user.id ? null : user.id); setEditingId(null); }}
-                                className={`p-2 rounded-xl transition-colors ${resetId === user.id ? 'bg-orange-500 text-white' : 'bg-orange-100 text-orange-500 hover:bg-orange-200'}`}
-                                title="Change Password / Reset Options"
-                              >
-                                <KeyRound size={16} />
-                              </motion.button>
-                              
-                              {!isMasterUser && (
-                                <motion.button
-                                  whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
-                                  onClick={() => startEdit(user)}
-                                  className="p-2 bg-blue-100 text-blue-500 rounded-xl hover:bg-blue-200 transition-colors"
-                                  title="Edit Username"
-                                >
-                                  <Edit2 size={16} />
-                                </motion.button>
-                              )}
-                              
-                              {!isMasterUser && !isSelf && (
-                                <>
-                                  <motion.button
-                                    whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
-                                    onClick={() => setActionUser(user)}
-                                    className={`p-2 rounded-xl transition-colors ${
-                                      isDeactivated 
-                                        ? 'bg-emerald-100 text-emerald-500 hover:bg-emerald-200'
-                                        : 'bg-orange-100 text-orange-500 hover:bg-orange-200'
-                                    }`}
-                                    title={isDeactivated ? "Activate User" : "Deactivate User"}
-                                  >
-                                    {isDeactivated ? <CheckCircle2 size={16} /> : <Ban size={16} />}
-                                  </motion.button>
-                                  <motion.button
-                                    whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
-                                    onClick={() => handleDeleteUser(user.id)}
-                                    className="p-2 rounded-xl bg-red-100 text-red-500 hover:bg-red-200 transition-colors"
-                                    title="Delete User"
-                                  >
-                                    <Trash2 size={16} />
-                                  </motion.button>
-                                </>
-                              )}
                             </>
                           )}
                         </div>
                       </div>
 
-                      {/* Password Reset Expandable Section */}
+                      {/* Expandable Password Reset */}
                       <AnimatePresence>
                         {resetId === user.id && (
                           <motion.div
                             initial={{ height: 0, opacity: 0 }}
                             animate={{ height: 'auto', opacity: 1 }}
                             exit={{ height: 0, opacity: 0 }}
-                            transition={{ duration: 0.25, ease: 'easeInOut' }}
-                            className="overflow-hidden bg-orange-50/50 border-t border-slate-200/60"
+                            className="bg-slate-50 border-t border-slate-100"
                           >
-                            <div className="px-4 py-4 flex gap-3 flex-col sm:flex-row sm:items-center">
+                            <div className="p-6">
                               {isMasterUser ? (
-                                <div className="flex-1 w-full">
-                                  <p className="text-sm text-slate-600 mb-3 font-medium">
-                                    Master Admin passwords cannot be changed directly here for security. Send an OTP magic link to the registered secure email (mdcourierkdy@gmail.com).
+                                <div className="space-y-4">
+                                  <div className="flex items-center gap-3 text-orange-600 font-bold text-sm">
+                                    <AlertCircle size={18} />
+                                    <span>High-Security Account</span>
+                                  </div>
+                                  <p className="text-sm text-slate-500 font-medium leading-relaxed">
+                                    To reset the Master Admin password, a secure magic link will be sent to 
+                                    <span className="text-slate-900 font-bold ml-1">mdcourierkdy@gmail.com</span>.
                                   </p>
                                   <motion.button
                                     whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
                                     onClick={sendMasterAdminOTPLink}
-                                    className="px-4 py-2.5 bg-orange-500 text-white text-sm font-bold rounded-xl hover:bg-orange-600 transition-colors w-full flex items-center justify-center gap-2 shadow-md shadow-orange-500/20"
+                                    className="w-full py-3.5 bg-orange-500 text-white font-black rounded-2xl hover:bg-orange-600 transition-all flex items-center justify-center gap-3 shadow-lg shadow-orange-100"
                                   >
-                                    <Mail size={16} /> Send Email OTP Reset Link
+                                    <Mail size={18} strokeWidth={2.5} />
+                                    Send Security Link
                                   </motion.button>
                                 </div>
                               ) : (
-                                <>
-                                  <div className="flex items-center gap-2 flex-1">
-                                    <div className="relative flex-1">
+                                <div className="space-y-4">
+                                  <p className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">New Security Credential</p>
+                                  <div className="flex flex-col sm:flex-row gap-3">
+                                    <div className="relative flex-1 group">
                                       <input
                                         type={showResetPassword ? "text" : "password"}
-                                        placeholder="New Password (min 6 chars)"
+                                        placeholder="Min 6 characters"
                                         value={newPassword}
                                         onChange={(e) => setNewPassword(e.target.value)}
-                                        className="w-full px-3 py-2 pl-9 pr-10 bg-white border border-orange-200 rounded-xl text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-orange-400/50"
+                                        className="w-full pl-12 pr-12 py-3.5 bg-white border border-slate-200 rounded-2xl text-sm font-bold focus:outline-none focus:ring-4 focus:ring-orange-500/10 focus:border-orange-500/30 transition-all"
                                       />
-                                      <KeyRound size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-orange-400" />
+                                      <KeyRound size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-orange-400" />
                                       <button
                                         type="button"
                                         onClick={() => setShowResetPassword(!showResetPassword)}
-                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors p-1"
+                                        className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-600 p-1"
                                       >
-                                        {showResetPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                                        {showResetPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                                       </button>
                                     </div>
+                                    <motion.button
+                                      whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+                                      onClick={() => handlePasswordReset(user.id)}
+                                      className="px-8 py-3.5 bg-slate-900 text-white font-black rounded-2xl hover:bg-orange-500 transition-all shadow-lg shadow-slate-200 whitespace-nowrap"
+                                    >
+                                      Update Key
+                                    </motion.button>
                                   </div>
-                                  <motion.button
-                                    whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
-                                    onClick={() => handlePasswordReset(user.id)}
-                                    className="px-4 py-2 bg-orange-500 text-white text-sm font-bold rounded-xl hover:bg-orange-600 transition-colors whitespace-nowrap shadow-sm shadow-orange-500/20"
-                                  >
-                                    Update Password
-                                  </motion.button>
-                                </>
+                                </div>
                               )}
                             </div>
                           </motion.div>

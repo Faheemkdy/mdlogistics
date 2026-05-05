@@ -4,7 +4,7 @@ import { supabase } from '../../lib/supabase';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { useToast } from '../../components/ui/Toast';
-import { Trash2, Plus, MapPin, Edit2, X, Check, Upload, Search, Store } from 'lucide-react';
+import { Trash2, Plus, MapPin, Edit2, X, Check, Upload, Search, Store, LayoutGrid, FileSpreadsheet, CheckCircle2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import * as XLSX from 'xlsx';
 
@@ -101,155 +101,289 @@ export const Shops = () => {
     reader.readAsBinaryString(file);
   };
 
-  const filteredShops = shops.filter(s => s.name.toLowerCase().includes(search.toLowerCase()));
+  const filteredShops = shops.filter(s => 
+    s.name.toLowerCase().includes(search.toLowerCase()) || 
+    (s.location || '').toLowerCase().includes(search.toLowerCase())
+  );
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <motion.div initial={{ opacity: 0, y: -16 }} animate={{ opacity: 1, y: 0 }}>
-        <h1 className="text-3xl font-black text-slate-800 tracking-tight">Shops</h1>
-        <p className="text-slate-500 font-medium mt-1">{shops.length} shop{shops.length !== 1 ? 's' : ''} registered</p>
+    <div className="space-y-8 max-w-5xl mx-auto pb-20">
+      
+      {/* ── Page Header & Quick Actions ── */}
+      <motion.div 
+        initial={{ opacity: 0, y: -20 }} 
+        animate={{ opacity: 1, y: 0 }}
+        className="flex flex-col md:flex-row md:items-end justify-between gap-6"
+      >
+        <div className="space-y-1">
+          <h1 className="text-4xl font-black text-slate-900 tracking-tight">Partner Outlets</h1>
+          <p className="text-slate-500 font-semibold text-sm flex items-center gap-2">
+            <LayoutGrid size={16} className="text-indigo-500" />
+            Control and monitor your retail network
+          </p>
+        </div>
+        
+        <div className="flex gap-3">
+          <div className="px-5 py-3 bg-white/80 backdrop-blur-md rounded-2xl border border-white shadow-sm flex flex-col items-center min-w-[100px]">
+            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Shops</span>
+            <span className="text-xl font-black text-slate-900">{shops.length}</span>
+          </div>
+          <div className="px-5 py-3 bg-indigo-600 rounded-2xl shadow-lg shadow-indigo-200 flex flex-col items-center min-w-[100px] text-white">
+            <span className="text-[10px] font-black text-indigo-100 uppercase tracking-widest mb-1">Region</span>
+            <span className="text-xl font-black">All</span>
+          </div>
+        </div>
       </motion.div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
-        {/* Left: Add Form */}
-        <motion.div
-          initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.08 }}
-          className="lg:col-span-1 space-y-5"
-        >
-          {/* Add Form Card */}
-          <div className="bg-gradient-to-br from-[#eef2f7] to-[#d3d8df] rounded-3xl p-6 shadow-[10px_10px_24px_rgba(163,177,198,0.5),-10px_-10px_24px_rgba(255,255,255,0.8)] border border-white/50">
-            <div className="flex items-center gap-3 mb-5">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg">
-                <Store size={18} className="text-white" />
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        
+        {/* ── Left Column: Controls (Add & Import) ── */}
+        <div className="lg:col-span-4 space-y-6">
+          {/* Add Shop Card */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white/80 backdrop-blur-xl rounded-[2.5rem] p-8 border border-white shadow-[0_8px_30px_rgb(0,0,0,0.04)]"
+          >
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-10 h-10 rounded-2xl bg-slate-900 flex items-center justify-center shadow-lg">
+                <Store size={20} className="text-white" strokeWidth={2.5} />
               </div>
-              <h3 className="font-black text-lg text-slate-800">Add New Shop</h3>
+              <h3 className="font-black text-lg text-slate-900 tracking-tight">Quick Add</h3>
             </div>
-            <form onSubmit={handleAdd} className="space-y-4">
-              <Input label="Shop Name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Enter shop name" />
-              <Input label="Location" value={location} onChange={(e) => setLocation(e.target.value)} placeholder="Area / City" />
-              <Button type="submit" isLoading={loading} className="w-full mt-1">
-                <Plus size={20} /> Add Shop
-              </Button>
+
+            <form onSubmit={handleAdd} className="space-y-5">
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Establishment Name</label>
+                <input
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="e.g. Moonlight Cafe"
+                  className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500/30 transition-all font-black text-sm"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Geographic Location</label>
+                <div className="relative group">
+                  <input
+                    value={location}
+                    onChange={(e) => setLocation(e.target.value)}
+                    placeholder="Area / Landmark"
+                    className="w-full pl-12 pr-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500/30 transition-all font-black text-sm"
+                  />
+                  <MapPin size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-indigo-500 transition-colors" />
+                </div>
+              </div>
+
+              <motion.button 
+                type="submit" 
+                disabled={loading || !name.trim()}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                className="w-full py-4 bg-slate-900 text-white font-black rounded-2xl hover:bg-indigo-600 transition-all disabled:opacity-50 flex items-center justify-center gap-3 shadow-xl shadow-slate-100"
+              >
+                {loading ? (
+                   <motion.div
+                     animate={{ rotate: 360 }}
+                     transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                     className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full"
+                   />
+                ) : <Plus size={18} strokeWidth={3} />}
+                Add Outlet
+              </motion.button>
             </form>
-          </div>
+          </motion.div>
 
           {/* Bulk Import Card */}
-          <div className="bg-gradient-to-br from-[#eef2f7] to-[#d3d8df] rounded-3xl p-6 shadow-[10px_10px_24px_rgba(163,177,198,0.5),-10px_-10px_24px_rgba(255,255,255,0.8)] border border-white/50">
-            <h4 className="font-black text-sm text-slate-600 uppercase tracking-widest mb-4">Bulk Import</h4>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="bg-white/80 backdrop-blur-xl rounded-[2.5rem] p-8 border border-white shadow-[0_8px_30px_rgb(0,0,0,0.04)]"
+          >
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-10 h-10 rounded-2xl bg-emerald-500/10 flex items-center justify-center">
+                <FileSpreadsheet size={20} className="text-emerald-600" />
+              </div>
+              <h4 className="font-black text-sm text-slate-400 uppercase tracking-[0.2em]">Bulk Migration</h4>
+            </div>
+
             <input type="file" id="excel-upload" className="hidden" accept=".xlsx, .xls" onChange={handleExcelUpload} disabled={importing} />
-            <label htmlFor="excel-upload" className="block">
+            <label htmlFor="excel-upload" className="block cursor-pointer">
               <motion.div
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.97 }}
+                whileHover={{ scale: 1.02, backgroundColor: 'rgba(236, 253, 245, 0.8)' }}
+                whileTap={{ scale: 0.98 }}
                 className={clsx(
-                  'flex items-center justify-center gap-2 px-5 py-3 rounded-xl font-bold text-sm cursor-pointer transition-all border',
-                  'bg-gradient-to-r from-emerald-50 to-teal-50 text-emerald-700 border-emerald-200 hover:shadow-md',
-                  importing && 'opacity-60 cursor-not-allowed'
+                  "flex flex-col items-center justify-center gap-3 px-6 py-8 rounded-[2rem] border-2 border-dashed transition-all",
+                  "border-emerald-100 bg-emerald-50/30 text-emerald-700",
+                  importing && "opacity-60 cursor-not-allowed"
                 )}
               >
-                {importing
-                  ? <div className="w-4 h-4 border-2 border-emerald-400 border-t-emerald-700 rounded-full animate-spin" />
-                  : <><Upload size={16} /> Import from Excel</>
-                }
+                {importing ? (
+                  <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1 }} className="w-6 h-6 border-2 border-emerald-300 border-t-emerald-700 rounded-full" />
+                ) : (
+                  <>
+                    <div className="w-12 h-12 bg-white rounded-2xl shadow-sm flex items-center justify-center">
+                      <Upload size={24} className="text-emerald-500" />
+                    </div>
+                    <span className="font-black text-sm">Upload Excel (.xlsx)</span>
+                  </>
+                )}
               </motion.div>
             </label>
+
             <AnimatePresence>
               {importSummary && (
                 <motion.div
-                  initial={{ opacity: 0, y: 8, height: 0 }}
-                  animate={{ opacity: 1, y: 0, height: 'auto' }}
-                  exit={{ opacity: 0 }}
-                  className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-xl text-xs"
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  className="mt-6 p-4 bg-indigo-50 border border-indigo-100 rounded-2xl"
                 >
-                  <p className="text-blue-700 font-bold flex items-center gap-1.5 mb-1.5"><Check size={13} /> Import Complete</p>
-                  <div className="flex justify-between text-blue-600 font-semibold">
-                    <span>✅ Added: {importSummary.added}</span>
-                    <span>⏭ Skipped: {importSummary.skipped}</span>
+                  <p className="text-[10px] font-black text-indigo-500 uppercase tracking-widest mb-3 flex items-center gap-2">
+                    <CheckCircle2 size={12} /> Sync Summary
+                  </p>
+                  <div className="flex justify-between">
+                    <div className="text-center flex-1 border-r border-indigo-100">
+                      <p className="text-xl font-black text-indigo-700">{importSummary.added}</p>
+                      <p className="text-[10px] font-bold text-indigo-400">ADDED</p>
+                    </div>
+                    <div className="text-center flex-1">
+                      <p className="text-xl font-black text-slate-400">{importSummary.skipped}</p>
+                      <p className="text-[10px] font-bold text-slate-400">SKIPPED</p>
+                    </div>
                   </div>
                 </motion.div>
               )}
             </AnimatePresence>
-            <p className="text-[10px] text-slate-400 mt-3 leading-relaxed">
-              Excel must have <strong>"Shop Name"</strong> and <strong>"Location"</strong> columns.
-            </p>
-          </div>
-        </motion.div>
 
-        {/* Right: Shops List */}
-        <motion.div
-          initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.12 }}
-          className="lg:col-span-2 space-y-4"
-        >
-          {/* Search */}
-          <div className="relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search shops..."
-              className="w-full bg-gradient-to-br from-[#eef2f7] to-[#d3d8df] rounded-2xl pl-12 pr-4 py-3.5 font-medium text-slate-700 outline-none shadow-[inset_4px_4px_8px_rgba(163,177,198,0.4),inset_-4px_-4px_8px_rgba(255,255,255,0.6)] border border-white/30 placeholder-slate-400 focus:ring-2 focus:ring-blue-400/30 transition-all"
-            />
+            <div className="mt-6 p-4 bg-slate-50 rounded-2xl border border-slate-100">
+               <p className="text-[10px] font-bold text-slate-500 leading-relaxed italic">
+                 Ensure columns are named <strong>"Shop Name"</strong> and <strong>"Location"</strong> for automatic mapping.
+               </p>
+            </div>
+          </motion.div>
+        </div>
+
+        {/* ── Right Column: Shops Directory ── */}
+        <div className="lg:col-span-8 space-y-6">
+          {/* Search Header */}
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="relative flex-1 group">
+              <input
+                type="text"
+                placeholder="Find outlet by name or area..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-full pl-14 pr-6 py-4 bg-white/80 backdrop-blur-xl border border-white rounded-[2.5rem] text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500/30 transition-all font-bold shadow-sm"
+              />
+              <Search size={22} className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-indigo-500 transition-colors" />
+            </div>
+            
+            <div className="px-6 py-4 bg-white/80 backdrop-blur-xl border border-white rounded-[2.5rem] flex items-center gap-3 shadow-sm min-w-[150px]">
+               <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
+               <span className="text-sm font-black text-slate-900 uppercase tracking-tighter">Directory Live</span>
+            </div>
           </div>
 
-          {/* List */}
-          <div className="space-y-3 max-h-[600px] overflow-y-auto pr-1">
-            <AnimatePresence>
-              {filteredShops.map((shop, index) => (
+          <div className="space-y-3 max-h-[700px] overflow-y-auto pr-2 custom-scrollbar">
+            <AnimatePresence mode="popLayout">
+              {filteredShops.length === 0 ? (
                 <motion.div
-                  key={shop.id}
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, scale: 0.95, x: 20 }}
-                  transition={{ duration: 0.25, delay: index * 0.03 }}
-                  className="flex items-center gap-4 p-4 bg-gradient-to-br from-[#eef2f7] to-[#d3d8df] rounded-2xl shadow-[6px_6px_14px_rgba(163,177,198,0.4),-6px_-6px_14px_rgba(255,255,255,0.7)] border border-white/50"
+                  key="empty"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="text-center py-24 bg-white/30 rounded-[3rem] border border-dashed border-slate-200"
                 >
-                  {/* Shop Icon */}
-                  <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-md flex-shrink-0">
-                    <span className="text-white font-black text-lg">{shop.name.charAt(0).toUpperCase()}</span>
-                  </div>
-
-                  {editingId === shop.id ? (
-                    <div className="flex-1 flex flex-col sm:flex-row gap-2">
-                      <Input value={editName} onChange={(e) => setEditName(e.target.value)} className="!py-2" autoFocus />
-                      <Input value={editLocation} onChange={(e) => setEditLocation(e.target.value)} className="!py-2" placeholder="Location" />
-                    </div>
-                  ) : (
-                    <div className="flex-1 min-w-0">
-                      <p className="font-bold text-slate-800 text-base leading-tight truncate">{shop.name}</p>
-                      <div className="flex items-center gap-1.5 text-slate-500 text-xs font-medium mt-0.5">
-                        <MapPin size={12} className="text-blue-400 flex-shrink-0" />
-                        <span className="truncate">{shop.location || 'No location'}</span>
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="flex items-center gap-2 shrink-0">
-                    {editingId === shop.id ? (
-                      <>
-                        <Button onClick={saveEdit} className="!p-2.5 text-green-600 !rounded-xl"><Check size={17} /></Button>
-                        <Button onClick={cancelEdit} className="!p-2.5 text-slate-500 !rounded-xl"><X size={17} /></Button>
-                      </>
-                    ) : (
-                      <>
-                        <Button onClick={() => startEdit(shop)} className="!p-2.5 text-blue-500 !rounded-xl"><Edit2 size={17} /></Button>
-                        <Button onClick={() => handleDelete(shop.id, shop.name)} className="!p-2.5 text-red-500 !rounded-xl" variant="danger"><Trash2 size={17} /></Button>
-                      </>
-                    )}
-                  </div>
+                  <Store size={64} className="mx-auto mb-4 text-slate-200" />
+                  <p className="font-black text-slate-400 text-xl tracking-tight">No outlets discovered</p>
+                  <p className="text-slate-400 text-sm font-medium">Refine your search or add a new shop</p>
                 </motion.div>
-              ))}
-            </AnimatePresence>
+              ) : (
+                filteredShops.map((shop, index) => (
+                  <motion.div
+                    key={shop.id}
+                    layout
+                    initial={{ opacity: 0, y: 16 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.95 }}
+                    transition={{ duration: 0.4, delay: index * 0.04 }}
+                    className="group flex flex-col sm:flex-row sm:items-center gap-4 p-5 bg-white/80 backdrop-blur-xl rounded-[2.5rem] border border-white shadow-[0_4px_20px_rgb(0,0,0,0.02)] hover:border-indigo-200 hover:shadow-[0_8px_30px_rgb(0,0,0,0.04)] transition-all"
+                  >
+                    {/* Shop Brand Icon */}
+                    <div className="w-16 h-16 rounded-[1.5rem] bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center shadow-inner flex-shrink-0 group-hover:from-indigo-600 group-hover:to-blue-600 transition-all duration-500">
+                      <span className="text-slate-400 group-hover:text-white font-black text-2xl transition-colors">
+                        {shop.name.charAt(0).toUpperCase()}
+                      </span>
+                    </div>
 
-            {filteredShops.length === 0 && (
-              <div className="text-center py-16 text-slate-400">
-                <Store size={40} className="mx-auto mb-3 opacity-30" />
-                <p className="font-bold">No shops found</p>
-              </div>
-            )}
+                    <div className="flex-1 min-w-0 px-2">
+                      {editingId === shop.id ? (
+                        <div className="space-y-2 py-2">
+                          <input
+                            value={editName}
+                            onChange={(e) => setEditName(e.target.value)}
+                            className="w-full px-4 py-2 bg-slate-50 border border-indigo-200 rounded-xl text-slate-900 font-black text-lg focus:outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all"
+                            autoFocus
+                          />
+                          <div className="relative">
+                            <input
+                              value={editLocation}
+                              onChange={(e) => setEditLocation(e.target.value)}
+                              className="w-full pl-9 pr-4 py-1.5 bg-slate-50 border border-indigo-100 rounded-xl text-slate-600 font-bold text-sm focus:outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all"
+                              placeholder="Location"
+                            />
+                            <MapPin size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-300" />
+                          </div>
+                          <div className="flex gap-2 pt-1">
+                            <button onClick={saveEdit} className="px-4 py-2 bg-emerald-500 text-white font-black rounded-lg text-xs hover:bg-emerald-600 transition-all flex items-center gap-1.5"><Check size={14} /> SAVE</button>
+                            <button onClick={cancelEdit} className="px-4 py-2 bg-slate-100 text-slate-500 font-black rounded-lg text-xs hover:bg-slate-200 transition-all flex items-center gap-1.5"><X size={14} /> CANCEL</button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="space-y-1">
+                          <h4 className="font-black text-xl text-slate-900 tracking-tight truncate group-hover:text-indigo-600 transition-colors">
+                            {shop.name}
+                          </h4>
+                          <div className="flex flex-wrap items-center gap-y-2 gap-x-4">
+                             <div className="flex items-center gap-1.5 text-slate-400">
+                                <MapPin size={14} className="text-indigo-400" />
+                                <span className="text-sm font-bold truncate max-w-[200px]">{shop.location || 'Unknown Location'}</span>
+                             </div>
+                             <div className="flex items-center gap-1.5">
+                                <span className="text-[10px] font-black text-emerald-500 uppercase tracking-widest bg-emerald-50 px-2 py-0.5 rounded-md">Live Outlet</span>
+                             </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-1 justify-end">
+                      {editingId !== shop.id && (
+                        <>
+                          <motion.button 
+                            whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
+                            onClick={() => startEdit(shop)} 
+                            className="p-3.5 text-indigo-500 hover:bg-indigo-50 rounded-2xl transition-all"
+                          >
+                            <Edit2 size={18} />
+                          </motion.button>
+                          <motion.button 
+                            whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
+                            onClick={() => handleDelete(shop.id, shop.name)} 
+                            className="p-3.5 text-slate-300 hover:text-rose-600 hover:bg-rose-50 rounded-2xl transition-all"
+                          >
+                            <Trash2 size={18} />
+                          </motion.button>
+                        </>
+                      )}
+                    </div>
+                  </motion.div>
+                ))
+              )}
+            </AnimatePresence>
           </div>
-        </motion.div>
+        </div>
       </div>
     </div>
   );

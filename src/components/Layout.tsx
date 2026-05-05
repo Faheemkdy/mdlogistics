@@ -1,12 +1,138 @@
 import React, { useState } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { LogOut, User, LayoutDashboard, Building2, Store, FileText, Users, Menu, X, Truck, Package, Receipt, ChevronRight, ClipboardList, BarChart2, AlertCircle } from 'lucide-react';
+import { LogOut, User, LayoutDashboard, Building2, Store, FileText, Users, Menu, X, Truck, Package, Receipt, ChevronRight, ClipboardList, BarChart2, AlertCircle, Compass, Shield } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { clsx } from 'clsx';
 import { Logo } from './ui/Logo';
 import { Modal } from './ui/Modal';
 import { Button } from './ui/Button';
+
+const NavItem = ({ to, icon: Icon, label, badge, isActive, onClick }: { to: string; icon: any; label: string; badge?: string; isActive: boolean; onClick: () => void }) => {
+  return (
+    <button
+      onClick={onClick}
+      className={clsx(
+        "w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all duration-300 relative group",
+        isActive
+          ? "bg-slate-900 text-white shadow-xl shadow-slate-200"
+          : "text-slate-500 hover:text-slate-900 hover:bg-slate-100"
+      )}
+    >
+      <div className={clsx(
+        "w-8 h-8 rounded-xl flex items-center justify-center transition-all flex-shrink-0",
+        isActive
+          ? "bg-white/10"
+          : "bg-slate-50 group-hover:bg-white shadow-sm"
+      )}>
+        <Icon size={18} strokeWidth={isActive ? 2.5 : 2} />
+      </div>
+      <span className="font-bold text-sm flex-1 text-left tracking-tight">{label}</span>
+      {badge && (
+        <span className="text-[10px] font-black px-2 py-0.5 bg-blue-500 text-white rounded-lg shadow-lg shadow-blue-200">{badge}</span>
+      )}
+      {isActive && (
+        <motion.div layoutId="activePill" className="absolute left-0 w-1 h-6 bg-blue-500 rounded-r-full" />
+      )}
+    </button>
+  );
+};
+
+const SidebarContent = ({ 
+  profile, 
+  location, 
+  navigate, 
+  setIsSidebarOpen, 
+  setShowLogoutConfirm 
+}: { 
+  profile: any; 
+  location: any; 
+  navigate: any; 
+  setIsSidebarOpen: (open: boolean) => void;
+  setShowLogoutConfirm: (show: boolean) => void;
+}) => (
+  <div className="flex flex-col h-full">
+    <div className="flex items-center gap-3 mb-8 px-2 pt-2 pb-6 border-b border-slate-100">
+      <div className="w-12 h-12 rounded-[1.25rem] bg-slate-900 flex items-center justify-center shadow-lg flex-shrink-0 overflow-hidden p-2.5">
+        <Logo showText={false} className="w-full h-full filter brightness-0 invert" />
+      </div>
+      <div className="min-w-0">
+        <h1 className="font-black text-xl text-slate-900 leading-none tracking-tighter">MD LOGISTICS</h1>
+        <p className="text-[10px] font-black text-blue-500 uppercase tracking-[0.2em] mt-1">Global Network</p>
+      </div>
+      <button
+        onClick={() => setIsSidebarOpen(false)}
+        className="lg:hidden ml-auto p-2 text-slate-400 bg-slate-50 rounded-xl hover:bg-slate-100 transition-colors"
+      >
+        <X size={20} />
+      </button>
+    </div>
+
+    <nav className="flex-1 space-y-1.5 overflow-y-auto pr-1 custom-scrollbar">
+      {profile?.role === 'admin' ? (
+        <>
+          <div className="mb-4">
+            <p className="px-4 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2">Main Navigation</p>
+            <NavItem to="/" icon={LayoutDashboard} label="Dashboard" isActive={location.pathname === "/"} onClick={() => { navigate("/"); setIsSidebarOpen(false); }} />
+            <NavItem to="/companies" icon={Building2} label="Companies" isActive={location.pathname === "/companies"} onClick={() => { navigate("/companies"); setIsSidebarOpen(false); }} />
+            <NavItem to="/shops" icon={Store} label="Partner Shops" isActive={location.pathname === "/shops"} onClick={() => { navigate("/shops"); setIsSidebarOpen(false); }} />
+          </div>
+          
+          <div className="mb-4 pt-4 border-t border-slate-50">
+            <p className="px-4 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2">Core Operations</p>
+            <NavItem to="/pickup" icon={Package} label="Pickup Requests" isActive={location.pathname === "/pickup"} onClick={() => { navigate("/pickup"); setIsSidebarOpen(false); }} />
+            <NavItem to="/delivery" icon={Truck} label="Final Delivery" isActive={location.pathname === "/delivery"} onClick={() => { navigate("/delivery"); setIsSidebarOpen(false); }} />
+            <NavItem to="/dispatch" icon={ClipboardList} label="Dispatch Hub" isActive={location.pathname === "/dispatch"} onClick={() => { navigate("/dispatch"); setIsSidebarOpen(false); }} />
+            <NavItem to="/day-sheet" icon={FileText} label="Accounting" isActive={location.pathname === "/day-sheet"} onClick={() => { navigate("/day-sheet"); setIsSidebarOpen(false); }} />
+            <NavItem to="/vouchers" icon={Receipt} label="Expense Vouchers" isActive={location.pathname === "/vouchers"} onClick={() => { navigate("/vouchers"); setIsSidebarOpen(false); }} />
+          </div>
+
+          {profile?.username === 'md' && (
+            <div className="mb-4 pt-4 border-t border-slate-50">
+              <p className="px-4 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2">Advanced Control</p>
+              <NavItem to="/reconciliation" icon={Compass} label="Reconciliation" isActive={location.pathname === "/reconciliation"} onClick={() => { navigate("/reconciliation"); setIsSidebarOpen(false); }} />
+              <NavItem to="/reports" icon={BarChart2} label="Analytical Reports" isActive={location.pathname === "/reports"} onClick={() => { navigate("/reports"); setIsSidebarOpen(false); }} />
+              <NavItem to="/billing" icon={Receipt} label="Invoicing & Billing" isActive={location.pathname === "/billing"} onClick={() => { navigate("/billing"); setIsSidebarOpen(false); }} />
+              <NavItem to="/users" icon={Users} label="Access Management" isActive={location.pathname === "/users"} onClick={() => { navigate("/users"); setIsSidebarOpen(false); }} />
+            </div>
+          )}
+        </>
+      ) : (
+        <div className="space-y-1.5">
+          <NavItem to="/" icon={LayoutDashboard} label="Dashboard" isActive={location.pathname === "/"} onClick={() => { navigate("/"); setIsSidebarOpen(false); }} />
+          <NavItem to="/pickup" icon={Package} label="My Pickups" isActive={location.pathname === "/pickup"} onClick={() => { navigate("/pickup"); setIsSidebarOpen(false); }} />
+          <NavItem to="/delivery" icon={Truck} label="My Deliveries" isActive={location.pathname === "/delivery"} onClick={() => { navigate("/delivery"); setIsSidebarOpen(false); }} />
+        </div>
+      )}
+    </nav>
+
+    <div className="pt-6 border-t border-slate-100 space-y-4 mt-auto pb-4">
+      <NavItem to="/profile" icon={User} label="Profile Settings" isActive={location.pathname === "/profile"} onClick={() => { navigate("/profile"); setIsSidebarOpen(false); }} />
+      
+      <div className="mx-1 p-4 bg-slate-50/80 rounded-[2rem] border border-slate-100 flex items-center gap-3 shadow-sm">
+        <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-sm font-black text-white shadow-lg flex-shrink-0">
+          {profile?.username?.charAt(0).toUpperCase()}
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-black text-slate-900 truncate tracking-tight">{profile?.username}</p>
+          <div className="flex items-center gap-1 text-[10px] text-blue-600 font-bold uppercase tracking-widest">
+             <Shield size={10} /> {profile?.role}
+          </div>
+        </div>
+      </div>
+
+      <button
+        onClick={() => setShowLogoutConfirm(true)}
+        className="w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl text-rose-500 hover:bg-rose-50 transition-all font-black text-sm group"
+      >
+        <div className="w-8 h-8 rounded-xl bg-rose-50 group-hover:bg-rose-100 flex items-center justify-center transition-colors">
+          <LogOut size={18} strokeWidth={2.5} />
+        </div>
+        Logout
+      </button>
+    </div>
+  </div>
+);
 
 export const Layout = () => {
   const { profile, signOut } = useAuth();
@@ -21,155 +147,31 @@ export const Layout = () => {
     navigate('/login');
   };
 
-  const NavItem = ({ to, icon: Icon, label, badge }: { to: string; icon: any; label: string; badge?: string }) => {
-    const isActive = location.pathname === to;
-    return (
-      <button
-        onClick={() => { navigate(to); setIsSidebarOpen(false); }}
-        className={clsx(
-          "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 relative group",
-          isActive
-            ? "bg-gradient-to-r from-indigo-600 to-blue-600 text-white shadow-lg shadow-indigo-500/30"
-            : "text-slate-400 hover:text-white hover:bg-white/10"
-        )}
-      >
-        <div className={clsx(
-          "w-8 h-8 rounded-lg flex items-center justify-center transition-all flex-shrink-0",
-          isActive
-            ? "bg-white/20"
-            : "bg-white/5 group-hover:bg-white/10"
-        )}>
-          <Icon size={17} />
-        </div>
-        <span className="font-semibold text-sm flex-1 text-left">{label}</span>
-        {badge && (
-          <span className="text-[9px] font-bold px-1.5 py-0.5 bg-white/20 rounded-full">{badge}</span>
-        )}
-        {isActive && (
-          <ChevronRight size={14} className="opacity-60" />
-        )}
-      </button>
-    );
-  };
-
-  const SidebarContent = () => (
-    <>
-      <div className="flex items-center gap-3 mb-8 px-2 pt-4 pb-2 border-b border-white/10">
-        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-blue-600 flex items-center justify-center shadow-lg flex-shrink-0 overflow-hidden p-2">
-          <Logo showText={false} className="w-full h-full filter brightness-0 invert" />
-        </div>
-        <div className="min-w-0">
-          <h1 className="font-black text-lg text-white leading-none tracking-wide">MD</h1>
-          <p className="text-[0.6rem] font-bold text-indigo-300 uppercase tracking-[0.2em] mt-0.5">Logistics</p>
-        </div>
-        <button
-          onClick={() => setIsSidebarOpen(false)}
-          className="lg:hidden ml-auto p-1.5 text-slate-400 bg-white/10 rounded-lg hover:bg-white/20 transition-colors"
-        >
-          <X size={16} />
-        </button>
-      </div>
-
-      <nav className="flex-1 space-y-1 overflow-y-auto pr-1">
-        {profile?.role === 'admin' ? (
-          <>
-            <div className="mb-2">
-              <p className="px-3 text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1">Main</p>
-              <NavItem to="/" icon={LayoutDashboard} label="Dashboard" />
-              <NavItem to="/companies" icon={Building2} label="Companies" />
-              <NavItem to="/shops" icon={Store} label="Shops" />
-            </div>
-            <div className="mb-2 pt-2 border-t border-white/10">
-              <p className="px-3 text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1">Operations</p>
-              <NavItem to="/pickup" icon={Package} label="Pickup" />
-              <NavItem to="/delivery" icon={Truck} label="Delivery" />
-              <NavItem to="/dispatch" icon={ClipboardList} label="Dispatch" />
-              <NavItem to="/day-sheet" icon={FileText} label="Day Sheet" />
-              <NavItem to="/vouchers" icon={Receipt} label="Voucher" />
-              {profile?.username === 'md' && (
-                <>
-                  <NavItem to="/reconciliation" icon={BarChart2} label="Reconciliation" />
-                  <NavItem to="/reports" icon={FileText} label="Reports" />
-                  <NavItem to="/billing" icon={Receipt} label="Billing & Invoice" />
-                </>
-              )}
-            </div>
-            {profile?.username === 'md' && (
-              <div className="mb-2 pt-2 border-t border-white/10">
-                <p className="px-3 text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1">Admin</p>
-                <NavItem to="/users" icon={Users} label="User Management" />
-              </div>
-            )}
-          </>
-        ) : (
-          <>
-            <NavItem to="/" icon={LayoutDashboard} label="Dashboard" />
-            <NavItem to="/pickup" icon={Package} label="Pickup" />
-            <NavItem to="/delivery" icon={Truck} label="Delivery" />
-          </>
-        )}
-      </nav>
-
-      <div className="pt-4 border-t border-white/10 space-y-2 mt-auto pb-[env(safe-area-inset-bottom)]">
-        <NavItem to="/profile" icon={User} label="Profile" />
-        <div className="mx-1 p-3 bg-white/5 border border-white/10 rounded-xl flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-blue-600 flex items-center justify-center text-xs font-bold text-white overflow-hidden shadow-md flex-shrink-0">
-            {profile?.username?.charAt(0).toUpperCase()}
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-bold text-white truncate">{profile?.username}</p>
-            <p className="text-xs text-indigo-300 font-medium capitalize">{profile?.role}</p>
-          </div>
-        </div>
-        <button
-          onClick={() => setShowLogoutConfirm(true)}
-          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-all font-semibold text-sm"
-        >
-          <div className="w-8 h-8 rounded-lg bg-red-500/10 flex items-center justify-center">
-            <LogOut size={16} />
-          </div>
-          Logout
-        </button>
-      </div>
-    </>
-  );
-
   return (
-    <div className="min-h-screen bg-[#e0e5ec] flex overflow-hidden">
+    <div className="min-h-screen bg-slate-50 flex overflow-hidden font-sans">
       {/* Mobile Header */}
       {(profile?.role === 'admin' || (profile?.role !== 'admin' && location.pathname !== '/')) && (
-        <div className="lg:hidden fixed top-0 left-0 right-0 z-40 flex items-center justify-between px-4 py-2 pt-[calc(env(safe-area-inset-top)+8px)] landscape:py-1.5"
-          style={{
-            background: profile?.role === 'admin' ? 'rgba(15,23,42,0.95)' : 'rgba(255,255,255,0.8)',
-            backdropFilter: 'blur(16px)',
-            borderBottom: profile?.role === 'admin' ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.05)'
-          }}
+        <div className="lg:hidden fixed top-0 left-0 right-0 z-[80] flex items-center justify-between px-6 py-4 pt-[calc(env(safe-area-inset-top)+12px)] bg-white/80 backdrop-blur-xl border-b border-slate-100 shadow-sm"
         >
-          <div className="flex items-center gap-2.5">
-            <div className={clsx(
-              "w-8 h-8 landscape:w-7 landscape:h-7 rounded-lg flex items-center justify-center p-1.5 landscape:p-1",
-              profile?.role === 'admin' ? "bg-gradient-to-br from-indigo-500 to-blue-600" : "bg-slate-800"
-            )}>
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-slate-900 flex items-center justify-center p-2 shadow-md">
               <Logo showText={false} className="filter brightness-0 invert" />
             </div>
-            <span className={clsx(
-              "font-black tracking-wider text-sm landscape:text-xs",
-              profile?.role === 'admin' ? "text-white" : "text-slate-800"
-            )}>MD LOGISTICS</span>
+            <span className="font-black tracking-tighter text-slate-900">MD LOGISTICS</span>
           </div>
           {profile?.role === 'admin' ? (
             <button
               onClick={() => setIsSidebarOpen(true)}
-              className="p-2 landscape:p-1.5 text-slate-300 bg-white/10 rounded-xl hover:bg-white/20 transition-colors"
+              className="p-2.5 text-slate-600 bg-slate-50 rounded-2xl hover:bg-slate-100 active:scale-95 transition-all border border-slate-100"
             >
-              <Menu size={20} className="landscape:w-4 landscape:h-4" />
+              <Menu size={22} />
             </button>
           ) : (
             <button
               onClick={() => navigate('/')}
-              className="p-2 text-slate-500 bg-slate-100 rounded-xl hover:bg-slate-200 transition-colors"
+              className="p-2.5 text-slate-600 bg-slate-50 rounded-2xl hover:bg-slate-100 active:scale-95 transition-all border border-slate-100"
             >
-              <LayoutDashboard size={20} />
+              <LayoutDashboard size={22} />
             </button>
           )}
         </div>
@@ -183,45 +185,52 @@ export const Layout = () => {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={() => setIsSidebarOpen(false)}
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[90] lg:hidden"
+            className="fixed inset-0 bg-slate-900/40 backdrop-blur-md z-[90] lg:hidden"
           />
         )}
       </AnimatePresence>
 
-      {/* Sidebar - Only for Admin */}
+      {/* Sidebar */}
       {profile?.role === 'admin' && (
         <motion.aside
           className={clsx(
-            "fixed lg:sticky top-0 left-0 h-screen w-64 z-[100] flex flex-col p-4 pt-[env(safe-area-inset-top)]",
-            "transform transition-transform duration-300 ease-in-out lg:translate-x-0 shadow-2xl",
-            isSidebarOpen ? "translate-x-0" : "-translate-x-full"
+            "fixed inset-y-0 left-0 w-72 z-[100] flex flex-col p-6 pb-2 transition-all duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] shadow-2xl lg:shadow-none",
+            isSidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
           )}
           style={{
-            background: 'linear-gradient(160deg, #0f172a 0%, #1e293b 60%, #1a1f3a 100%)',
-            borderRight: '1px solid rgba(255,255,255,0.08)'
+            background: 'rgba(255, 255, 255, 0.95)',
+            backdropFilter: 'blur(30px)',
+            borderRight: '1px solid rgba(241, 245, 249, 1)'
           }}
         >
-          <SidebarContent />
+          <SidebarContent 
+            profile={profile} 
+            location={location} 
+            navigate={navigate} 
+            setIsSidebarOpen={setIsSidebarOpen} 
+            setShowLogoutConfirm={setShowLogoutConfirm} 
+          />
         </motion.aside>
       )}
 
       {/* Main Content */}
       <main className={clsx(
-        "flex-1 min-w-0 relative overflow-y-auto overflow-x-hidden h-screen scroll-smooth",
+        "flex-1 min-w-0 relative overflow-y-auto h-screen scroll-smooth custom-scrollbar",
+        profile?.role === 'admin' && "lg:ml-72",
         (profile?.role === 'admin' || location.pathname !== '/')
-          ? "pt-[calc(60px+env(safe-area-inset-top))] landscape:pt-[calc(48px+env(safe-area-inset-top))] lg:pt-0"
+          ? "pt-[calc(80px+env(safe-area-inset-top))] lg:pt-0"
           : "pt-0"
       )}>
         <AnimatePresence mode="wait">
           <motion.div
             key={location.pathname}
-            initial={{ opacity: 0, y: 16, scale: 0.99 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -12, scale: 0.99 }}
-            transition={{ duration: 0.35, ease: [0.23, 1, 0.32, 1] }}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            transition={{ duration: 0.4, ease: [0.23, 1, 0.32, 1] }}
             className={clsx(
-              "max-w-7xl mx-auto pb-8 min-h-full",
-              (profile?.role === 'admin' || location.pathname !== '/') ? "p-4 lg:p-8" : "p-0"
+              "max-w-7xl mx-auto pb-12 min-h-full",
+              (profile?.role === 'admin' || location.pathname !== '/') ? "p-6 lg:p-10" : "p-0"
             )}
           >
             <Outlet />
@@ -235,29 +244,29 @@ export const Layout = () => {
         onClose={() => setShowLogoutConfirm(false)}
         title="Confirm Logout"
       >
-        <div className="text-center space-y-6">
-          <div className="w-20 h-20 bg-red-50 rounded-3xl flex items-center justify-center mx-auto text-red-500 shadow-inner">
-            <AlertCircle size={40} />
+        <div className="text-center space-y-8 p-4">
+          <div className="w-24 h-24 bg-rose-50 rounded-[2.5rem] flex items-center justify-center mx-auto text-rose-500 shadow-inner group">
+            <motion.div animate={{ scale: [1, 1.1, 1] }} transition={{ repeat: Infinity, duration: 2 }}>
+               <AlertCircle size={48} strokeWidth={2.5} />
+            </motion.div>
           </div>
-          <div>
-            <h3 className="text-xl font-black text-slate-800">Are you sure?</h3>
-            <p className="text-slate-500 font-medium mt-1">You will need to login again to access your account.</p>
+          <div className="space-y-2">
+            <h3 className="text-2xl font-black text-slate-900 tracking-tight">Sign Out?</h3>
+            <p className="text-slate-500 font-bold">Are you sure you want to terminate your current active session?</p>
           </div>
-          <div className="flex gap-3">
-            <Button 
-              variant="secondary" 
+          <div className="flex gap-4">
+            <button 
               onClick={() => setShowLogoutConfirm(false)}
-              className="flex-1 py-4 font-bold"
+              className="flex-1 py-4 bg-slate-100 text-slate-900 font-black rounded-2xl hover:bg-slate-200 transition-all active:scale-95"
             >
               Cancel
-            </Button>
-            <Button 
-              variant="danger" 
+            </button>
+            <button 
               onClick={handleSignOut}
-              className="flex-1 py-4 font-bold bg-red-500 text-white shadow-lg shadow-red-500/30"
+              className="flex-1 py-4 bg-rose-500 text-white font-black rounded-2xl hover:bg-rose-600 transition-all shadow-xl shadow-rose-200 active:scale-95"
             >
               Logout
-            </Button>
+            </button>
           </div>
         </div>
       </Modal>

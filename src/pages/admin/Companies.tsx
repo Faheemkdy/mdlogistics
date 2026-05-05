@@ -3,12 +3,14 @@ import { supabase } from '../../lib/supabase';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { useToast } from '../../components/ui/Toast';
-import { Trash2, Plus, Edit2, Check, X, Building2 } from 'lucide-react';
+import { Trash2, Plus, Edit2, Check, X, Building2, Search, Briefcase, Hash, CheckCircle2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { clsx } from 'clsx';
 
 export const Companies = () => {
   const toast = useToast();
   const [companies, setCompanies] = useState<any[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
   const [newCompany, setNewCompany] = useState('');
   const [loading, setLoading] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -50,102 +52,201 @@ export const Companies = () => {
     fetchCompanies();
   };
 
+  const filteredCompanies = companies.filter(c => 
+    c.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   return (
-    <div className="space-y-6 max-w-2xl mx-auto">
+    <div className="space-y-8 max-w-4xl mx-auto pb-20">
 
-      {/* Header */}
-      <motion.div initial={{ opacity: 0, y: -16 }} animate={{ opacity: 1, y: 0 }}>
-        <h1 className="text-3xl font-black text-slate-800 tracking-tight">Companies</h1>
-        <p className="text-slate-500 font-medium mt-1">{companies.length} client{companies.length !== 1 ? 's' : ''} registered</p>
-      </motion.div>
-
-      {/* Add Form */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
+      {/* ── Page Header & Stats ── */}
+      <motion.div 
+        initial={{ opacity: 0, y: -20 }} 
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.08 }}
-        className="bg-gradient-to-br from-[#eef2f7] to-[#d3d8df] rounded-3xl p-6 shadow-[10px_10px_24px_rgba(163,177,198,0.5),-10px_-10px_24px_rgba(255,255,255,0.8)] border border-white/50"
+        className="flex flex-col sm:flex-row sm:items-end justify-between gap-6"
       >
-        <div className="flex items-center gap-3 mb-5">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-blue-600 flex items-center justify-center shadow-lg">
-            <Building2 size={18} className="text-white" />
-          </div>
-          <h3 className="font-black text-lg text-slate-800">Add New Company</h3>
+        <div className="space-y-1">
+          <h1 className="text-4xl font-black text-slate-900 tracking-tight">Organization Hub</h1>
+          <p className="text-slate-500 font-semibold text-sm flex items-center gap-2">
+            <Briefcase size={16} className="text-blue-500" />
+            Manage your network of partner companies
+          </p>
         </div>
-        <form onSubmit={handleAdd} className="flex gap-3">
-          <div className="flex-1">
-            <Input
-              value={newCompany}
-              onChange={(e) => setNewCompany(e.target.value)}
-              placeholder="Enter company name..."
-            />
+        
+        <div className="flex gap-3">
+          <div className="px-5 py-3 bg-white/80 backdrop-blur-md rounded-2xl border border-white shadow-sm flex flex-col items-center min-w-[100px]">
+            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Active</span>
+            <span className="text-xl font-black text-slate-900">{companies.length}</span>
           </div>
-          <Button type="submit" isLoading={loading} className="px-6 flex-shrink-0">
-            <Plus size={20} />
-          </Button>
-        </form>
+          <div className="px-5 py-3 bg-blue-500 rounded-2xl shadow-lg shadow-blue-200 flex flex-col items-center min-w-[100px] text-white">
+            <span className="text-[10px] font-black text-blue-100 uppercase tracking-widest mb-1">Premium</span>
+            <span className="text-xl font-black">All</span>
+          </div>
+        </div>
       </motion.div>
 
-      {/* Companies List */}
-      <div className="space-y-3">
-        <AnimatePresence>
-          {companies.map((company, index) => (
-            <motion.div
-              key={company.id}
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, x: -20 }}
-              transition={{ duration: 0.3, delay: index * 0.04 }}
-              className="flex items-center gap-4 p-4 bg-gradient-to-br from-[#eef2f7] to-[#d3d8df] rounded-2xl shadow-[6px_6px_14px_rgba(163,177,198,0.4),-6px_-6px_14px_rgba(255,255,255,0.7)] border border-white/50"
-            >
-              {/* Company Icon */}
-              <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-md flex-shrink-0">
-                <span className="text-white font-black text-lg">
-                  {company.name.charAt(0).toUpperCase()}
-                </span>
-              </div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* ── Add Company Form ── */}
+        <div className="lg:col-span-1 space-y-6">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white/80 backdrop-blur-xl rounded-[2.5rem] p-8 border border-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] relative overflow-hidden"
+          >
+            <div className="absolute top-0 right-0 p-8 opacity-[0.03] pointer-events-none">
+               <Building2 size={120} />
+            </div>
 
-              {editingId === company.id ? (
-                <div className="flex-1">
-                  <Input
-                    value={editName}
-                    onChange={(e) => setEditName(e.target.value)}
-                    className="!py-2"
-                    autoFocus
+            <div className="flex items-center gap-3 mb-6 relative z-10">
+              <div className="w-10 h-10 rounded-2xl bg-slate-900 flex items-center justify-center shadow-lg">
+                <Plus size={20} className="text-white" strokeWidth={3} />
+              </div>
+              <h3 className="font-black text-lg text-slate-900 tracking-tight">Register Client</h3>
+            </div>
+
+            <form onSubmit={handleAdd} className="space-y-4 relative z-10">
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Entity Name</label>
+                <div className="relative group">
+                  <input
+                    value={newCompany}
+                    onChange={(e) => setNewCompany(e.target.value)}
+                    placeholder="e.g. Acme Corp"
+                    className="w-full pl-5 pr-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500/30 transition-all font-black text-sm"
                   />
                 </div>
-              ) : (
-                <span className="flex-1 font-bold text-lg text-slate-800">{company.name}</span>
-              )}
-
-              <div className="flex items-center gap-2 shrink-0">
-                {editingId === company.id ? (
-                  <>
-                    <Button onClick={saveEdit} className="!p-2.5 text-green-600 !rounded-xl"><Check size={17} /></Button>
-                    <Button onClick={() => setEditingId(null)} className="!p-2.5 text-slate-500 !rounded-xl"><X size={17} /></Button>
-                  </>
-                ) : (
-                  <>
-                    <Button onClick={() => startEdit(company)} className="!p-2.5 text-blue-500 !rounded-xl"><Edit2 size={17} /></Button>
-                    <Button onClick={() => handleDelete(company.id, company.name)} className="!p-2.5 text-red-500 !rounded-xl" variant="danger"><Trash2 size={17} /></Button>
-                  </>
-                )}
               </div>
-            </motion.div>
-          ))}
-        </AnimatePresence>
 
-        {companies.length === 0 && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="text-center py-16 text-slate-400"
-          >
-            <Building2 size={40} className="mx-auto mb-3 opacity-30" />
-            <p className="font-bold text-lg">No companies yet</p>
-            <p className="text-sm mt-1">Add your first client above</p>
+              <motion.button 
+                type="submit" 
+                disabled={loading || !newCompany.trim()}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                className="w-full py-4 bg-slate-900 text-white font-black rounded-2xl hover:bg-blue-600 transition-all disabled:opacity-50 flex items-center justify-center gap-3 shadow-xl shadow-slate-100"
+              >
+                {loading ? (
+                   <motion.div
+                     animate={{ rotate: 360 }}
+                     transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                     className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full"
+                   />
+                ) : <CheckCircle2 size={18} strokeWidth={2.5} />}
+                Add Organization
+              </motion.button>
+            </form>
           </motion.div>
-        )}
+
+          <div className="bg-emerald-50 rounded-3xl p-6 border border-emerald-100 flex items-center gap-4">
+             <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-600">
+                <CheckCircle2 size={24} />
+             </div>
+             <div>
+                <p className="text-xs font-black text-emerald-500 uppercase tracking-widest">Verified Partners</p>
+                <p className="text-sm font-bold text-slate-600">Securely managing trusted logistics entities</p>
+             </div>
+          </div>
+        </div>
+
+        {/* ── Companies List ── */}
+        <div className="lg:col-span-2 space-y-6">
+          {/* Search Bar */}
+          <div className="relative group">
+            <input
+              type="text"
+              placeholder="Search organizations..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-14 pr-6 py-4 bg-white/80 backdrop-blur-xl border border-white rounded-[2rem] text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500/30 transition-all font-bold shadow-sm"
+            />
+            <Search size={20} className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-blue-500 transition-colors" />
+          </div>
+
+          <div className="space-y-3 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
+            <AnimatePresence mode="popLayout">
+              {filteredCompanies.length === 0 ? (
+                <motion.div
+                  key="empty"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="text-center py-20 bg-white/30 rounded-[2.5rem] border border-dashed border-slate-200"
+                >
+                  <Building2 size={48} className="mx-auto mb-4 text-slate-200" />
+                  <p className="font-black text-slate-400 text-lg tracking-tight">No results found</p>
+                  <p className="text-slate-400 text-sm font-medium">Try a different search term</p>
+                </motion.div>
+              ) : (
+                filteredCompanies.map((company, index) => (
+                  <motion.div
+                    key={company.id}
+                    layout
+                    initial={{ opacity: 0, y: 16 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.95 }}
+                    transition={{ duration: 0.4, delay: index * 0.04 }}
+                    className="group flex items-center gap-4 p-5 bg-white/80 backdrop-blur-xl rounded-3xl border border-white shadow-[0_4px_20px_rgb(0,0,0,0.02)] hover:border-blue-200 hover:shadow-[0_8px_30px_rgb(0,0,0,0.04)] transition-all"
+                  >
+                    {/* Entity Avatar */}
+                    <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center shadow-inner flex-shrink-0 relative group-hover:from-blue-500 group-hover:to-indigo-600 transition-all">
+                      <Building2 size={24} className="text-slate-400 group-hover:text-white transition-colors" />
+                      <div className="absolute -top-1 -right-1 w-5 h-5 bg-emerald-500 rounded-full border-4 border-white" />
+                    </div>
+
+                    <div className="flex-1 min-w-0">
+                      {editingId === company.id ? (
+                        <div className="relative">
+                          <input
+                            value={editName}
+                            onChange={(e) => setEditName(e.target.value)}
+                            className="w-full px-4 py-2 bg-slate-50 border border-blue-200 rounded-xl text-slate-900 font-black text-lg focus:outline-none focus:ring-4 focus:ring-blue-500/10 transition-all"
+                            autoFocus
+                          />
+                          <div className="absolute right-2 top-1/2 -translate-y-1/2 flex gap-1">
+                            <button onClick={saveEdit} className="p-1.5 text-emerald-500 hover:bg-emerald-50 rounded-lg transition-colors"><Check size={18} /></button>
+                            <button onClick={() => setEditingId(null)} className="p-1.5 text-slate-400 hover:bg-slate-100 rounded-lg transition-colors"><X size={18} /></button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="space-y-0.5">
+                          <h4 className="font-black text-xl text-slate-900 tracking-tight truncate group-hover:text-blue-600 transition-colors">
+                            {company.name}
+                          </h4>
+                          <div className="flex items-center gap-2">
+                             <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest bg-slate-50 px-2 py-0.5 rounded-md">ID: {company.id.substring(0, 8)}</span>
+                             <span className="w-1 h-1 bg-slate-200 rounded-full" />
+                             <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Verified Entity</span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all sm:opacity-100">
+                      {editingId !== company.id && (
+                        <>
+                          <motion.button 
+                            whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
+                            onClick={() => startEdit(company)} 
+                            className="p-3 text-blue-500 hover:bg-blue-50 rounded-2xl transition-all"
+                            title="Edit Entity"
+                          >
+                            <Edit2 size={18} />
+                          </motion.button>
+                          <motion.button 
+                            whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
+                            onClick={() => handleDelete(company.id, company.name)} 
+                            className="p-3 text-slate-300 hover:text-rose-600 hover:bg-rose-50 rounded-2xl transition-all"
+                            title="Remove Entity"
+                          >
+                            <Trash2 size={18} />
+                          </motion.button>
+                        </>
+                      )}
+                    </div>
+                  </motion.div>
+                ))
+              )}
+            </AnimatePresence>
+          </div>
+        </div>
       </div>
     </div>
   );
