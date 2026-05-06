@@ -50,16 +50,38 @@ const SidebarContent = ({
   navigate: any; 
   setIsSidebarOpen: (open: boolean) => void;
   setShowLogoutConfirm: (show: boolean) => void;
-}) => (
-  <div className="flex flex-col h-full">
-    <div className="flex items-center gap-3 mb-8 px-2 pt-2 pb-6 border-b border-slate-100">
-      <div className="w-12 h-12 rounded-[1.25rem] bg-slate-900 flex items-center justify-center shadow-lg flex-shrink-0 overflow-hidden p-2.5">
-        <Logo showText={false} className="w-full h-full filter brightness-0 invert" />
-      </div>
-      <div className="min-w-0">
-        <h1 className="font-black text-xl text-slate-900 leading-none tracking-tighter">MD LOGISTICS</h1>
-        <p className="text-[10px] font-black text-blue-500 uppercase tracking-[0.2em] mt-1">Global Network</p>
-      </div>
+}) => {
+  const confirmNavigation = (to: string) => {
+    // Check for active drafts
+    const drafts = [
+      localStorage.getItem('delivery_draft_selections'),
+      localStorage.getItem('pickup_draft_selections'),
+      localStorage.getItem('dispatch_draft_selections')
+    ];
+
+    const hasActiveDraft = drafts.some(d => d && d !== '{}');
+
+    if (hasActiveDraft) {
+      if (window.confirm('You have unsaved selections. Are you sure you want to leave this page?')) {
+        navigate(to);
+        setIsSidebarOpen(false);
+      }
+    } else {
+      navigate(to);
+      setIsSidebarOpen(false);
+    }
+  };
+
+  return (
+    <div className="flex flex-col h-full">
+      <div className="flex items-center gap-3 mb-8 px-2 pt-2 pb-6 border-b border-slate-100">
+        <div className="w-12 h-12 rounded-[1.25rem] bg-slate-900 flex items-center justify-center shadow-lg flex-shrink-0 overflow-hidden p-2.5">
+          <Logo showText={false} className="w-full h-full filter brightness-0 invert" />
+        </div>
+        <div className="min-w-0">
+          <h1 className="font-black text-xl text-slate-900 leading-none tracking-tighter">MD LOGISTICS</h1>
+          <p className="text-[10px] font-black text-blue-500 uppercase tracking-[0.2em] mt-1">Global Network</p>
+        </div>
       <button
         onClick={() => setIsSidebarOpen(false)}
         className="lg:hidden ml-auto p-2 text-slate-400 bg-slate-50 rounded-xl hover:bg-slate-100 transition-colors"
@@ -73,41 +95,41 @@ const SidebarContent = ({
         <>
           <div className="mb-4">
             <p className="px-4 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2">Main Navigation</p>
-            <NavItem to="/" icon={LayoutDashboard} label="Dashboard" isActive={location.pathname === "/"} onClick={() => { navigate("/"); setIsSidebarOpen(false); }} />
-            <NavItem to="/companies" icon={Building2} label="Companies" isActive={location.pathname === "/companies"} onClick={() => { navigate("/companies"); setIsSidebarOpen(false); }} />
-            <NavItem to="/shops" icon={Store} label="Partner Shops" isActive={location.pathname === "/shops"} onClick={() => { navigate("/shops"); setIsSidebarOpen(false); }} />
+            <NavItem to="/" icon={LayoutDashboard} label="Dashboard" isActive={location.pathname === "/"} onClick={() => confirmNavigation("/")} />
+            <NavItem to="/companies" icon={Building2} label="Companies" isActive={location.pathname === "/companies"} onClick={() => confirmNavigation("/companies")} />
+            <NavItem to="/shops" icon={Store} label="Partner Shops" isActive={location.pathname === "/shops"} onClick={() => confirmNavigation("/shops")} />
           </div>
           
           <div className="mb-4 pt-4 border-t border-slate-50">
             <p className="px-4 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2">Core Operations</p>
-            <NavItem to="/pickup" icon={Package} label="Pickup Requests" isActive={location.pathname === "/pickup"} onClick={() => { navigate("/pickup"); setIsSidebarOpen(false); }} />
-            <NavItem to="/delivery" icon={Truck} label="Final Delivery" isActive={location.pathname === "/delivery"} onClick={() => { navigate("/delivery"); setIsSidebarOpen(false); }} />
-            <NavItem to="/dispatch" icon={ClipboardList} label="Dispatch Hub" isActive={location.pathname === "/dispatch"} onClick={() => { navigate("/dispatch"); setIsSidebarOpen(false); }} />
-            <NavItem to="/day-sheet" icon={FileText} label="Accounting" isActive={location.pathname === "/day-sheet"} onClick={() => { navigate("/day-sheet"); setIsSidebarOpen(false); }} />
-            <NavItem to="/vouchers" icon={Receipt} label="Expense Vouchers" isActive={location.pathname === "/vouchers"} onClick={() => { navigate("/vouchers"); setIsSidebarOpen(false); }} />
+            <NavItem to="/pickup" icon={Package} label="Pickup Requests" isActive={location.pathname === "/pickup"} onClick={() => confirmNavigation("/pickup")} />
+            <NavItem to="/delivery" icon={Truck} label="Final Delivery" isActive={location.pathname === "/delivery"} onClick={() => confirmNavigation("/delivery")} />
+            <NavItem to="/dispatch" icon={ClipboardList} label="Dispatch Hub" isActive={location.pathname === "/dispatch"} onClick={() => confirmNavigation("/dispatch")} />
+            <NavItem to="/day-sheet" icon={FileText} label="Accounting" isActive={location.pathname === "/day-sheet"} onClick={() => confirmNavigation("/day-sheet")} />
+            <NavItem to="/vouchers" icon={Receipt} label="Expense Vouchers" isActive={location.pathname === "/vouchers"} onClick={() => confirmNavigation("/vouchers")} />
           </div>
 
           {profile?.username === 'md' && (
             <div className="mb-4 pt-4 border-t border-slate-50">
               <p className="px-4 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2">Advanced Control</p>
-              <NavItem to="/reconciliation" icon={Compass} label="Reconciliation" isActive={location.pathname === "/reconciliation"} onClick={() => { navigate("/reconciliation"); setIsSidebarOpen(false); }} />
-              <NavItem to="/reports" icon={BarChart2} label="Analytical Reports" isActive={location.pathname === "/reports"} onClick={() => { navigate("/reports"); setIsSidebarOpen(false); }} />
-              <NavItem to="/billing" icon={Receipt} label="Invoicing & Billing" isActive={location.pathname === "/billing"} onClick={() => { navigate("/billing"); setIsSidebarOpen(false); }} />
-              <NavItem to="/users" icon={Users} label="Access Management" isActive={location.pathname === "/users"} onClick={() => { navigate("/users"); setIsSidebarOpen(false); }} />
+              <NavItem to="/reconciliation" icon={Compass} label="Reconciliation" isActive={location.pathname === "/reconciliation"} onClick={() => confirmNavigation("/reconciliation")} />
+              <NavItem to="/reports" icon={BarChart2} label="Analytical Reports" isActive={location.pathname === "/reports"} onClick={() => confirmNavigation("/reports")} />
+              <NavItem to="/billing" icon={Receipt} label="Invoicing & Billing" isActive={location.pathname === "/billing"} onClick={() => confirmNavigation("/billing")} />
+              <NavItem to="/users" icon={Users} label="Access Management" isActive={location.pathname === "/users"} onClick={() => confirmNavigation("/users")} />
             </div>
           )}
         </>
       ) : (
         <div className="space-y-1.5">
-          <NavItem to="/" icon={LayoutDashboard} label="Dashboard" isActive={location.pathname === "/"} onClick={() => { navigate("/"); setIsSidebarOpen(false); }} />
-          <NavItem to="/pickup" icon={Package} label="My Pickups" isActive={location.pathname === "/pickup"} onClick={() => { navigate("/pickup"); setIsSidebarOpen(false); }} />
-          <NavItem to="/delivery" icon={Truck} label="My Deliveries" isActive={location.pathname === "/delivery"} onClick={() => { navigate("/delivery"); setIsSidebarOpen(false); }} />
+          <NavItem to="/" icon={LayoutDashboard} label="Dashboard" isActive={location.pathname === "/"} onClick={() => confirmNavigation("/")} />
+          <NavItem to="/pickup" icon={Package} label="My Pickups" isActive={location.pathname === "/pickup"} onClick={() => confirmNavigation("/pickup")} />
+          <NavItem to="/delivery" icon={Truck} label="My Deliveries" isActive={location.pathname === "/delivery"} onClick={() => confirmNavigation("/delivery")} />
         </div>
       )}
     </nav>
 
     <div className="pt-6 border-t border-slate-100 space-y-4 mt-auto pb-4">
-      <NavItem to="/profile" icon={User} label="Profile Settings" isActive={location.pathname === "/profile"} onClick={() => { navigate("/profile"); setIsSidebarOpen(false); }} />
+      <NavItem to="/profile" icon={User} label="Profile Settings" isActive={location.pathname === "/profile"} onClick={() => confirmNavigation("/profile")} />
       
       <div className="mx-1 p-4 bg-slate-50/80 rounded-[2rem] border border-slate-100 flex items-center gap-3 shadow-sm">
         <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-sm font-black text-white shadow-lg flex-shrink-0">

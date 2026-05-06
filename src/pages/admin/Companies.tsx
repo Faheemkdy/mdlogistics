@@ -11,10 +11,13 @@ export const Companies = () => {
   const toast = useToast();
   const [companies, setCompanies] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [newCompany, setNewCompany] = useState('');
+  const [newCompany, setNewCompany] = useState(() => localStorage.getItem('companies_draft_name') || '');
   const [loading, setLoading] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
+
+  // Persistence
+  useEffect(() => { localStorage.setItem('companies_draft_name', newCompany); }, [newCompany]);
 
   useEffect(() => { fetchCompanies(); }, []);
 
@@ -29,8 +32,11 @@ export const Companies = () => {
     setLoading(true);
     const { error } = await supabase.from('companies').insert([{ name: newCompany }]);
     if (error) { toast.error('Failed to add company', error.message); }
-    else { toast.success('Company added!', `"${newCompany}" has been registered.`); }
-    setNewCompany('');
+    else { 
+      toast.success('Company added!', `"${newCompany}" has been registered.`); 
+      setNewCompany('');
+      localStorage.removeItem('companies_draft_name');
+    }
     fetchCompanies();
     setLoading(false);
   };

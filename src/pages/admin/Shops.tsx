@@ -11,8 +11,8 @@ import * as XLSX from 'xlsx';
 export const Shops = () => {
   const toast = useToast();
   const [shops, setShops] = useState<any[]>([]);
-  const [name, setName] = useState('');
-  const [location, setLocation] = useState('');
+  const [name, setName] = useState(() => localStorage.getItem('shops_draft_name') || '');
+  const [location, setLocation] = useState(() => localStorage.getItem('shops_draft_location') || '');
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -20,6 +20,10 @@ export const Shops = () => {
   const [editLocation, setEditLocation] = useState('');
   const [importing, setImporting] = useState(false);
   const [importSummary, setImportSummary] = useState<{ added: number; skipped: number } | null>(null);
+
+  // Persistence
+  useEffect(() => { localStorage.setItem('shops_draft_name', name); }, [name]);
+  useEffect(() => { localStorage.setItem('shops_draft_location', location); }, [location]);
 
   useEffect(() => { fetchShops(); }, []);
 
@@ -31,11 +35,27 @@ export const Shops = () => {
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
+
+    // Duplicate Check: Same name and place (case-insensitive)
+    const isDuplicate = shops.some(s => 
+      s.name.toLowerCase().trim() === name.toLowerCase().trim() && 
+      (s.location || '').toLowerCase().trim() === (location || '').toLowerCase().trim()
+    );
+
+    if (isDuplicate) {
+      toast.warning('Duplicate Shop', `A shop with the name "${name}" at "${location || 'this location'}" already exists.`);
+      return;
+    }
+
     setLoading(true);
-    const { error } = await supabase.from('shops').insert([{ name, location }]);
+    const { error } = await supabase.from('shops').insert([{ name: name.trim(), location: location.trim() }]);
     if (error) { toast.error('Failed to add shop', error.message); }
-    else { toast.success('Shop added!', `"${name}" has been registered.`); }
-    setName(''); setLocation('');
+    else { 
+      toast.success('Shop added!', `"${name}" has been registered.`); 
+      setName(''); setLocation('');
+      localStorage.removeItem('shops_draft_name');
+      localStorage.removeItem('shops_draft_location');
+    }
     fetchShops();
     setLoading(false);
   };

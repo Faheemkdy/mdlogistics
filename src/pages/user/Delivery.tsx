@@ -13,13 +13,57 @@ export const Delivery = () => {
   const { user, profile } = useAuth();
   const toast = useToast();
   const [shops, setShops] = useState<any[]>([]);
-  const [search, setSearch] = useState('');
+  // Load initial state with 5-hour expiration check
+  const [search, setSearch] = useState(() => {
+    const saved = localStorage.getItem('delivery_draft_search');
+    const timestamp = localStorage.getItem('delivery_draft_timestamp');
+    const now = Date.now();
+    const fiveHours = 5 * 60 * 60 * 1000;
+    
+    if (timestamp && now - parseInt(timestamp) > fiveHours) {
+      localStorage.removeItem('delivery_draft_search');
+      localStorage.removeItem('delivery_draft_selections');
+      localStorage.removeItem('delivery_draft_timestamp');
+      return '';
+    }
+    return saved || '';
+  });
   const [loading, setLoading] = useState(false);
-  const [selections, setSelections] = useState<Record<string, string>>({});
+  const [selections, setSelections] = useState<Record<string, string>>(() => {
+    const saved = localStorage.getItem('delivery_draft_selections');
+    const timestamp = localStorage.getItem('delivery_draft_timestamp');
+    const now = Date.now();
+    const fiveHours = 5 * 60 * 60 * 1000;
+    
+    if (timestamp && now - parseInt(timestamp) > fiveHours) return {};
+    return saved ? JSON.parse(saved) : {};
+  });
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [newShopName, setNewShopName] = useState('');
   const [newShopLocation, setNewShopLocation] = useState('');
   const [addingShop, setAddingShop] = useState(false);
+
+  // Persist state to localStorage with timestamp
+  useEffect(() => {
+    localStorage.setItem('delivery_draft_search', search);
+    localStorage.setItem('delivery_draft_timestamp', Date.now().toString());
+  }, [search]);
+
+  useEffect(() => {
+    localStorage.setItem('delivery_draft_selections', JSON.stringify(selections));
+    localStorage.setItem('delivery_draft_timestamp', Date.now().toString());
+  }, [selections]);
+
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (Object.keys(selections).length > 0) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [selections]);
 
   useEffect(() => { fetchShops(); }, []);
 
@@ -60,6 +104,9 @@ export const Delivery = () => {
       if (error) throw error;
       toast.success('Deliveries recorded!', `${shopIds.length} shop(s) delivered.`);
       setSelections({});
+      localStorage.removeItem('delivery_draft_selections');
+      localStorage.removeItem('delivery_draft_search');
+      localStorage.removeItem('delivery_draft_timestamp');
     } catch (err: any) { toast.error('Failed to save deliveries', err.message); }
     finally { setLoading(false); }
   };

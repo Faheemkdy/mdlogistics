@@ -9,11 +9,49 @@ import { motion, AnimatePresence } from 'framer-motion';
 export const Dispatch = () => {
   const toast = useToast();
   const [shops, setShops] = useState<any[]>([]);
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState(() => {
+    const saved = localStorage.getItem('dispatch_draft_search');
+    const timestamp = localStorage.getItem('dispatch_draft_timestamp');
+    const now = Date.now();
+    if (timestamp && now - parseInt(timestamp) > 5 * 60 * 60 * 1000) {
+      localStorage.removeItem('dispatch_draft_search');
+      localStorage.removeItem('dispatch_draft_selections');
+      localStorage.removeItem('dispatch_draft_timestamp');
+      return '';
+    }
+    return saved || '';
+  });
   const [loading, setLoading] = useState(false);
-  const [selections, setSelections] = useState<Record<string, string>>({});
+  const [selections, setSelections] = useState<Record<string, string>>(() => {
+    const saved = localStorage.getItem('dispatch_draft_selections');
+    const timestamp = localStorage.getItem('dispatch_draft_timestamp');
+    const now = Date.now();
+    if (timestamp && now - parseInt(timestamp) > 5 * 60 * 60 * 1000) return {};
+    return saved ? JSON.parse(saved) : {};
+  });
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [isScrolled, setIsScrolled] = useState(false);
+
+  // Persistence Effects
+  useEffect(() => { 
+    localStorage.setItem('dispatch_draft_search', search); 
+    localStorage.setItem('dispatch_draft_timestamp', Date.now().toString());
+  }, [search]);
+  useEffect(() => { 
+    localStorage.setItem('dispatch_draft_selections', JSON.stringify(selections)); 
+    localStorage.setItem('dispatch_draft_timestamp', Date.now().toString());
+  }, [selections]);
+
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (Object.keys(selections).length > 0) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [selections]);
 
   useEffect(() => {
     fetchShops();
@@ -42,6 +80,9 @@ export const Dispatch = () => {
       if (error) throw error;
       toast.success('Dispatches recorded!', `${shopIds.length} shop dispatches saved successfully.`);
       setSelections({});
+      localStorage.removeItem('dispatch_draft_selections');
+      localStorage.removeItem('dispatch_draft_search');
+      localStorage.removeItem('dispatch_draft_timestamp');
     } catch (error: any) {
       toast.error('Failed to save dispatches', error.message);
     } finally { setLoading(false); }

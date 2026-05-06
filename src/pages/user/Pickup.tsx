@@ -17,18 +17,85 @@ export const Pickup = () => {
   const { user, profile } = useAuth();
   const toast = useToast();
   const navigate = useNavigate();
-  const [step, setStep] = useState<1 | 2>(1);
+  const [step, setStep] = useState<1 | 2>(() => {
+    const saved = localStorage.getItem('pickup_draft_step');
+    const timestamp = localStorage.getItem('pickup_draft_timestamp');
+    const now = Date.now();
+    const fiveHours = 5 * 60 * 60 * 1000;
+    
+    if (timestamp && now - parseInt(timestamp) > fiveHours) {
+      ['pickup_draft_step', 'pickup_draft_company_id', 'pickup_draft_company_name', 'pickup_draft_selections', 'pickup_draft_search', 'pickup_draft_timestamp'].forEach(k => localStorage.removeItem(k));
+      return 1;
+    }
+    return saved ? (parseInt(saved) as 1 | 2) : 1;
+  });
   const [companies, setCompanies] = useState<any[]>([]);
   const [shops, setShops] = useState<any[]>([]);
-  const [selectedCompany, setSelectedCompany] = useState<string | null>(null);
-  const [selectedCompanyName, setSelectedCompanyName] = useState('');
-  const [selections, setSelections] = useState<Record<string, string>>({});
-  const [search, setSearch] = useState('');
+  const [selectedCompany, setSelectedCompany] = useState<string | null>(() => {
+    const timestamp = localStorage.getItem('pickup_draft_timestamp');
+    const now = Date.now();
+    if (timestamp && now - parseInt(timestamp) > 5 * 60 * 60 * 1000) return null;
+    return localStorage.getItem('pickup_draft_company_id');
+  });
+  const [selectedCompanyName, setSelectedCompanyName] = useState(() => {
+    const timestamp = localStorage.getItem('pickup_draft_timestamp');
+    const now = Date.now();
+    if (timestamp && now - parseInt(timestamp) > 5 * 60 * 60 * 1000) return '';
+    return localStorage.getItem('pickup_draft_company_name') || '';
+  });
+  const [selections, setSelections] = useState<Record<string, string>>(() => {
+    const saved = localStorage.getItem('pickup_draft_selections');
+    const timestamp = localStorage.getItem('pickup_draft_timestamp');
+    const now = Date.now();
+    if (timestamp && now - parseInt(timestamp) > 5 * 60 * 60 * 1000) return {};
+    return saved ? JSON.parse(saved) : {};
+  });
+  const [search, setSearch] = useState(() => {
+    const saved = localStorage.getItem('pickup_draft_search');
+    const timestamp = localStorage.getItem('pickup_draft_timestamp');
+    const now = Date.now();
+    if (timestamp && now - parseInt(timestamp) > 5 * 60 * 60 * 1000) return '';
+    return saved || '';
+  });
   const [loading, setLoading] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [newShopName, setNewShopName] = useState('');
   const [newShopLocation, setNewShopLocation] = useState('');
   const [addingShop, setAddingShop] = useState(false);
+
+  // Persistence Effects
+  useEffect(() => { 
+    localStorage.setItem('pickup_draft_step', String(step)); 
+    localStorage.setItem('pickup_draft_timestamp', Date.now().toString());
+  }, [step]);
+  useEffect(() => { 
+    if (selectedCompany) localStorage.setItem('pickup_draft_company_id', selectedCompany); 
+    else localStorage.removeItem('pickup_draft_company_id'); 
+    localStorage.setItem('pickup_draft_timestamp', Date.now().toString());
+  }, [selectedCompany]);
+  useEffect(() => { 
+    localStorage.setItem('pickup_draft_company_name', selectedCompanyName); 
+    localStorage.setItem('pickup_draft_timestamp', Date.now().toString());
+  }, [selectedCompanyName]);
+  useEffect(() => { 
+    localStorage.setItem('pickup_draft_selections', JSON.stringify(selections)); 
+    localStorage.setItem('pickup_draft_timestamp', Date.now().toString());
+  }, [selections]);
+  useEffect(() => { 
+    localStorage.setItem('pickup_draft_search', search); 
+    localStorage.setItem('pickup_draft_timestamp', Date.now().toString());
+  }, [search]);
+
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (Object.keys(selections).length > 0) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [selections]);
 
   useEffect(() => { fetchData(); }, []);
 
@@ -73,6 +140,8 @@ export const Pickup = () => {
       const { error: ie } = await supabase.from('pickup_items').insert(items);
       if (ie) throw ie;
       toast.success('Pickup saved!', `${shopIds.length} shop(s) recorded.`);
+      // Clear persistence on success
+      ['pickup_draft_step', 'pickup_draft_company_id', 'pickup_draft_company_name', 'pickup_draft_selections', 'pickup_draft_search', 'pickup_draft_timestamp'].forEach(k => localStorage.removeItem(k));
       setTimeout(() => navigate('/'), 900);
     } catch (err: any) { toast.error('Failed to save pickup', err.message); }
     finally { setLoading(false); }
