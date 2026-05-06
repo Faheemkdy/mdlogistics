@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useToast } from '../../components/ui/Toast';
 import { Button } from '../../components/ui/Button';
-import { Search, Calendar, CheckCircle2, AlertCircle, HelpCircle, ArrowRight, Download, MapPin, Share2, Filter, CheckCircle } from 'lucide-react';
+import { Search, Calendar, CheckCircle2, AlertCircle, ArrowRight, MapPin } from 'lucide-react';
 import { clsx } from 'clsx';
 import { motion } from 'framer-motion';
 import jsPDF from 'jspdf';
@@ -76,7 +76,7 @@ export const Reconciliation = () => {
     }
   };
 
-  const filteredData = useMemo(() => {
+  const filteredData = React.useMemo(() => {
     const q = debouncedSearch.toLowerCase();
     return data
       .filter(d => 
