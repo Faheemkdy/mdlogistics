@@ -74,41 +74,63 @@ export const Reports = () => {
   };
 
   const downloadAllPickupsPDF = () => {
-    const doc = new jsPDF();
-    drawPDFHeader(doc);
-    drawCustomerInfo(doc, 'Report:', 'Master Pickup Log', date);
-    let y = 75; let total = 0;
-    pickupData.forEach((c) => {
-      total += c.items.length;
-      if (y > 250) { doc.addPage(); drawPDFHeader(doc); y = 60; }
-      doc.setFontSize(12); doc.setTextColor(79, 70, 229); doc.setFont('helvetica', 'bold');
-      doc.text(c.name, 14, y);
-      autoTable(doc, {
-        head: [['#', 'Shop', 'Location', 'Item No.', 'Time']],
-        body: c.items.map((item: any, i: number) => [i + 1, item.name, item.location || '-', item.itemNumber || '-', item.pickupTime]),
-        startY: y + 5, theme: 'grid',
-        headStyles: { fillColor: [79, 70, 229], textColor: 255, fontStyle: 'bold' },
-        styles: { cellPadding: 3, fontSize: 10 }, margin: { left: 14, right: 14 },
+    if (filteredPickups.length === 0) {
+      toast.error('No data', 'No pickups found for this date.');
+      return;
+    }
+    try {
+      const doc = new jsPDF();
+      drawPDFHeader(doc);
+      drawCustomerInfo(doc, 'Report:', 'Master Pickup Log', date);
+      let y = 105; let total = 0;
+      filteredPickups.forEach((c) => {
+        total += c.items.length;
+        if (y > 250) { doc.addPage(); drawPDFHeader(doc); y = 60; }
+        doc.setFontSize(12); doc.setTextColor(...BRAND.accent); doc.setFont('helvetica', 'bold');
+        doc.text(c.name || 'Unknown', 14, y);
+        autoTable(doc, {
+          head: [['#', 'Shop', 'Location', 'Item No.', 'Time']],
+          body: c.items.map((item: any, i: number) => [i + 1, item.name, item.location || '-', item.itemNumber || '-', item.pickupTime || '-']),
+          startY: y + 5, theme: 'grid',
+          headStyles: { fillColor: BRAND.accent, textColor: 255, fontStyle: 'bold' },
+          styles: { cellPadding: 3, fontSize: 10 }, margin: { left: 14, right: 14 },
+        });
+        y = (doc as any).lastAutoTable?.finalY ? (doc as any).lastAutoTable.finalY + 15 : y + 30;
       });
-      y = (doc as any).lastAutoTable.finalY + 15;
-    });
-    drawGreenFooter(doc, 'TOTAL SHOPS:', total);
-    savePDF(doc, `Master_Pickup_${date}.pdf`);
+      drawGreenFooter(doc, 'TOTAL SHOPS:', total);
+      savePDF(doc, `Master_Pickup_${date}.pdf`);
+    } catch (e: any) {
+      console.error('PDF Generation Error:', e);
+      toast.error('Export Failed', 'An error occurred while generating the PDF.');
+    }
   };
 
   const downloadDeliveryPDF = () => {
-    const doc = new jsPDF();
-    drawPDFHeader(doc);
-    drawCustomerInfo(doc, 'Report:', 'Daily Delivery Log', date);
-    autoTable(doc, {
-      head: [['#', 'Shop', 'Location', 'Item No.', 'Time']],
-      body: deliveryData.map((d, i) => [i + 1, d.shops?.name || '-', d.shops?.location || '-', d.item_number || '-', format(new Date(d.created_at), 'hh:mm a')]),
-      startY: 75, theme: 'grid',
-      headStyles: { fillColor: [16, 185, 129], textColor: 255, fontStyle: 'bold' },
-      styles: { cellPadding: 3, fontSize: 10 },
-    });
-    drawGreenFooter(doc, 'TOTAL DELIVERIES:', deliveryData.length);
-    savePDF(doc, `Delivery_${date}.pdf`);
+    if (filteredDeliveries.length === 0) {
+      toast.error('No data', 'No deliveries found for this date.');
+      return;
+    }
+    try {
+      const doc = new jsPDF();
+      drawPDFHeader(doc);
+      drawCustomerInfo(doc, 'Report:', 'Daily Delivery Log', date);
+      autoTable(doc, {
+        head: [['#', 'Shop', 'Location', 'Item No.', 'Time']],
+        body: filteredDeliveries.map((d, i) => {
+          let timeStr = '-';
+          try { timeStr = d.created_at ? format(new Date(d.created_at), 'hh:mm a') : '-'; } catch(e) {}
+          return [i + 1, d.shops?.name || '-', d.shops?.location || '-', d.item_number || '-', timeStr];
+        }),
+        startY: 105, theme: 'grid',
+        headStyles: { fillColor: BRAND.success, textColor: 255, fontStyle: 'bold' },
+        styles: { cellPadding: 3, fontSize: 10 },
+      });
+      drawGreenFooter(doc, 'TOTAL DELIVERIES:', filteredDeliveries.length);
+      savePDF(doc, `Delivery_${date}.pdf`);
+    } catch (e: any) {
+      console.error('PDF Generation Error:', e);
+      toast.error('Export Failed', 'An error occurred while generating the PDF.');
+    }
   };
 
   const downloadPickupRangePDF = async (days: number) => {
@@ -181,62 +203,65 @@ export const Reports = () => {
   );
 
   return (
-    <div className="space-y-5 pb-6">
+    <div className="pb-6 flex flex-col">
 
       {/* ── Header ── */}
-      <div className="flex items-start justify-between gap-3">
-        <div>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 sm:gap-6 px-1 mb-5">
+        <div className="space-y-1">
           <h1 className="text-2xl sm:text-3xl font-black text-slate-800 tracking-tight">Reports</h1>
-          <p className="text-slate-500 text-sm font-medium mt-0.5">View & export logistics data</p>
+          <p className="text-slate-500 text-xs sm:text-sm font-medium">View & export logistics data</p>
         </div>
         {/* Date picker */}
-        <label className="flex items-center gap-2 bg-white border border-slate-200 rounded-xl px-3 py-2 shadow-sm cursor-pointer hover:border-indigo-300 transition-colors">
+        <label className="flex items-center gap-2 bg-white/80 backdrop-blur-md border border-white shadow-sm rounded-2xl px-4 py-2.5 cursor-pointer hover:border-indigo-300 transition-all self-end sm:self-auto">
           <CalendarDays size={16} className="text-indigo-500 flex-shrink-0" />
           <input
             type="date"
             value={date}
             onChange={e => setDate(e.target.value)}
-            className="bg-transparent border-none focus:ring-0 text-slate-700 font-bold text-sm w-32"
+            className="bg-transparent border-none focus:ring-0 text-slate-700 font-bold text-sm w-32 outline-none"
           />
         </label>
       </div>
 
-      {/* ── Tab Toggle ── */}
-      <div className="flex gap-2 p-1.5 bg-slate-100 rounded-2xl">
-        {(['pickups', 'deliveries'] as Tab[]).map(tab => (
-          <button
-            key={tab}
-            onClick={() => { setActiveTab(tab); setSearchQuery(''); setExpandedCompany(null); }}
-            className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold transition-all duration-300 ${
-              activeTab === tab
-                ? tab === 'pickups'
-                  ? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-lg shadow-blue-500/30'
-                  : 'bg-gradient-to-r from-emerald-500 to-green-600 text-white shadow-lg shadow-emerald-500/30'
-                : 'text-slate-500 hover:text-slate-700 hover:bg-white/60'
-            }`}
-          >
-            {tab === 'pickups' ? <Package size={16} /> : <Truck size={16} />}
-            <span className="capitalize">{tab}</span>
-          </button>
-        ))}
-      </div>
+      {/* ── Sticky Nav & Search ── */}
+      <div className="sticky top-0 z-30 bg-slate-50/95 backdrop-blur-xl pb-4 pt-1 -mx-2 px-2 sm:-mx-4 sm:px-4 shadow-sm border-b border-slate-200/50 space-y-3 mb-5">
+        {/* ── Tab Toggle ── */}
+        <div className="flex gap-2 p-1.5 bg-slate-200/50 rounded-2xl backdrop-blur-sm">
+          {(['pickups', 'deliveries'] as Tab[]).map(tab => (
+            <button
+              key={tab}
+              onClick={() => { setActiveTab(tab); setSearchQuery(''); setExpandedCompany(null); }}
+              className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-black transition-all duration-300 ${
+                activeTab === tab
+                  ? tab === 'pickups'
+                    ? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-lg shadow-blue-500/30'
+                    : 'bg-gradient-to-r from-emerald-500 to-green-600 text-white shadow-lg shadow-emerald-500/30'
+                  : 'text-slate-500 hover:text-slate-700 hover:bg-white/60'
+              }`}
+            >
+              {tab === 'pickups' ? <Package size={16} /> : <Truck size={16} />}
+              <span className="capitalize">{tab}</span>
+            </button>
+          ))}
+        </div>
 
-      {/* ── Search ── */}
-      <div className="relative">
-        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-        <input
-          type="text"
-          placeholder={`Search ${activeTab}...`}
-          value={searchQuery}
-          onChange={e => setSearchQuery(e.target.value)}
-          className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 shadow-sm transition-all"
-        />
+        {/* ── Search ── */}
+        <div className="relative group">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors" size={16} />
+          <input
+            type="text"
+            placeholder={`Find ${activeTab}...`}
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            className="w-full pl-11 pr-4 py-3 sm:py-3.5 bg-white/80 backdrop-blur-md border border-slate-200 rounded-2xl text-sm text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-400 shadow-sm transition-all font-bold"
+          />
+        </div>
       </div>
 
       {/* ── Loading ── */}
       {loading && (
-        <div className="flex justify-center py-10">
-          <div className="w-8 h-8 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+        <div className="flex justify-center py-20">
+          <div className="w-10 h-10 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin shadow-lg" />
         </div>
       )}
 
@@ -251,12 +276,13 @@ export const Reports = () => {
                 <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Download Range (Pickups)</span>
                 <button
                   onClick={downloadAllPickupsPDF}
-                  disabled={pickupData.length === 0}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-[11px] font-bold hover:bg-indigo-700 disabled:opacity-50 transition-all shadow-md shadow-indigo-500/20">
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-indigo-600 text-[11px] font-bold hover:bg-indigo-50 transition-all shadow-sm">
                   <FileText size={12} /> Master PDF
                 </button>
               </div>
-              <RangeBtns onDownload={downloadPickupRangePDF} />
+              <div className="overflow-x-auto no-scrollbar pb-1 -mx-1 px-1">
+                <RangeBtns onDownload={downloadPickupRangePDF} />
+              </div>
               <p className="text-[11px] text-slate-400 font-medium">
                 {filteredPickups.length} compan{filteredPickups.length !== 1 ? 'ies' : 'y'} · {filteredPickups.reduce((a, c) => a + c.items.length, 0)} shops
               </p>
@@ -351,8 +377,7 @@ export const Reports = () => {
                 <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Download Range (Deliveries)</span>
                 <button
                   onClick={downloadDeliveryPDF}
-                  disabled={deliveryData.length === 0}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 text-white text-[11px] font-bold hover:bg-emerald-700 disabled:opacity-50 transition-all shadow-md shadow-emerald-500/20">
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-emerald-600 text-[11px] font-bold hover:bg-emerald-50 transition-all shadow-sm">
                   <Download size={12} /> Today's PDF
                 </button>
               </div>

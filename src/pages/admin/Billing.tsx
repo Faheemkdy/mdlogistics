@@ -464,8 +464,10 @@ export const Billing = () => {
               </div>
 
               {/* Table */}
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse" style={{ minWidth: mode === 'delivery' ? '700px' : '400px' }}>
+              <div className="relative group/scroll">
+                <div className="lg:hidden absolute top-0 right-0 bottom-0 w-6 bg-gradient-to-l from-slate-300/40 to-transparent pointer-events-none z-10" />
+                <div className="overflow-x-auto custom-scrollbar">
+                  <table className="w-full text-left border-collapse" style={{ minWidth: mode === 'delivery' ? '700px' : '400px' }}>
                   <thead>
                     <tr className="bg-slate-800 text-white text-xs">
                       {mode === 'delivery' ? (
@@ -605,6 +607,7 @@ export const Billing = () => {
                   <Plus size={18} /> Add New Row
                 </button>
               </div>
+            </div>
             </div>
           </motion.div>
         </div>

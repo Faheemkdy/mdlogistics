@@ -14,7 +14,7 @@ import { clsx } from 'clsx';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export const Pickup = () => {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const toast = useToast();
   const navigate = useNavigate();
   const [step, setStep] = useState<1 | 2>(1);
@@ -93,17 +93,18 @@ export const Pickup = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* ── Page Header ── */}
-      <div className="bg-white border-b border-gray-100 sticky top-0 z-30">
-        <div className="max-w-2xl mx-auto px-4">
+      <div className="bg-white/95 backdrop-blur-xl border-b border-gray-100 sticky top-0 z-30 transition-all duration-300">
+        <div className="max-w-4xl lg:max-w-6xl mx-auto px-4">
           {/* Top bar */}
-          <div className="flex items-center gap-3 py-4">
-            <AnimatePresence>
+          <div className="flex items-center gap-3 py-3 lg:py-4">
+            <AnimatePresence mode="wait">
               {step === 2 && (
                 <motion.button
-                  initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -8 }}
+                  key="back-btn"
+                  initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.8 }}
                   whileTap={{ scale: 0.9 }}
                   onClick={() => { setStep(1); setSelections({}); setSearch(''); }}
-                  className="w-9 h-9 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-600 transition-colors flex-shrink-0"
+                  className="w-9 h-9 rounded-2xl bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-600 transition-colors flex-shrink-0"
                 >
                   <ChevronLeft size={20} />
                 </motion.button>
@@ -112,37 +113,37 @@ export const Pickup = () => {
 
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
-                <h1 className="text-xl font-bold text-gray-900">
+                <h1 className="text-lg lg:text-xl font-black text-gray-900 tracking-tight">
                   {step === 1 ? 'New Pickup' : 'Select Shops'}
                 </h1>
                 <AnimatePresence>
                   {step === 2 && selectedCompanyName && (
                     <motion.span
-                      initial={{ opacity: 0, scale: 0.85 }} animate={{ opacity: 1, scale: 1 }}
-                      className="inline-flex items-center gap-1 px-2.5 py-0.5 bg-orange-50 text-orange-600 rounded-full text-xs font-semibold border border-orange-100"
+                      initial={{ opacity: 0, x: 5 }} animate={{ opacity: 1, x: 0 }}
+                      className="inline-flex items-center gap-1 px-2.5 py-0.5 bg-orange-50 text-orange-600 rounded-full text-[10px] font-bold border border-orange-100"
                     >
                       <Building2 size={10} /> {selectedCompanyName}
                     </motion.span>
                   )}
                 </AnimatePresence>
               </div>
-              <p className="text-xs text-gray-400 font-medium mt-0.5">
-                {step === 1 ? 'Choose a company to proceed' : selectedCount > 0 ? `${selectedCount} shop(s) selected` : 'Tap shops to select'}
+              <p className="text-[10px] lg:text-xs text-gray-400 font-bold uppercase tracking-wider mt-0.5">
+                {step === 1 ? 'Choose a company' : selectedCount > 0 ? `${selectedCount} selected` : 'Tap to select'}
               </p>
             </div>
 
             {/* Orange pill badge */}
-            <div className="flex items-center gap-1.5 bg-orange-500 text-white px-3 py-1.5 rounded-full text-xs font-bold shadow-sm shadow-orange-200 flex-shrink-0">
+            <div className="flex items-center gap-1.5 bg-orange-500 text-white px-3 py-1.5 rounded-full text-[10px] font-black shadow-lg shadow-orange-500/20 flex-shrink-0 uppercase tracking-widest">
               <Package size={12} /> Pickup
             </div>
           </div>
 
           {/* Step progress dots */}
-          <div className="flex items-center gap-1.5 pb-3">
+          <div className="flex items-center gap-1.5 pb-2 lg:pb-3">
             {[1, 2].map(s => (
               <div key={s} className={clsx(
-                'rounded-full transition-all duration-400',
-                s === step ? 'w-6 h-2 bg-orange-500' : s < step ? 'w-2 h-2 bg-orange-300' : 'w-2 h-2 bg-gray-200'
+                'rounded-full transition-all duration-500',
+                s === step ? 'w-8 h-1.5 bg-orange-500' : s < step ? 'w-2 h-1.5 bg-orange-300' : 'w-2 h-1.5 bg-gray-200'
               )} />
             ))}
           </div>
@@ -156,15 +157,15 @@ export const Pickup = () => {
                 className="flex gap-2 pb-3 overflow-hidden"
               >
                 <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                  <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
                   <input
                     placeholder="Search shops..."
                     value={search}
                     onChange={e => setSearch(e.target.value)}
-                    className="w-full h-10 pl-9 pr-9 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-700 placeholder-gray-400 focus:outline-none focus:border-orange-300 focus:ring-2 focus:ring-orange-100 transition-all"
+                    className="w-full h-11 pl-10 pr-10 bg-gray-50 border border-gray-200 rounded-2xl text-sm text-gray-700 placeholder-gray-400 focus:outline-none focus:border-orange-400 focus:ring-4 focus:ring-orange-500/5 transition-all shadow-inner"
                   />
                   {search && (
-                    <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                    <button onClick={() => setSearch('')} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
                       <X size={14} />
                     </button>
                   )}
@@ -172,9 +173,9 @@ export const Pickup = () => {
                 <motion.button
                   whileTap={{ scale: 0.92 }}
                   onClick={() => setIsAddModalOpen(true)}
-                  className="w-10 h-10 rounded-xl bg-orange-500 hover:bg-orange-600 text-white flex items-center justify-center shadow-sm shadow-orange-200 transition-colors flex-shrink-0"
+                  className="w-11 h-11 rounded-2xl bg-orange-500 hover:bg-orange-600 text-white flex items-center justify-center shadow-lg shadow-orange-500/25 transition-colors flex-shrink-0"
                 >
-                  <Plus size={18} />
+                  <Plus size={20} />
                 </motion.button>
               </motion.div>
             )}
@@ -183,7 +184,7 @@ export const Pickup = () => {
       </div>
 
       {/* ── Body ── */}
-      <div className="max-w-2xl mx-auto px-4 pb-36 pt-4">
+      <div className="max-w-4xl lg:max-w-6xl mx-auto px-4 pb-36 pt-4">
         <AnimatePresence mode="wait">
 
           {/* STEP 1 — Companies */}
@@ -197,27 +198,28 @@ export const Pickup = () => {
               <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-widest">
                 {companies.length} Companies
               </p>
-              {companies.map((c, i) => (
-                <motion.button
-                  key={c.id}
-                  initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: i * 0.05 }}
-                  whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }}
-                  onClick={() => { setSelectedCompany(c.id); setSelectedCompanyName(c.name); setStep(2); }}
-                  className="w-full flex items-center gap-4 p-4 bg-white border border-gray-100 rounded-2xl hover:border-orange-200 hover:shadow-md hover:shadow-orange-50 transition-all text-left group"
-                >
-                  <div className="w-11 h-11 rounded-xl bg-orange-50 border border-orange-100 flex items-center justify-center flex-shrink-0 group-hover:bg-orange-100 transition-colors">
-                    <Building2 size={20} className="text-orange-500" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-gray-800 text-base truncate">{c.name}</p>
-                    <p className="text-xs text-gray-400 mt-0.5">Tap to continue →</p>
-                  </div>
-                  <div className="w-8 h-8 rounded-full bg-gray-50 group-hover:bg-orange-50 flex items-center justify-center transition-colors">
-                    <ChevronRight size={16} className="text-gray-400 group-hover:text-orange-500 transition-colors" />
-                  </div>
-                </motion.button>
-              ))}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                {companies.map((c, i) => (
+                  <motion.div
+                    key={c.id}
+                    initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5, ease: [0.23, 1, 0.32, 1], delay: i * 0.02 }}
+                    onClick={() => { setSelectedCompany(c.id); setSelectedCompanyName(c.name); setStep(2); }}
+                    className="w-full flex items-center gap-4 p-4 bg-white border border-gray-100 rounded-2xl hover:border-orange-200 hover:shadow-md hover:shadow-orange-50 transition-all text-left cursor-pointer group"
+                  >
+                    <div className="w-11 h-11 rounded-xl bg-orange-50 border border-orange-100 flex items-center justify-center flex-shrink-0 group-hover:bg-orange-100 transition-colors">
+                      <Building2 size={20} className="text-orange-500" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-gray-800 text-base truncate">{c.name}</p>
+                      <p className="text-xs text-gray-400 mt-0.5">Tap to continue →</p>
+                    </div>
+                    <div className="w-8 h-8 rounded-full bg-gray-50 group-hover:bg-orange-50 flex items-center justify-center transition-colors">
+                      <ChevronRight size={16} className="text-gray-400 group-hover:text-orange-500 transition-colors" />
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
 
               {companies.length === 0 && (
                 <div className="text-center py-16">
@@ -257,14 +259,15 @@ export const Pickup = () => {
                 {filteredShops.length} Shops
               </p>
 
-              <AnimatePresence>
-                {filteredShops.map((shop, index) => {
+              <motion.div layout className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <AnimatePresence>
+                  {filteredShops.map((shop, index) => {
                   const isSelected = selections[shop.id] !== undefined;
                   return (
                     <motion.div
                       key={shop.id} layout
-                      initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: 8 }} transition={{ delay: index * 0.015 }}
+                      initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.95 }} transition={{ duration: 0.5, ease: [0.23, 1, 0.32, 1], delay: index * 0.02 }}
                       className={clsx(
                         'bg-white rounded-2xl border-2 overflow-hidden transition-all duration-200',
                         isSelected
@@ -274,7 +277,7 @@ export const Pickup = () => {
                     >
                       {/* Shop tap row */}
                       <div
-                        className="flex items-center gap-3 px-4 py-3.5 cursor-pointer"
+                        className="flex items-center gap-3 px-3 py-3 lg:px-4 lg:py-3.5 cursor-pointer"
                         onClick={() => toggleShop(shop.id)}
                       >
                         {/* Checkbox */}
@@ -334,7 +337,8 @@ export const Pickup = () => {
                     </motion.div>
                   );
                 })}
-              </AnimatePresence>
+                </AnimatePresence>
+              </motion.div>
 
               {filteredShops.length === 0 && (
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-14">
@@ -362,10 +366,13 @@ export const Pickup = () => {
           <motion.div
             initial={{ y: 80, opacity: 0 }} animate={{ y: 0, opacity: 1 }}
             exit={{ y: 80, opacity: 0 }}
-            className="fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-gray-100"
+            className={clsx(
+              "fixed bottom-0 right-0 z-40 bg-white border-t border-gray-100",
+              profile?.role === 'admin' ? "left-0 lg:left-72" : "left-0"
+            )}
             style={{ paddingBottom: 'env(safe-area-inset-bottom)', boxShadow: '0 -8px 30px rgba(0,0,0,0.06)' }}
           >
-            <div className="max-w-2xl mx-auto px-4 py-3 flex items-center gap-3">
+            <div className="max-w-4xl lg:max-w-6xl mx-auto px-4 py-3 flex items-center gap-3">
               {/* Count info */}
               <div className="flex items-center gap-3 flex-1">
                 <div className="w-10 h-10 rounded-xl bg-orange-50 border border-orange-100 flex items-center justify-center flex-shrink-0">

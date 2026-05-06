@@ -77,48 +77,69 @@ export const AdminDashboard = () => {
   };
 
   const downloadDaySheetPDF = () => {
-    if (todayDaySheets.length === 0) { toast.warning('No data today', 'No day sheet entries found for today.'); return; }
-    const doc = new jsPDF();
-    const today = getStandardDate();
-    drawPDFHeader(doc);
-    drawCustomerInfo(doc, "Report Type:", "Day Sheet Statement", formatReportDate(today));
-    const tableData = todayDaySheets.map(e => [e.type.toUpperCase(), e.description, e.amount]);
-    autoTable(doc, { head: [['Type', 'Description', 'Amount']], body: tableData, startY: 80, theme: 'grid', headStyles: { fillColor: [79, 70, 229], textColor: 255, fontStyle: 'bold' }, styles: { cellPadding: 4, fontSize: 11 }, alternateRowStyles: { fillColor: [245, 247, 250] } });
-    const balance = stats.todayIncome - stats.todayExpense;
-    drawGreenFooter(doc, "TOTAL BALANCE:", `Rs. ${balance}`);
-    savePDF(doc, `daysheet_${today}.pdf`);
+    try {
+      if (todayDaySheets.length === 0) { toast.warning('No data today', 'No day sheet entries found for today.'); return; }
+      const doc = new jsPDF();
+      const today = getStandardDate();
+      drawPDFHeader(doc);
+      drawCustomerInfo(doc, "Report Type:", "Day Sheet Statement", formatReportDate(today));
+      const tableData = todayDaySheets.map(e => [e.type.toUpperCase(), e.description, e.amount]);
+      autoTable(doc, { head: [['Type', 'Description', 'Amount']], body: tableData, startY: 80, theme: 'grid', headStyles: { fillColor: [79, 70, 229], textColor: 255, fontStyle: 'bold' }, styles: { cellPadding: 4, fontSize: 11 }, alternateRowStyles: { fillColor: [245, 247, 250] } });
+      const balance = stats.todayIncome - stats.todayExpense;
+      drawGreenFooter(doc, "TOTAL BALANCE:", `Rs. ${balance}`);
+      savePDF(doc, `daysheet_${today}.pdf`);
+    } catch (e: any) {
+      console.error('PDF Generation Error:', e);
+      toast.error('Export Failed', 'An error occurred while generating the PDF.');
+    }
   };
 
   const downloadPickupsReport = async () => {
-    const today = getStandardDate();
-    const { data, error } = await supabase.from('pickups').select(`id, created_at, companies (name), pickup_items ( item_number, shops (name, location) )`).eq('date', today);
-    if (error || !data || data.length === 0) { toast.warning('No pickups today', 'No pickup records found for today.'); return; }
-    const doc = new jsPDF();
-    drawPDFHeader(doc);
-    drawCustomerInfo(doc, "Report Type:", "Daily Pickups Report", formatReportDate(today));
-    let tableData: any[] = [];
-    data.forEach((pickup: any) => {
-      const companyName = pickup.companies?.name || 'Unknown';
-      pickup.pickup_items?.forEach((item: any) => {
-        tableData.push([companyName, item.shops?.name || 'Unknown', item.shops?.location || '-', item.item_number || '-', format(new Date(pickup.created_at), 'hh:mm a')]);
+    try {
+      const today = getStandardDate();
+      const { data, error } = await supabase.from('pickups').select(`id, created_at, companies (name), pickup_items ( item_number, shops (name, location) )`).eq('date', today);
+      if (error || !data || data.length === 0) { toast.warning('No pickups today', 'No pickup records found for today.'); return; }
+      const doc = new jsPDF();
+      drawPDFHeader(doc);
+      drawCustomerInfo(doc, "Report Type:", "Daily Pickups Report", formatReportDate(today));
+      let tableData: any[] = [];
+      data.forEach((pickup: any) => {
+        const companyName = pickup.companies?.name || 'Unknown';
+        pickup.pickup_items?.forEach((item: any) => {
+          let timeStr = '-';
+          try { timeStr = pickup.created_at ? format(new Date(pickup.created_at), 'hh:mm a') : '-'; } catch(e) {}
+          tableData.push([companyName, item.shops?.name || 'Unknown', item.shops?.location || '-', item.item_number || '-', timeStr]);
+        });
       });
-    });
-    autoTable(doc, { head: [['Company', 'Shop', 'Location', 'Item No.', 'Time']], body: tableData, startY: 80, theme: 'grid', headStyles: { fillColor: [249, 115, 22], textColor: 255, fontStyle: 'bold' }, styles: { cellPadding: 4, fontSize: 10 }, alternateRowStyles: { fillColor: [255, 247, 237] } });
-    drawGreenFooter(doc, "TOTAL ITEMS:", tableData.length);
-    savePDF(doc, `pickups_${today}.pdf`);
+      autoTable(doc, { head: [['Company', 'Shop', 'Location', 'Item No.', 'Time']], body: tableData, startY: 80, theme: 'grid', headStyles: { fillColor: [249, 115, 22], textColor: 255, fontStyle: 'bold' }, styles: { cellPadding: 4, fontSize: 10 }, alternateRowStyles: { fillColor: [255, 247, 237] } });
+      drawGreenFooter(doc, "TOTAL ITEMS:", tableData.length);
+      savePDF(doc, `pickups_${today}.pdf`);
+    } catch (e: any) {
+      console.error('PDF Generation Error:', e);
+      toast.error('Export Failed', 'An error occurred while generating the PDF.');
+    }
   };
 
   const downloadDeliveriesReport = async () => {
-    const today = getStandardDate();
-    const { data, error } = await supabase.from('deliveries').select(`created_at, item_number, shops (name, location), profiles (username)`).eq('date', today);
-    if (error || !data || data.length === 0) { toast.warning('No deliveries today', 'No delivery records found for today.'); return; }
-    const doc = new jsPDF();
-    drawPDFHeader(doc);
-    drawCustomerInfo(doc, "Report Type:", "Daily Deliveries Report", formatReportDate(today));
-    const tableData = data.map((d: any) => [d.shops?.name || 'Unknown', d.shops?.location || '-', d.item_number || '-', format(new Date(d.created_at), 'hh:mm a')]);
-    autoTable(doc, { head: [['Shop Name', 'Location', 'Item No.', 'Time']], body: tableData, startY: 80, theme: 'grid', headStyles: { fillColor: [34, 197, 94], textColor: 255, fontStyle: 'bold' }, styles: { cellPadding: 4, fontSize: 11 }, alternateRowStyles: { fillColor: [240, 253, 244] } });
-    drawGreenFooter(doc, "TOTAL DELIVERIES:", data.length);
-    savePDF(doc, `deliveries_${today}.pdf`);
+    try {
+      const today = getStandardDate();
+      const { data, error } = await supabase.from('deliveries').select(`created_at, item_number, shops (name, location), profiles (username)`).eq('date', today);
+      if (error || !data || data.length === 0) { toast.warning('No deliveries today', 'No delivery records found for today.'); return; }
+      const doc = new jsPDF();
+      drawPDFHeader(doc);
+      drawCustomerInfo(doc, "Report Type:", "Daily Deliveries Report", formatReportDate(today));
+      const tableData = data.map((d: any) => {
+        let timeStr = '-';
+        try { timeStr = d.created_at ? format(new Date(d.created_at), 'hh:mm a') : '-'; } catch(e) {}
+        return [d.shops?.name || 'Unknown', d.shops?.location || '-', d.item_number || '-', timeStr];
+      });
+      autoTable(doc, { head: [['Shop Name', 'Location', 'Item No.', 'Time']], body: tableData, startY: 80, theme: 'grid', headStyles: { fillColor: [34, 197, 94], textColor: 255, fontStyle: 'bold' }, styles: { cellPadding: 4, fontSize: 11 }, alternateRowStyles: { fillColor: [240, 253, 244] } });
+      drawGreenFooter(doc, "TOTAL DELIVERIES:", data.length);
+      savePDF(doc, `deliveries_${today}.pdf`);
+    } catch (e: any) {
+      console.error('PDF Generation Error:', e);
+      toast.error('Export Failed', 'An error occurred while generating the PDF.');
+    }
   };
 
   const balance = stats.todayIncome - stats.todayExpense;
@@ -168,7 +189,7 @@ export const AdminDashboard = () => {
     },
     {
       title: "Today's Income",
-      value: `₹${stats.todayIncome.toLocaleString()}`,
+      value: `Rs.${stats.todayIncome.toLocaleString()}`,
       icon: TrendingUp,
       gradient: 'from-emerald-400 to-emerald-600',
       glow: 'shadow-emerald-500/25',
@@ -179,7 +200,7 @@ export const AdminDashboard = () => {
     },
     {
       title: "Today's Expense",
-      value: `₹${stats.todayExpense.toLocaleString()}`,
+      value: `Rs.${stats.todayExpense.toLocaleString()}`,
       icon: TrendingDown,
       gradient: 'from-red-400 to-red-600',
       glow: 'shadow-red-500/25',
@@ -201,51 +222,52 @@ export const AdminDashboard = () => {
   ].filter(action => action.access !== 'master' || isMasterAdmin);
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6 sm:space-y-8 pb-6">
       {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="flex flex-wrap justify-between items-start gap-3"
+        className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 px-1"
       >
         <div className="min-w-0">
-          <h1 className="text-2xl sm:text-3xl font-black text-slate-800 tracking-tight">Dashboard</h1>
-          <p className="text-slate-500 font-medium mt-1 text-sm sm:text-base">
+          <h1 className="text-3xl sm:text-4xl font-black text-slate-800 tracking-tight leading-none">Dashboard</h1>
+          <p className="text-slate-500 font-bold mt-1.5 text-xs sm:text-sm flex items-center gap-2">
+            <Activity size={14} className="text-indigo-500" />
             {formatReportDate(getStandardDate())}
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-2 mt-1">
-          <span className="px-3 py-1.5 bg-gradient-to-r from-indigo-600 to-blue-600 text-white rounded-full text-xs font-bold shadow-lg shadow-indigo-500/30">
-            Admin Access
+        <div className="flex items-center gap-2">
+          <span className="px-4 py-1.5 bg-slate-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-lg">
+            {profile?.username === 'md' ? 'Master Admin' : 'Admin Access'}
           </span>
           {/* Balance chip */}
-          <div className={`px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-1.5 ${balance >= 0 ? 'bg-emerald-100 text-emerald-700 border border-emerald-200' : 'bg-red-100 text-red-700 border border-red-200'}`}>
-            <Activity size={12} />
-            ₹{balance.toLocaleString()}
+          <div className={`px-4 py-1.5 rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5 border shadow-sm ${balance >= 0 ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-red-50 text-red-700 border-red-100'}`}>
+            Rs.{balance.toLocaleString()}
           </div>
         </div>
       </motion.div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-6">
         {statsCards.map((card) => (
           <motion.div
             key={card.title}
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: card.delay, ease: [0.23, 1, 0.32, 1] }}
-            className={`relative bg-gradient-to-br from-[#eef2f7] to-[#d3d8df] rounded-2xl p-5 border border-white/60 shadow-[6px_6px_14px_rgba(163,177,198,0.5),-6px_-6px_14px_rgba(255,255,255,0.8)] overflow-hidden ${card.action ? 'cursor-default' : ''}`}
+            className={`relative bg-white/80 backdrop-blur-xl rounded-[2rem] p-4 sm:p-6 border border-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden ${card.action ? 'cursor-pointer hover:border-indigo-200 transition-all' : ''}`}
+            onClick={card.action}
           >
             {/* Icon */}
-            <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${card.gradient} flex items-center justify-center shadow-lg ${card.glow} mb-3`}>
-              <card.icon size={22} className="text-white" />
+            <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-gradient-to-br ${card.gradient} flex items-center justify-center shadow-lg ${card.glow} mb-3 sm:mb-4`}>
+              <card.icon size={20} className="text-white" />
             </div>
 
             {/* Value */}
             <div>
-              <p className="text-sm text-slate-500 font-semibold">{card.title}</p>
-              <h3 className="text-2xl lg:text-3xl font-black text-slate-800 mt-1 tracking-tight">{card.value}</h3>
+              <p className="text-[10px] sm:text-xs text-slate-400 font-black uppercase tracking-widest mb-1">{card.title}</p>
+              <h3 className="text-xl sm:text-3xl font-black text-slate-800 tracking-tight leading-none">{card.value}</h3>
             </div>
 
             {/* Download button */}

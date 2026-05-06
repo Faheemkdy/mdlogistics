@@ -282,26 +282,28 @@ export const Reconciliation = () => {
       </div>
 
       <div className="bg-white rounded-2xl sm:rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
-        <div className="p-4 sm:p-6 border-b border-slate-50 bg-slate-50/50 flex flex-col sm:flex-row gap-3">
+        <div className="p-4 sm:p-6 border-b border-slate-50 bg-slate-50/50 flex flex-col sm:flex-row gap-3 sticky top-0 z-20 backdrop-blur-md bg-white/90">
           <div className="relative flex-1">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
             <input 
-              placeholder="Search by shop name or location..." 
+              placeholder="Search by shop..." 
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full h-11 pl-11 pr-4 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+              className="w-full h-12 pl-11 pr-4 bg-white border border-slate-200 rounded-2xl text-sm focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all shadow-inner"
             />
           </div>
           <Button 
             variant={showAll ? "primary" : "ghost"} 
             onClick={() => setShowAll(!showAll)}
             className={clsx(
-              "h-11 border text-sm font-bold",
-              showAll ? "bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100" : "bg-white border-slate-200 text-slate-600 shadow-sm"
+              "h-12 border text-xs sm:text-sm font-black uppercase tracking-widest px-6 rounded-2xl transition-all",
+              showAll 
+                ? "bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-200" 
+                : "bg-white border-slate-200 text-slate-600 shadow-sm hover:border-blue-300"
             )}
           >
             <Filter size={16} className="mr-2" />
-            {showAll ? 'Showing All Shops' : 'Show All Shops'}
+            {showAll ? 'Showing All' : 'Show All'}
           </Button>
         </div>
 

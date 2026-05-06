@@ -104,11 +104,11 @@ export const UserDashboard = () => {
           </motion.div>
 
           {/* Hero Section - Perfectly centered text */}
-          <div className="text-center space-y-4 px-4">
+          <div className="text-center space-y-3 sm:space-y-4 px-4">
             <motion.h1 
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
-              className="text-5xl sm:text-7xl lg:text-8xl font-black text-slate-900 tracking-tighter"
+              className="text-4xl sm:text-7xl lg:text-8xl font-black text-slate-900 tracking-tighter"
             >
               MD <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-teal-500">Logistics</span>
             </motion.h1>
@@ -116,14 +116,14 @@ export const UserDashboard = () => {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.2 }}
-              className="text-slate-500 font-semibold text-base sm:text-xl lg:text-2xl max-w-2xl mx-auto leading-relaxed"
+              className="text-slate-500 font-semibold text-sm sm:text-xl lg:text-2xl max-w-2xl mx-auto leading-relaxed"
             >
               Manage your courier operations with precision and speed.
             </motion.p>
           </div>
 
           {/* Action Grid - Responsive columns and gaps */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-10 lg:gap-16 max-w-5xl mx-auto w-full landscape:grid-cols-2 landscape:gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-10 lg:gap-16 max-w-5xl mx-auto w-full landscape:grid-cols-2 landscape:gap-4">
             <motion.div 
               initial={{ opacity: 0, x: -30 }}
               animate={{ opacity: 1, x: 0 }}
@@ -133,14 +133,14 @@ export const UserDashboard = () => {
               <div className="absolute inset-0 bg-blue-500/10 rounded-[2.5rem] blur-2xl opacity-0 group-hover:opacity-100 transition-opacity" />
               <DashboardCard 
                 onClick={() => navigate('/pickup')}
-                className="relative h-64 sm:h-80 lg:h-96 flex flex-col items-center justify-center gap-6 sm:gap-8 cursor-pointer bg-white/40 backdrop-blur-xl border border-white/60 shadow-glass hover:border-blue-300 transition-all rounded-[2.5rem] group overflow-hidden"
+                className="relative h-56 sm:h-80 lg:h-96 flex flex-col items-center justify-center gap-4 sm:gap-8 cursor-pointer bg-white/40 backdrop-blur-xl border border-white/60 shadow-glass hover:border-blue-300 transition-all rounded-[2.5rem] group overflow-hidden"
               >
-                <div className="p-7 sm:p-10 bg-gradient-to-br from-blue-400 to-blue-600 rounded-[2rem] text-white shadow-xl transform group-hover:scale-110 group-hover:rotate-3 transition-all duration-500">
-                  <Package size={52} className="sm:w-16 sm:h-16" strokeWidth={1.5} />
+                <div className="p-6 sm:p-10 bg-gradient-to-br from-blue-400 to-blue-600 rounded-[2rem] text-white shadow-xl transform group-hover:scale-110 group-hover:rotate-3 transition-all duration-500">
+                  <Package size={40} className="sm:w-16 sm:h-16" strokeWidth={1.5} />
                 </div>
                 <div className="text-center">
-                  <h3 className="text-2xl sm:text-3xl font-black text-slate-800">New Pickup</h3>
-                  <p className="text-slate-400 font-bold text-[10px] sm:text-xs uppercase tracking-[0.2em] mt-2">Inventory Management</p>
+                  <h3 className="text-xl sm:text-3xl font-black text-slate-800">New Pickup</h3>
+                  <p className="text-slate-400 font-bold text-[8px] sm:text-xs uppercase tracking-[0.2em] mt-1 sm:mt-2">Inventory Management</p>
                 </div>
               </DashboardCard>
             </motion.div>
@@ -154,14 +154,14 @@ export const UserDashboard = () => {
               <div className="absolute inset-0 bg-green-500/10 rounded-[2.5rem] blur-2xl opacity-0 group-hover:opacity-100 transition-opacity" />
               <DashboardCard 
                 onClick={() => navigate('/delivery')}
-                className="relative h-64 sm:h-80 lg:h-96 flex flex-col items-center justify-center gap-6 sm:gap-8 cursor-pointer bg-white/40 backdrop-blur-xl border border-white/60 shadow-glass hover:border-green-300 transition-all rounded-[2.5rem] group overflow-hidden"
+                className="relative h-56 sm:h-80 lg:h-96 flex flex-col items-center justify-center gap-4 sm:gap-8 cursor-pointer bg-white/40 backdrop-blur-xl border border-white/60 shadow-glass hover:border-green-300 transition-all rounded-[2.5rem] group overflow-hidden"
               >
-                <div className="p-7 sm:p-10 bg-gradient-to-br from-green-400 to-green-600 rounded-[2rem] text-white shadow-xl transform group-hover:scale-110 group-hover:-rotate-3 transition-all duration-500">
-                  <Truck size={52} className="sm:w-16 sm:h-16" strokeWidth={1.5} />
+                <div className="p-6 sm:p-10 bg-gradient-to-br from-green-400 to-green-600 rounded-[2rem] text-white shadow-xl transform group-hover:scale-110 group-hover:-rotate-3 transition-all duration-500">
+                  <Truck size={40} className="sm:w-16 sm:h-16" strokeWidth={1.5} />
                 </div>
                 <div className="text-center">
-                  <h3 className="text-2xl sm:text-3xl font-black text-slate-800">New Delivery</h3>
-                  <p className="text-slate-400 font-bold text-[10px] sm:text-xs uppercase tracking-[0.2em] mt-2">Client Fulfillment</p>
+                  <h3 className="text-xl sm:text-3xl font-black text-slate-800">New Delivery</h3>
+                  <p className="text-slate-400 font-bold text-[8px] sm:text-xs uppercase tracking-[0.2em] mt-1 sm:mt-2">Client Fulfillment</p>
                 </div>
               </DashboardCard>
             </motion.div>

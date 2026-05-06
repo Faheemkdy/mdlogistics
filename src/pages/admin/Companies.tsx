@@ -63,35 +63,35 @@ export const Companies = () => {
       <motion.div 
         initial={{ opacity: 0, y: -20 }} 
         animate={{ opacity: 1, y: 0 }}
-        className="flex flex-col sm:flex-row sm:items-end justify-between gap-6"
+        className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 sm:gap-6 px-1"
       >
         <div className="space-y-1">
-          <h1 className="text-4xl font-black text-slate-900 tracking-tight">Organization Hub</h1>
-          <p className="text-slate-500 font-semibold text-sm flex items-center gap-2">
-            <Briefcase size={16} className="text-blue-500" />
+          <h1 className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">Organization Hub</h1>
+          <p className="text-slate-500 font-semibold text-xs sm:text-sm flex items-center gap-2">
+            <Briefcase size={14} className="text-blue-500" />
             Manage your network of partner companies
           </p>
         </div>
         
-        <div className="flex gap-3">
-          <div className="px-5 py-3 bg-white/80 backdrop-blur-md rounded-2xl border border-white shadow-sm flex flex-col items-center min-w-[100px]">
-            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Active</span>
-            <span className="text-xl font-black text-slate-900">{companies.length}</span>
+        <div className="flex gap-2 sm:gap-3">
+          <div className="px-4 py-2 sm:px-5 sm:py-3 bg-white/80 backdrop-blur-md rounded-2xl border border-white shadow-sm flex flex-col items-center min-w-[80px] sm:min-w-[100px]">
+            <span className="text-[8px] sm:text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Active</span>
+            <span className="text-lg sm:text-xl font-black text-slate-900">{companies.length}</span>
           </div>
-          <div className="px-5 py-3 bg-blue-500 rounded-2xl shadow-lg shadow-blue-200 flex flex-col items-center min-w-[100px] text-white">
-            <span className="text-[10px] font-black text-blue-100 uppercase tracking-widest mb-1">Premium</span>
-            <span className="text-xl font-black">All</span>
+          <div className="px-4 py-2 sm:px-5 sm:py-3 bg-blue-500 rounded-2xl shadow-lg shadow-blue-200 flex flex-col items-center min-w-[80px] sm:min-w-[100px] text-white">
+            <span className="text-[8px] sm:text-[10px] font-black text-blue-100 uppercase tracking-widest mb-0.5">Premium</span>
+            <span className="text-lg sm:text-xl font-black">All</span>
           </div>
         </div>
       </motion.div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
         {/* ── Add Company Form ── */}
-        <div className="lg:col-span-1 space-y-6">
+        <div className="lg:col-span-1 space-y-4 sm:space-y-6">
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="bg-white/80 backdrop-blur-xl rounded-[2.5rem] p-8 border border-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] relative overflow-hidden"
+            className="bg-white/80 backdrop-blur-xl rounded-[2.5rem] p-6 sm:p-8 border border-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] relative overflow-hidden"
           >
             <div className="absolute top-0 right-0 p-8 opacity-[0.03] pointer-events-none">
                <Building2 size={120} />
@@ -112,7 +112,7 @@ export const Companies = () => {
                     value={newCompany}
                     onChange={(e) => setNewCompany(e.target.value)}
                     placeholder="e.g. Acme Corp"
-                    className="w-full pl-5 pr-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500/30 transition-all font-black text-sm"
+                    className="w-full pl-5 pr-5 py-3.5 sm:py-4 bg-slate-50 border border-slate-100 rounded-2xl text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500/30 transition-all font-black text-sm"
                   />
                 </div>
               </div>
@@ -136,19 +136,19 @@ export const Companies = () => {
             </form>
           </motion.div>
 
-          <div className="bg-emerald-50 rounded-3xl p-6 border border-emerald-100 flex items-center gap-4">
-             <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-600">
-                <CheckCircle2 size={24} />
+          <div className="bg-emerald-50 rounded-3xl p-5 sm:p-6 border border-emerald-100 flex items-center gap-4">
+             <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-600">
+                <CheckCircle2 size={20} />
              </div>
              <div>
-                <p className="text-xs font-black text-emerald-500 uppercase tracking-widest">Verified Partners</p>
-                <p className="text-sm font-bold text-slate-600">Securely managing trusted logistics entities</p>
+                <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">Verified Partners</p>
+                <p className="text-xs sm:text-sm font-bold text-slate-600">Securely managing entities</p>
              </div>
           </div>
         </div>
 
         {/* ── Companies List ── */}
-        <div className="lg:col-span-2 space-y-6">
+        <div className="lg:col-span-2 space-y-4 sm:space-y-6">
           {/* Search Bar */}
           <div className="relative group">
             <input
@@ -156,12 +156,12 @@ export const Companies = () => {
               placeholder="Search organizations..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-14 pr-6 py-4 bg-white/80 backdrop-blur-xl border border-white rounded-[2rem] text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500/30 transition-all font-bold shadow-sm"
+              className="w-full pl-12 sm:pl-14 pr-6 py-3.5 sm:py-4 bg-white/80 backdrop-blur-xl border border-white rounded-[2rem] text-sm sm:text-base text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500/30 transition-all font-bold shadow-sm"
             />
-            <Search size={20} className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-blue-500 transition-colors" />
+            <Search size={18} className="absolute left-5 sm:left-6 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-blue-500 transition-colors" />
           </div>
 
-          <div className="space-y-3 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
+          <div className="space-y-3 max-h-[600px] overflow-y-auto pr-1 sm:pr-2 custom-scrollbar">
             <AnimatePresence mode="popLayout">
               {filteredCompanies.length === 0 ? (
                 <motion.div
@@ -183,7 +183,7 @@ export const Companies = () => {
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.95 }}
                     transition={{ duration: 0.4, delay: index * 0.04 }}
-                    className="group flex items-center gap-4 p-5 bg-white/80 backdrop-blur-xl rounded-3xl border border-white shadow-[0_4px_20px_rgb(0,0,0,0.02)] hover:border-blue-200 hover:shadow-[0_8px_30px_rgb(0,0,0,0.04)] transition-all"
+                    className="group flex items-center gap-3 sm:gap-4 p-3.5 sm:p-5 bg-white/80 backdrop-blur-xl rounded-3xl border border-white shadow-[0_4px_20px_rgb(0,0,0,0.02)] hover:border-blue-200 hover:shadow-[0_8px_30px_rgb(0,0,0,0.04)] transition-all"
                   >
                     {/* Entity Avatar */}
                     <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center shadow-inner flex-shrink-0 relative group-hover:from-blue-500 group-hover:to-indigo-600 transition-all">

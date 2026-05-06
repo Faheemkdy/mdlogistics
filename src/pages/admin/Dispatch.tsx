@@ -67,14 +67,14 @@ export const Dispatch = () => {
   const filledCount = Object.keys(selections).filter(id => selections[id].trim() !== '').length;
 
   return (
-    <div className="max-w-4xl mx-auto pb-32">
+    <div className="max-w-4xl lg:max-w-6xl mx-auto pb-32 px-4">
 
       {/* ── Sticky Header ── */}
       <div
         className={clsx(
           "sticky top-0 z-30 -mx-4 px-4 pt-4 pb-5 transition-all duration-300 ease-in-out",
           isScrolled 
-            ? "bg-[#e0e5ec] shadow-[0_8px_30px_rgb(0,0,0,0.08)]" 
+            ? "bg-[#e0e5ec]/95 backdrop-blur-xl shadow-[0_8px_30px_rgb(0,0,0,0.08)]" 
             : "bg-transparent backdrop-blur-sm"
         )}
       >
@@ -108,7 +108,7 @@ export const Dispatch = () => {
 
         {/* Search */}
         <div className="relative group">
-          <div className="absolute inset-0 bg-blue-500/5 blur-xl rounded-2xl opacity-0 group-focus-within:opacity-100 transition-opacity" />
+          <div className="absolute inset-0 bg-blue-500/5 blur-xl rounded-2xl opacity-0 group-focus-within:opacity-100 transition-opacity pointer-events-none" />
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors" size={18} />
           <input
             placeholder="Search shops by name or area..."
@@ -140,7 +140,7 @@ export const Dispatch = () => {
           {filteredShops.length} Active Shop{filteredShops.length !== 1 ? 's' : ''}
         </p>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
           <AnimatePresence>
             {filteredShops.map((shop, index) => {
               const isSelected = selections[shop.id] !== undefined;
@@ -148,8 +148,8 @@ export const Dispatch = () => {
               return (
                 <motion.div
                   key={shop.id} layout
-                  initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.97 }} transition={{ delay: index * 0.01 }}
+                  initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.95 }} transition={{ duration: 0.5, ease: [0.23, 1, 0.32, 1], delay: index * 0.02 }}
                   className={clsx(
                     'rounded-2xl overflow-hidden transition-all duration-300',
                     isSelected ? 'border-2 border-blue-300' : 'border border-white/60'
@@ -248,16 +248,16 @@ export const Dispatch = () => {
       <motion.div
         initial={{ y: 100, opacity: 0 }} animate={{ y: 0, opacity: 1 }}
         transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-        className="fixed bottom-0 left-0 right-0 z-40"
+        className="fixed bottom-0 left-0 lg:left-72 right-0 z-40"
         style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
       >
-        <div className="mx-auto max-w-4xl px-4 pb-4">
+        <div className="mx-auto max-w-4xl lg:max-w-6xl px-4 pb-4">
           <div
             className="p-3 rounded-2xl flex items-center gap-3"
             style={{ background: 'rgba(15,23,42,0.94)', backdropFilter: 'blur(16px)', boxShadow: '0 -4px 30px rgba(0,0,0,0.15), 0 20px 40px rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.08)' }}
           >
             {/* Count pill */}
-            <div className="flex items-center gap-2.5 pl-1 flex-1">
+            <div className="flex items-center gap-3 pl-3 flex-1">
               <div className="w-10 h-10 rounded-xl bg-blue-500/20 flex items-center justify-center flex-shrink-0">
                 <Package size={18} className="text-blue-400" />
               </div>

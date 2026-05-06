@@ -113,37 +113,37 @@ export const Shops = () => {
       <motion.div 
         initial={{ opacity: 0, y: -20 }} 
         animate={{ opacity: 1, y: 0 }}
-        className="flex flex-col md:flex-row md:items-end justify-between gap-6"
+        className="flex flex-col md:flex-row md:items-center justify-between gap-4 md:gap-6 px-1"
       >
         <div className="space-y-1">
-          <h1 className="text-4xl font-black text-slate-900 tracking-tight">Partner Outlets</h1>
-          <p className="text-slate-500 font-semibold text-sm flex items-center gap-2">
-            <LayoutGrid size={16} className="text-indigo-500" />
+          <h1 className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">Partner Outlets</h1>
+          <p className="text-slate-500 font-semibold text-xs sm:text-sm flex items-center gap-2">
+            <LayoutGrid size={14} className="text-indigo-500" />
             Control and monitor your retail network
           </p>
         </div>
         
-        <div className="flex gap-3">
-          <div className="px-5 py-3 bg-white/80 backdrop-blur-md rounded-2xl border border-white shadow-sm flex flex-col items-center min-w-[100px]">
-            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Shops</span>
-            <span className="text-xl font-black text-slate-900">{shops.length}</span>
+        <div className="flex gap-2 sm:gap-3">
+          <div className="px-4 py-2 sm:px-5 sm:py-3 bg-white/80 backdrop-blur-md rounded-2xl border border-white shadow-sm flex flex-col items-center min-w-[80px] sm:min-w-[100px]">
+            <span className="text-[8px] sm:text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Total Shops</span>
+            <span className="text-lg sm:text-xl font-black text-slate-900">{shops.length}</span>
           </div>
-          <div className="px-5 py-3 bg-indigo-600 rounded-2xl shadow-lg shadow-indigo-200 flex flex-col items-center min-w-[100px] text-white">
-            <span className="text-[10px] font-black text-indigo-100 uppercase tracking-widest mb-1">Region</span>
-            <span className="text-xl font-black">All</span>
+          <div className="px-4 py-2 sm:px-5 sm:py-3 bg-indigo-600 rounded-2xl shadow-lg shadow-indigo-200 flex flex-col items-center min-w-[80px] sm:min-w-[100px] text-white">
+            <span className="text-[8px] sm:text-[10px] font-black text-indigo-100 uppercase tracking-widest mb-0.5">Region</span>
+            <span className="text-lg sm:text-xl font-black">All</span>
           </div>
         </div>
       </motion.div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8">
         
         {/* ── Left Column: Controls (Add & Import) ── */}
-        <div className="lg:col-span-4 space-y-6">
+        <div className="lg:col-span-4 space-y-4 sm:space-y-6">
           {/* Add Shop Card */}
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="bg-white/80 backdrop-blur-xl rounded-[2.5rem] p-8 border border-white shadow-[0_8px_30px_rgb(0,0,0,0.04)]"
+            className="bg-white/80 backdrop-blur-xl rounded-[2.5rem] p-6 sm:p-8 border border-white shadow-[0_8px_30px_rgb(0,0,0,0.04)]"
           >
             <div className="flex items-center gap-3 mb-6">
               <div className="w-10 h-10 rounded-2xl bg-slate-900 flex items-center justify-center shadow-lg">
@@ -152,14 +152,14 @@ export const Shops = () => {
               <h3 className="font-black text-lg text-slate-900 tracking-tight">Quick Add</h3>
             </div>
 
-            <form onSubmit={handleAdd} className="space-y-5">
+            <form onSubmit={handleAdd} className="space-y-4 sm:space-y-5">
               <div className="space-y-2">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Establishment Name</label>
                 <input
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="e.g. Moonlight Cafe"
-                  className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500/30 transition-all font-black text-sm"
+                  className="w-full px-5 py-3.5 sm:py-4 bg-slate-50 border border-slate-100 rounded-2xl text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500/30 transition-all font-black text-sm"
                 />
               </div>
 
@@ -170,7 +170,7 @@ export const Shops = () => {
                     value={location}
                     onChange={(e) => setLocation(e.target.value)}
                     placeholder="Area / Landmark"
-                    className="w-full pl-12 pr-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500/30 transition-all font-black text-sm"
+                    className="w-full pl-12 pr-5 py-3.5 sm:py-4 bg-slate-50 border border-slate-100 rounded-2xl text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500/30 transition-all font-black text-sm"
                   />
                   <MapPin size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-indigo-500 transition-colors" />
                 </div>
@@ -200,7 +200,7 @@ export const Shops = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
-            className="bg-white/80 backdrop-blur-xl rounded-[2.5rem] p-8 border border-white shadow-[0_8px_30px_rgb(0,0,0,0.04)]"
+            className="bg-white/80 backdrop-blur-xl rounded-[2.5rem] p-6 sm:p-8 border border-white shadow-[0_8px_30px_rgb(0,0,0,0.04)]"
           >
             <div className="flex items-center gap-3 mb-6">
               <div className="w-10 h-10 rounded-2xl bg-emerald-500/10 flex items-center justify-center">
@@ -215,7 +215,7 @@ export const Shops = () => {
                 whileHover={{ scale: 1.02, backgroundColor: 'rgba(236, 253, 245, 0.8)' }}
                 whileTap={{ scale: 0.98 }}
                 className={clsx(
-                  "flex flex-col items-center justify-center gap-3 px-6 py-8 rounded-[2rem] border-2 border-dashed transition-all",
+                  "flex flex-col items-center justify-center gap-3 px-4 py-6 sm:px-6 sm:py-8 rounded-[2rem] border-2 border-dashed transition-all",
                   "border-emerald-100 bg-emerald-50/30 text-emerald-700",
                   importing && "opacity-60 cursor-not-allowed"
                 )}
@@ -224,10 +224,10 @@ export const Shops = () => {
                   <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1 }} className="w-6 h-6 border-2 border-emerald-300 border-t-emerald-700 rounded-full" />
                 ) : (
                   <>
-                    <div className="w-12 h-12 bg-white rounded-2xl shadow-sm flex items-center justify-center">
-                      <Upload size={24} className="text-emerald-500" />
+                    <div className="w-10 h-10 sm:w-12 sm:h-12 bg-white rounded-2xl shadow-sm flex items-center justify-center">
+                      <Upload size={20} className="text-emerald-500" />
                     </div>
-                    <span className="font-black text-sm">Upload Excel (.xlsx)</span>
+                    <span className="font-black text-xs sm:text-sm">Upload Excel (.xlsx)</span>
                   </>
                 )}
               </motion.div>

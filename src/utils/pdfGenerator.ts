@@ -111,7 +111,7 @@ export const drawCustomerInfo = (doc: jsPDF, label: string, value: string, date:
 export const drawGreenFooter = (doc: jsPDF, label: string, value: string | number) => {
   const pw = doc.internal.pageSize.width;
   const margin = 12;
-  const finalY = (doc as any).lastAutoTable.finalY + 10;
+  const finalY = (doc as any).lastAutoTable?.finalY ? (doc as any).lastAutoTable.finalY + 10 : 150;
 
   const summaryWidth = 80;
   const summaryX = pw - margin - summaryWidth;

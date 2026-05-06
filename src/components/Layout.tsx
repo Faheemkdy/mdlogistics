@@ -148,7 +148,82 @@ export const Layout = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex overflow-hidden font-sans">
+    <div className="min-h-screen bg-slate-50 flex overflow-hidden font-sans relative">
+
+      {/* Background Decorations for non-admin/desktop */}
+      {profile?.role !== 'admin' && (
+        <div className="hidden lg:block fixed inset-0 overflow-hidden pointer-events-none z-[0]">
+          <motion.div
+            animate={{ 
+              x: [0, 40, 0], 
+              y: [0, -30, 0],
+              scale: [1, 1.1, 1] 
+            }}
+            transition={{ duration: 15, repeat: Infinity, ease: "linear" }}
+            className="absolute -top-24 -left-24 w-96 h-96 bg-indigo-500/10 blur-[120px] rounded-full"
+          />
+          <motion.div
+            animate={{ 
+              x: [0, -50, 0], 
+              y: [0, 40, 0],
+              scale: [1, 1.2, 1] 
+            }}
+            transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+            className="absolute -bottom-32 -right-32 w-[32rem] h-[32rem] bg-emerald-500/10 blur-[140px] rounded-full"
+          />
+          <div className="absolute top-1/2 left-10 -translate-y-1/2 opacity-[0.05]">
+             <Truck size={300} className="text-slate-900" />
+          </div>
+          <div className="absolute top-1/3 right-10 -translate-y-1/2 opacity-[0.04]">
+             <Package size={250} className="text-slate-900" />
+          </div>
+
+          {/* Floating Particles */}
+          {[...Array(8)].map((_, i) => (
+            <motion.div
+              key={i}
+              animate={{ 
+                x: [Math.random() * 400 - 200, Math.random() * 400 - 200], 
+                y: [Math.random() * 400 - 200, Math.random() * 400 - 200],
+                opacity: [0.2, 0.5, 0.2]
+              }}
+              transition={{ 
+                duration: 10 + Math.random() * 10, 
+                repeat: Infinity, 
+                ease: "linear" 
+              }}
+              className="absolute w-2 h-2 bg-indigo-400 rounded-full blur-[1px]"
+              style={{
+                left: i < 4 ? `${Math.random() * 15}%` : `${85 + Math.random() * 15}%`,
+                top: `${Math.random() * 100}%`
+              }}
+            />
+          ))}
+
+          {/* Driving Van Animation */}
+          <motion.div
+            initial={{ x: '-20vw' }}
+            animate={{ 
+              x: ['-20vw', '120vw'],
+              opacity: [0, 1, 1, 0]
+            }}
+            transition={{ 
+              duration: 15, 
+              repeat: Infinity, 
+              repeatDelay: 5,
+              ease: "linear"
+            }}
+            className="absolute bottom-24 left-0 text-slate-400 opacity-20 pointer-events-none z-0"
+          >
+            <div className="flex flex-col items-center">
+              <Truck size={140} strokeWidth={1} />
+              <div className="w-32 h-1 bg-slate-400/30 rounded-full mt-2" />
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+
       {/* Mobile Header */}
       {(profile?.role === 'admin' || (profile?.role !== 'admin' && location.pathname !== '/')) && (
         <div className="lg:hidden fixed top-0 left-0 right-0 z-[80] flex items-center justify-between px-6 py-4 pt-[calc(env(safe-area-inset-top)+12px)] bg-white/80 backdrop-blur-xl border-b border-slate-100 shadow-sm"

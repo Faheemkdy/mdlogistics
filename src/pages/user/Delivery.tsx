@@ -10,7 +10,7 @@ import { clsx } from 'clsx';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export const Delivery = () => {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const toast = useToast();
   const [shops, setShops] = useState<any[]>([]);
   const [search, setSearch] = useState('');
@@ -79,20 +79,19 @@ export const Delivery = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* ── Sticky Header ── */}
-      <div className="bg-white border-b border-gray-100 sticky top-0 z-30"
-        style={{ boxShadow: '0 1px 12px rgba(0,0,0,0.04)' }}>
-        <div className="max-w-2xl mx-auto px-4 pt-4 pb-3">
+      <div className="bg-white/95 backdrop-blur-xl border-b border-gray-100 sticky top-0 z-30 transition-all duration-300">
+        <div className="max-w-4xl lg:max-w-6xl mx-auto px-4 pt-3 pb-3">
           {/* Title row */}
-          <div className="flex items-start justify-between gap-3 mb-3">
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-xl font-bold text-gray-900">New Delivery</h1>
-                <div className="flex items-center gap-1.5 bg-green-500 text-white px-3 py-1 rounded-full text-xs font-bold shadow-sm shadow-green-200">
+          <div className="flex items-center justify-between gap-3 mb-3">
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h1 className="text-lg lg:text-xl font-black text-gray-900 tracking-tight">New Delivery</h1>
+                <div className="flex items-center gap-1.5 bg-green-500 text-white px-2.5 py-1 rounded-full text-[10px] font-black shadow-lg shadow-green-500/20 uppercase tracking-widest">
                   <Truck size={11} /> Delivery
                 </div>
               </div>
-              <p className="text-xs text-gray-400 font-medium mt-0.5">
-                {selectedCount > 0 ? `${selectedCount} shop(s) selected` : 'Tap shops to mark for delivery'}
+              <p className="text-[10px] lg:text-xs text-gray-400 font-bold uppercase tracking-wider mt-0.5">
+                {selectedCount > 0 ? `${selectedCount} selected` : 'Tap to mark delivery'}
               </p>
             </div>
           </div>
@@ -100,15 +99,15 @@ export const Delivery = () => {
           {/* Search + Add */}
           <div className="flex gap-2">
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
               <input
                 placeholder="Search shops..."
                 value={search}
                 onChange={e => setSearch(e.target.value)}
-                className="w-full h-10 pl-9 pr-9 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-700 placeholder-gray-400 focus:outline-none focus:border-green-300 focus:ring-2 focus:ring-green-100 transition-all"
+                className="w-full h-11 pl-10 pr-10 bg-gray-50 border border-gray-200 rounded-2xl text-sm text-gray-700 placeholder-gray-400 focus:outline-none focus:border-green-400 focus:ring-4 focus:ring-green-500/5 transition-all shadow-inner"
               />
               {search && (
-                <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                <button onClick={() => setSearch('')} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
                   <X size={14} />
                 </button>
               )}
@@ -116,16 +115,16 @@ export const Delivery = () => {
             <motion.button
               whileTap={{ scale: 0.92 }}
               onClick={() => setIsAddModalOpen(true)}
-              className="w-10 h-10 rounded-xl bg-green-500 hover:bg-green-600 text-white flex items-center justify-center shadow-sm shadow-green-200 transition-colors flex-shrink-0"
+              className="w-11 h-11 rounded-2xl bg-green-500 hover:bg-green-600 text-white flex items-center justify-center shadow-lg shadow-green-500/25 transition-colors flex-shrink-0"
             >
-              <Plus size={18} />
+              <Plus size={20} />
             </motion.button>
           </div>
         </div>
       </div>
 
       {/* ── Shop List ── */}
-      <div className="max-w-2xl mx-auto px-4 pt-4 pb-36 space-y-3">
+      <div className="max-w-4xl lg:max-w-6xl mx-auto px-4 pt-4 pb-36 space-y-3">
         {/* Selected banner */}
         <AnimatePresence>
           {selectedCount > 0 && (
@@ -145,14 +144,15 @@ export const Delivery = () => {
           {filteredShops.length} Shops
         </p>
 
-        <AnimatePresence>
-          {filteredShops.map((shop, index) => {
-            const isSelected = selections[shop.id] !== undefined;
-            return (
-              <motion.div
-                key={shop.id} layout
-                initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 8 }} transition={{ delay: index * 0.015 }}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <AnimatePresence>
+            {filteredShops.map((shop, index) => {
+              const isSelected = selections[shop.id] !== undefined;
+              return (
+                <motion.div
+                key={shop.id}
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }} transition={{ duration: 0.3, delay: index * 0.01 }}
                 className={clsx(
                   'bg-white rounded-2xl border-2 overflow-hidden transition-all duration-200',
                   isSelected
@@ -162,7 +162,7 @@ export const Delivery = () => {
               >
                 {/* Shop row */}
                 <div
-                  className="flex items-center gap-3 px-4 py-3.5 cursor-pointer"
+                  className="flex items-center gap-3 px-3 py-3 lg:px-4 lg:py-3.5 cursor-pointer"
                   onClick={() => toggleShop(shop.id)}
                 >
                   <div className={clsx(
@@ -217,9 +217,10 @@ export const Delivery = () => {
                   )}
                 </AnimatePresence>
               </motion.div>
-            );
-          })}
-        </AnimatePresence>
+              );
+            })}
+          </AnimatePresence>
+        </div>
 
         {filteredShops.length === 0 && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-14">
@@ -241,10 +242,13 @@ export const Delivery = () => {
       {/* ── Bottom Action Bar ── */}
       <motion.div
         initial={{ y: 80, opacity: 0 }} animate={{ y: 0, opacity: 1 }}
-        className="fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-gray-100"
+        className={clsx(
+          "fixed bottom-0 right-0 z-40 bg-white border-t border-gray-100",
+          profile?.role === 'admin' ? "left-0 lg:left-72" : "left-0"
+        )}
         style={{ paddingBottom: 'env(safe-area-inset-bottom)', boxShadow: '0 -8px 30px rgba(0,0,0,0.06)' }}
       >
-        <div className="max-w-2xl mx-auto px-4 py-3 flex items-center gap-3">
+        <div className="max-w-4xl lg:max-w-6xl mx-auto px-4 py-3 flex items-center gap-3">
           {/* Count info */}
           <div className="flex items-center gap-3 flex-1">
             <div className="w-10 h-10 rounded-xl bg-green-50 border border-green-100 flex items-center justify-center flex-shrink-0">

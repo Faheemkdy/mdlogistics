@@ -366,15 +366,15 @@ export const DaySheet = () => {
                     exit={{ opacity: 0, scale: 0.95 }}
                     transition={{ delay: index * 0.05 }}
                     className={clsx(
-                      "relative group bg-white/40 backdrop-blur-xl border border-white/60 p-5 sm:p-6 rounded-[2.5rem] shadow-glass flex items-center gap-5 sm:gap-6",
+                      "relative group bg-white/40 backdrop-blur-xl border border-white/60 p-4 sm:p-6 rounded-3xl sm:rounded-[2.5rem] shadow-glass flex items-center gap-4 sm:gap-6",
                       isEditing && "ring-2 ring-indigo-500 ring-offset-2"
                     )}
                   >
                     <div className={clsx(
-                      "w-12 h-12 sm:w-16 sm:h-16 rounded-[1.5rem] flex items-center justify-center shadow-lg transition-transform duration-500 group-hover:scale-110 group-hover:rotate-3",
+                      "w-10 h-10 sm:w-16 sm:h-16 rounded-2xl sm:rounded-[1.5rem] flex items-center justify-center shadow-lg transition-transform duration-500 group-hover:scale-110 group-hover:rotate-3",
                       currentType === 'income' ? "bg-emerald-500 text-white" : "bg-rose-500 text-white"
                     )}>
-                      {currentType === 'income' ? <TrendingUp size={24} /> : <TrendingDown size={24} />}
+                      {currentType === 'income' ? <TrendingUp size={20} /> : <TrendingDown size={24} />}
                     </div>
 
                     <div className="flex-1 min-w-0">
@@ -391,22 +391,22 @@ export const DaySheet = () => {
                         </div>
                       ) : (
                         <>
-                          <h4 className="text-lg sm:text-xl font-black text-slate-800 truncate leading-tight mb-1">{entry.description}</h4>
+                          <h4 className="text-base sm:text-xl font-black text-slate-800 truncate leading-tight mb-0.5 sm:mb-1">{entry.description}</h4>
                           <div className="flex items-center gap-2">
-                            <span className="w-1.5 h-1.5 rounded-full bg-slate-300" />
-                            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest truncate">Recorded by {entry.profiles?.username || 'System'}</p>
+                            <span className="w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full bg-slate-300" />
+                            <p className="text-[9px] sm:text-xs font-bold text-slate-400 uppercase tracking-widest truncate">By {entry.profiles?.username || 'System'}</p>
                           </div>
                         </>
                       )}
                     </div>
 
-                    <div className="flex flex-col items-end gap-3">
+                    <div className="flex flex-col items-end gap-2 sm:gap-3">
                       {!isEditing && (
                         <div className={clsx(
-                          "text-xl sm:text-2xl font-black whitespace-nowrap",
+                          "text-base sm:text-2xl font-black whitespace-nowrap",
                           entry.type === 'income' ? "text-emerald-600" : "text-rose-600"
                         )}>
-                          {entry.type === 'income' ? '+' : '-'}₹{Number(entry.amount || 0).toLocaleString()}
+                          {entry.type === 'income' ? '+' : '-'}Rs.{Number(entry.amount || 0).toLocaleString()}
                         </div>
                       )}
                       
@@ -443,49 +443,49 @@ export const DaySheet = () => {
       </div>
 
       {/* ── Mobile Static Bottom Bar ── */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-2xl border-t border-slate-200 shadow-[0_-8px_30px_rgba(0,0,0,0.05)] pb-[env(safe-area-inset-bottom)]">
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-2xl border-t border-slate-200/50 shadow-[0_-8px_30px_rgba(0,0,0,0.08)] pb-[env(safe-area-inset-bottom)]">
         <motion.div 
           initial={{ y: 50 }} 
           animate={{ y: 0 }}
-          className="p-4 flex items-center justify-between"
+          className="px-4 py-3 sm:py-4 flex items-center justify-between"
         >
           <div className="flex items-center gap-3">
             <div className={clsx(
-              "w-10 h-10 rounded-xl flex items-center justify-center shadow-sm",
+              "w-10 h-10 sm:w-11 sm:h-11 rounded-xl flex items-center justify-center shadow-sm",
               balance >= 0 ? "bg-emerald-50 text-emerald-600" : "bg-rose-50 text-rose-600"
             )}>
-              <Wallet size={20} />
+              <Wallet size={18} />
             </div>
             <div>
-              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 leading-none mb-1">Net Balance</p>
-              <h3 className={clsx("text-xl font-black leading-none", balance >= 0 ? "text-emerald-700" : "text-rose-700")}>
-                ₹{balance.toLocaleString()}
+              <p className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 leading-none mb-1">Net Balance</p>
+              <h3 className={clsx("text-lg sm:text-xl font-black leading-none", balance >= 0 ? "text-emerald-700" : "text-rose-700")}>
+                Rs.{balance.toLocaleString()}
               </h3>
             </div>
           </div>
           
-          <div className="flex items-center gap-4 pr-1">
-            <div className="text-right">
+          <div className="flex items-center gap-2 sm:gap-4">
+            <div className="text-right hidden xs:block">
               <p className="text-[8px] font-bold text-slate-400 uppercase tracking-wider">Entries</p>
               <p className="text-sm font-black leading-none text-slate-700">{entries.length}</p>
             </div>
             
             {profile?.username === 'md' && (
               <>
-                <div className="w-px h-8 bg-slate-200" />
+                <div className="w-px h-8 bg-slate-200 mx-1 hidden sm:block" />
                 <motion.button
                   whileTap={{ scale: 0.9 }}
                   onClick={() => setShowRangeModal(true)}
-                  className="w-11 h-11 rounded-2xl bg-slate-100 text-slate-600 flex items-center justify-center shadow-sm"
+                  className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl sm:rounded-2xl bg-slate-50 text-slate-500 flex items-center justify-center border border-slate-100"
                 >
-                  <FileText size={20} />
+                  <FileText size={18} />
                 </motion.button>
                 <motion.button
                   whileTap={{ scale: 0.9 }}
                   onClick={downloadPDF}
-                  className="w-11 h-11 rounded-2xl bg-indigo-600 text-white flex items-center justify-center shadow-lg shadow-indigo-500/20"
+                  className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl sm:rounded-2xl bg-slate-900 text-white flex items-center justify-center shadow-lg shadow-slate-900/20"
                 >
-                  <Download size={22} />
+                  <Download size={20} />
                 </motion.button>
               </>
             )}
