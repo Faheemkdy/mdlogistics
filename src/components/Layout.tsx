@@ -159,6 +159,7 @@ const SidebarContent = ({
     </div>
   </div>
 );
+};
 
 export const Layout = () => {
   const { profile, signOut } = useAuth();
