@@ -13,11 +13,18 @@ import { format } from 'date-fns';
 
 export const Reconciliation = () => {
   const toast = useToast();
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [data, setData] = useState<any[]>([]);
-  const [search, setSearch] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [showAll, setShowAll] = useState(false);
+
+  // Search Debounce
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(searchQuery), 150);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
   useEffect(() => {
     fetchData();
@@ -69,16 +76,21 @@ export const Reconciliation = () => {
     }
   };
 
-  const filteredData = data.filter(d => 
-    (showAll ? true : (d.totalDispatched > 0 || d.totalDelivered > 0)) &&
-    (d.name.toLowerCase().includes(search.toLowerCase()) || 
-    (d.location && d.location.toLowerCase().includes(search.toLowerCase())))
-  ).sort((a, b) => {
-    // Sort by mismatch first, then by activity
-    if (a.status === 'mismatch' && b.status !== 'mismatch') return -1;
-    if (b.status === 'mismatch' && a.status !== 'mismatch') return 1;
-    return b.totalDispatched - a.totalDispatched;
-  });
+  const filteredData = useMemo(() => {
+    const q = debouncedSearch.toLowerCase();
+    return data
+      .filter(d => 
+        (showAll ? true : (d.totalDispatched > 0 || d.totalDelivered > 0)) &&
+        (d.name.toLowerCase().includes(q) || 
+        (d.location && d.location.toLowerCase().includes(q)))
+      )
+      .sort((a, b) => {
+        // Sort by mismatch first, then by activity
+        if (a.status === 'mismatch' && b.status !== 'mismatch') return -1;
+        if (b.status === 'mismatch' && a.status !== 'mismatch') return 1;
+        return b.totalDispatched - a.totalDispatched;
+      });
+  }, [data, debouncedSearch, showAll]);
 
   const totals = data.reduce((acc, curr) => ({
     dispatched: acc.dispatched + curr.totalDispatched,
@@ -287,8 +299,8 @@ export const Reconciliation = () => {
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
             <input 
               placeholder="Search by shop..." 
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full h-12 pl-11 pr-4 bg-white border border-slate-200 rounded-2xl text-sm focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all shadow-inner"
             />
           </div>
@@ -321,10 +333,15 @@ export const Reconciliation = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
-              {filteredData.map((row) => (
-                <tr key={row.id} className={clsx(
-                  "group transition-colors",
-                  row.status === 'mismatch' ? "bg-red-50/30 hover:bg-red-50/50" : "hover:bg-slate-50/50"
+              {filteredData.map((row, index) => (
+                <motion.tr 
+                  key={row.id} 
+                  initial={{ opacity: 0, y: 5 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.15, delay: Math.min(index * 0.015, 0.2) }}
+                  className={clsx(
+                  "border-b border-slate-50 transition-colors will-change-[transform,opacity]",
+                  row.status === 'mismatch' ? "bg-red-50/20 hover:bg-red-50/40" : "hover:bg-slate-50/50"
                 )}>
                   <td className="px-6 py-4">
                     <p className="font-bold text-slate-700">{row.name}</p>

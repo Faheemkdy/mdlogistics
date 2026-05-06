@@ -57,11 +57,18 @@ export const Pickup = () => {
     if (timestamp && now - parseInt(timestamp) > 5 * 60 * 60 * 1000) return '';
     return saved || '';
   });
+  const [debouncedSearch, setDebouncedSearch] = useState(search);
   const [loading, setLoading] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [newShopName, setNewShopName] = useState('');
   const [newShopLocation, setNewShopLocation] = useState('');
   const [addingShop, setAddingShop] = useState(false);
+
+  // Search Debounce
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(search), 150);
+    return () => clearTimeout(timer);
+  }, [search]);
 
   // Persistence Effects
   useEffect(() => { 
@@ -153,10 +160,21 @@ export const Pickup = () => {
   const updateItemNumber = (id: string, val: string) =>
     setSelections(prev => ({ ...prev, [id]: val }));
 
-  const filteredShops = shops.filter(s =>
-    s.name.toLowerCase().includes(search.toLowerCase()) ||
-    (s.location || '').toLowerCase().includes(search.toLowerCase())
-  );
+  const filteredCompanies = React.useMemo(() => {
+    if (step !== 1) return [];
+    const q = debouncedSearch.toLowerCase();
+    return companies.filter(c => c.name.toLowerCase().includes(q));
+  }, [companies, debouncedSearch, step]);
+
+  const filteredShops = React.useMemo(() => {
+    if (step !== 2) return [];
+    const q = debouncedSearch.toLowerCase();
+    return shops.filter(s =>
+      s.name.toLowerCase().includes(q) ||
+      (s.location || '').toLowerCase().includes(q)
+    );
+  }, [shops, debouncedSearch, step]);
+
   const selectedCount = Object.keys(selections).length;
 
   return (
@@ -265,37 +283,39 @@ export const Pickup = () => {
               className="space-y-3"
             >
               <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-widest">
-                {companies.length} Companies
+                {filteredCompanies.length} Companies
               </p>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                {companies.map((c, i) => (
-                  <motion.div
-                    key={c.id}
-                    initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.5, ease: [0.23, 1, 0.32, 1], delay: i * 0.02 }}
-                    onClick={() => { setSelectedCompany(c.id); setSelectedCompanyName(c.name); setStep(2); }}
-                    className="w-full flex items-center gap-4 p-4 bg-white border border-gray-100 rounded-2xl hover:border-orange-200 hover:shadow-md hover:shadow-orange-50 transition-all text-left cursor-pointer group"
-                  >
-                    <div className="w-11 h-11 rounded-xl bg-orange-50 border border-orange-100 flex items-center justify-center flex-shrink-0 group-hover:bg-orange-100 transition-colors">
-                      <Building2 size={20} className="text-orange-500" />
+                {filteredCompanies.map((company, index) => (
+                    <motion.button
+                      key={company.id}
+                      initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.15, delay: Math.min(index * 0.02, 0.2) }}
+                      onClick={() => { setSelectedCompany(company.id); setSelectedCompanyName(company.name); setStep(2); setSearch(''); }}
+                      className="w-full text-left p-4 lg:p-5 rounded-3xl bg-white border-2 border-gray-100 hover:border-orange-400 hover:shadow-xl hover:shadow-orange-500/5 transition-all duration-300 group relative overflow-hidden will-change-[transform,opacity]"
+                    >
+                    <div className="flex items-center gap-4">
+                      <div className="w-11 h-11 rounded-xl bg-orange-50 border border-orange-100 flex items-center justify-center flex-shrink-0 group-hover:bg-orange-100 transition-colors">
+                        <Building2 size={20} className="text-orange-500" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-gray-800 text-base truncate">{company.name}</p>
+                        <p className="text-xs text-gray-400 mt-0.5">Tap to continue →</p>
+                      </div>
+                      <div className="w-8 h-8 rounded-full bg-gray-50 group-hover:bg-orange-50 flex items-center justify-center transition-colors">
+                        <ChevronRight size={16} className="text-gray-400 group-hover:text-orange-500 transition-colors" />
+                      </div>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-gray-800 text-base truncate">{c.name}</p>
-                      <p className="text-xs text-gray-400 mt-0.5">Tap to continue →</p>
-                    </div>
-                    <div className="w-8 h-8 rounded-full bg-gray-50 group-hover:bg-orange-50 flex items-center justify-center transition-colors">
-                      <ChevronRight size={16} className="text-gray-400 group-hover:text-orange-500 transition-colors" />
-                    </div>
-                  </motion.div>
+                  </motion.button>
                 ))}
               </div>
 
-              {companies.length === 0 && (
+              {filteredCompanies.length === 0 && (
                 <div className="text-center py-16">
                   <div className="w-14 h-14 rounded-2xl bg-gray-100 flex items-center justify-center mx-auto mb-3">
                     <Building2 size={24} className="text-gray-300" />
                   </div>
-                  <p className="text-gray-500 font-medium">No companies yet</p>
+                  <p className="text-gray-500 font-medium">No companies found</p>
                 </div>
               )}
             </motion.div>
@@ -335,10 +355,11 @@ export const Pickup = () => {
                   return (
                     <motion.div
                       key={shop.id} layout
-                      initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, scale: 0.95 }} transition={{ duration: 0.5, ease: [0.23, 1, 0.32, 1], delay: index * 0.02 }}
+                      initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.98 }}
+                      transition={{ duration: 0.1, delay: Math.min(index * 0.015, 0.15) }}
                       className={clsx(
-                        'bg-white rounded-2xl border-2 overflow-hidden transition-all duration-200',
+                        'bg-white rounded-3xl border-2 overflow-hidden transition-all duration-200 will-change-[transform,opacity]',
                         isSelected
                           ? 'border-orange-400 shadow-md shadow-orange-100'
                           : 'border-gray-100 hover:border-gray-200 hover:shadow-sm'

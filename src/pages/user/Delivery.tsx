@@ -28,6 +28,7 @@ export const Delivery = () => {
     }
     return saved || '';
   });
+  const [debouncedSearch, setDebouncedSearch] = useState(search);
   const [loading, setLoading] = useState(false);
   const [selections, setSelections] = useState<Record<string, string>>(() => {
     const saved = localStorage.getItem('delivery_draft_selections');
@@ -42,6 +43,12 @@ export const Delivery = () => {
   const [newShopName, setNewShopName] = useState('');
   const [newShopLocation, setNewShopLocation] = useState('');
   const [addingShop, setAddingShop] = useState(false);
+
+  // Search Debounce
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(search), 150);
+    return () => clearTimeout(timer);
+  }, [search]);
 
   // Persist state to localStorage with timestamp
   useEffect(() => {
@@ -117,10 +124,14 @@ export const Delivery = () => {
   const updateItemNumber = (id: string, val: string) =>
     setSelections(prev => ({ ...prev, [id]: val }));
 
-  const filteredShops = shops.filter(s =>
-    s.name.toLowerCase().includes(search.toLowerCase()) ||
-    (s.location || '').toLowerCase().includes(search.toLowerCase())
-  );
+  const filteredShops = React.useMemo(() => {
+    const q = debouncedSearch.toLowerCase();
+    return shops.filter(s => 
+      s.name.toLowerCase().includes(q) || 
+      (s.location || '').toLowerCase().includes(q)
+    );
+  }, [shops, debouncedSearch]);
+
   const selectedCount = Object.keys(selections).length;
 
   return (
@@ -198,10 +209,10 @@ export const Delivery = () => {
               return (
                 <motion.div
                 key={shop.id}
-                initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                exit={{ opacity: 0, scale: 0.95 }} transition={{ duration: 0.3, delay: index * 0.01 }}
+                initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.98 }} transition={{ duration: 0.15, delay: Math.min(index * 0.02, 0.2) }}
                 className={clsx(
-                  'bg-white rounded-2xl border-2 overflow-hidden transition-all duration-200',
+                  'bg-white rounded-2xl border-2 overflow-hidden transition-all duration-200 will-change-[transform,opacity]',
                   isSelected
                     ? 'border-green-400 shadow-md shadow-green-100'
                     : 'border-gray-100 hover:border-gray-200 hover:shadow-sm'

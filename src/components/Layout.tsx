@@ -8,19 +8,19 @@ import { Logo } from './ui/Logo';
 import { Modal } from './ui/Modal';
 import { Button } from './ui/Button';
 
-const NavItem = ({ to, icon: Icon, label, badge, isActive, onClick }: { to: string; icon: any; label: string; badge?: string; isActive: boolean; onClick: () => void }) => {
+const NavItem = React.memo(({ to, icon: Icon, label, badge, isActive, onClick }: { to: string; icon: any; label: string; badge?: string; isActive: boolean; onClick: () => void }) => {
   return (
     <button
       onClick={onClick}
       className={clsx(
-        "w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all duration-300 relative group",
+        "w-full flex items-center gap-3 px-4 py-2.5 rounded-2xl transition-all duration-200 relative group",
         isActive
-          ? "bg-slate-900 text-white shadow-xl shadow-slate-200"
+          ? "bg-slate-900 text-white shadow-lg shadow-slate-200"
           : "text-slate-500 hover:text-slate-900 hover:bg-slate-100"
       )}
     >
       <div className={clsx(
-        "w-8 h-8 rounded-xl flex items-center justify-center transition-all flex-shrink-0",
+        "w-8 h-8 rounded-xl flex items-center justify-center transition-all duration-200 flex-shrink-0",
         isActive
           ? "bg-white/10"
           : "bg-slate-50 group-hover:bg-white shadow-sm"
@@ -32,11 +32,15 @@ const NavItem = ({ to, icon: Icon, label, badge, isActive, onClick }: { to: stri
         <span className="text-[10px] font-black px-2 py-0.5 bg-blue-500 text-white rounded-lg shadow-lg shadow-blue-200">{badge}</span>
       )}
       {isActive && (
-        <motion.div layoutId="activePill" className="absolute left-0 w-1 h-6 bg-blue-500 rounded-r-full" />
+        <motion.div 
+          layoutId="activePill" 
+          transition={{ type: "spring", bounce: 0.2, duration: 0.3 }}
+          className="absolute left-0 w-1.5 h-6 bg-blue-500 rounded-r-full" 
+        />
       )}
     </button>
   );
-};
+});
 
 const SidebarContent = ({ 
   profile, 
@@ -174,7 +178,7 @@ export const Layout = () => {
 
       {/* Background Decorations for non-admin/desktop */}
       {profile?.role !== 'admin' && (
-        <div className="hidden lg:block fixed inset-0 overflow-hidden pointer-events-none z-[0]">
+        <div className="hidden lg:block fixed inset-0 overflow-hidden pointer-events-none z-[0] will-change-transform">
           <motion.div
             animate={{ 
               x: [0, 40, 0], 
@@ -182,7 +186,7 @@ export const Layout = () => {
               scale: [1, 1.1, 1] 
             }}
             transition={{ duration: 15, repeat: Infinity, ease: "linear" }}
-            className="absolute -top-24 -left-24 w-96 h-96 bg-indigo-500/10 blur-[120px] rounded-full"
+            className="absolute -top-24 -left-24 w-96 h-96 bg-indigo-500/10 blur-[120px] rounded-full will-change-transform"
           />
           <motion.div
             animate={{ 
@@ -191,7 +195,7 @@ export const Layout = () => {
               scale: [1, 1.2, 1] 
             }}
             transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-            className="absolute -bottom-32 -right-32 w-[32rem] h-[32rem] bg-emerald-500/10 blur-[140px] rounded-full"
+            className="absolute -bottom-32 -right-32 w-[32rem] h-[32rem] bg-emerald-500/10 blur-[140px] rounded-full will-change-transform"
           />
           <div className="absolute top-1/2 left-10 -translate-y-1/2 opacity-[0.05]">
              <Truck size={300} className="text-slate-900" />

@@ -29,8 +29,15 @@ export const Dispatch = () => {
     if (timestamp && now - parseInt(timestamp) > 5 * 60 * 60 * 1000) return {};
     return saved ? JSON.parse(saved) : {};
   });
+  const [debouncedSearch, setDebouncedSearch] = useState(search);
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [isScrolled, setIsScrolled] = useState(false);
+
+  // Search Debounce
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(search), 150);
+    return () => clearTimeout(timer);
+  }, [search]);
 
   // Persistence Effects
   useEffect(() => { 
@@ -88,22 +95,17 @@ export const Dispatch = () => {
     } finally { setLoading(false); }
   };
 
-  const toggleShop = (id: string) => {
-    setSelections(prev => {
-      const next = { ...prev };
-      if (next[id] !== undefined) delete next[id];
-      else next[id] = '';
-      return next;
-    });
-  };
+  const toggleShop = (id: string) =>
+    setSelections(prev => { const n = { ...prev }; if (n[id] !== undefined) delete n[id]; else n[id] = ''; return n; });
 
-  const updateItemNumber = (id: string, val: string) =>
-    setSelections(prev => ({ ...prev, [id]: val }));
+  const filteredShops = React.useMemo(() => {
+    const q = debouncedSearch.toLowerCase();
+    return shops.filter(s =>
+      s.name.toLowerCase().includes(q) ||
+      (s.location || '').toLowerCase().includes(q)
+    );
+  }, [shops, debouncedSearch]);
 
-  const filteredShops = shops.filter(s =>
-    s.name.toLowerCase().includes(search.toLowerCase()) ||
-    (s.location || '').toLowerCase().includes(search.toLowerCase())
-  );
   const selectedCount = Object.keys(selections).length;
   const filledCount = Object.keys(selections).filter(id => selections[id].trim() !== '').length;
 
@@ -188,11 +190,11 @@ export const Dispatch = () => {
               const hasCount = isSelected && selections[shop.id].trim() !== '';
               return (
                 <motion.div
-                  key={shop.id} layout
-                  initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.95 }} transition={{ duration: 0.5, ease: [0.23, 1, 0.32, 1], delay: index * 0.02 }}
+                  key={shop.id}
+                  initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.15, delay: Math.min(index * 0.015, 0.2) }}
                   className={clsx(
-                    'rounded-2xl overflow-hidden transition-all duration-300',
+                    "bg-white rounded-2xl border-2 overflow-hidden transition-all duration-200 will-change-[transform,opacity]",
                     isSelected ? 'border-2 border-blue-300' : 'border border-white/60'
                   )}
                   style={isSelected
