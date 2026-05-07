@@ -507,7 +507,7 @@ export const UserManagement = () => {
                             isMasterUser 
                               ? 'bg-gradient-to-br from-amber-400 to-orange-500 shadow-amber-200'
                               : user.role === 'admin'
-                                ? 'bg-gradient-to-br from-indigo-500 to-purple-600 shadow-indigo-200'
+                                ? 'bg-gradient-to-br from-rose-500 to-pink-600 shadow-rose-200'
                                 : 'bg-gradient-to-br from-blue-400 to-blue-600 shadow-blue-200'
                           }`}>
                             {isMasterUser ? <Crown size={24} /> :
@@ -544,7 +544,7 @@ export const UserManagement = () => {
                                     isMasterUser
                                       ? 'bg-amber-50 text-amber-600 border border-amber-100'
                                       : user.role === 'admin'
-                                        ? 'bg-indigo-50 text-indigo-600 border border-indigo-100'
+                                        ? 'bg-rose-50 text-rose-600 border border-rose-100'
                                         : 'bg-blue-50 text-blue-600 border border-blue-100'
                                   }`}>
                                     {isMasterUser ? 'Master Admin' : user.role === 'admin' ? 'Administrator' : 'Standard Staff'}

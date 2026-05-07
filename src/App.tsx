@@ -14,6 +14,7 @@ import { Billing } from './pages/admin/Billing';
 import { UserDashboard } from './pages/user/UserDashboard';
 import { Pickup } from './pages/user/Pickup';
 import { Delivery } from './pages/user/Delivery';
+import { TodayActivity } from './pages/user/TodayActivity';
 import { Profile } from './pages/Profile';
 import { VoucherEntry } from './pages/VoucherEntry';
 import { VoucherAdmin } from './pages/admin/VoucherAdmin';
@@ -76,6 +77,7 @@ function AppRoutes() {
         {/* User Routes */}
         <Route path="pickup" element={<ProtectedRoute allowedRoles={['admin', 'user']}><Pickup /></ProtectedRoute>} />
         <Route path="delivery" element={<ProtectedRoute allowedRoles={['admin', 'user']}><Delivery /></ProtectedRoute>} />
+        <Route path="today-activity" element={<ProtectedRoute allowedRoles={['admin', 'user']}><TodayActivity /></ProtectedRoute>} />
       </Route>
     </Routes>
   );
