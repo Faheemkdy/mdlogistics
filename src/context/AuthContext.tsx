@@ -53,6 +53,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const fetchProfile = async (userId: string) => {
+    // Prevent multiple simultaneous fetches for the same user
+    if (profile?.id === userId && !loading) return;
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => {
+      controller.abort();
+      setLoading(false);
+      console.warn('Profile fetch timed out. Check database connection.');
+    }, 8000); // 8 second timeout
+
     try {
       const { data, error } = await supabase
         .from('profiles')
@@ -60,10 +70,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .eq('id', userId)
         .single();
       
+      clearTimeout(timeoutId);
+
       if (error) {
         // Handle recursion error specifically
         if (error.code === '42P17') {
-           console.error('CRITICAL DB ERROR: Infinite Recursion in RLS policies. Please run the "Fix Recursion" SQL script.');
+           console.error('CRITICAL DB ERROR: Infinite Recursion in RLS policies. Please run the "Performance Boost" SQL script.');
            return;
         }
         throw error;
@@ -72,21 +84,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (data && data.is_active === false) {
         setProfile(null);
         await supabase.auth.signOut();
-        // Store message for login page to show as toast after redirect
         sessionStorage.setItem('auth_notice', 'Your account has been deactivated. Please contact the administrator.');
         return;
       }
       
       setProfile(data);
     } catch (error: any) {
-      // Handle network/fetch errors gracefully
-      if (error.message?.includes('Failed to fetch') || error.name === 'TypeError') {
+      if (error.name === 'AbortError') {
+        console.warn('Profile fetch was aborted due to timeout.');
+      } else if (error.message?.includes('Failed to fetch') || error.name === 'TypeError') {
          console.warn('Network error fetching profile. This might be due to a database timeout or connection issue.');
       } else {
          console.error('Error fetching profile:', error);
       }
     } finally {
       setLoading(false);
+      clearTimeout(timeoutId);
     }
   };
 

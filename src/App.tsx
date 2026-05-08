@@ -26,7 +26,10 @@ import { Reconciliation } from './pages/admin/Reconciliation';
 const ProtectedRoute = ({ children, allowedRoles }: { children: React.ReactNode, allowedRoles?: string[] }) => {
   const { user, profile, loading } = useAuth();
 
-  if (loading) return (
+  // Only show loading if we have NO user and we are still loading.
+  // If we HAVE a user, don't show loading screen even if profile is still fetching in background,
+  // unless we specifically need the profile for allowedRoles.
+  if (loading && !user) return (
     <div className="min-h-screen flex flex-col items-center justify-center" style={{ background: '#e0e5ec' }}>
       <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-500 to-blue-600 flex items-center justify-center shadow-xl mb-4">
         <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -35,7 +38,14 @@ const ProtectedRoute = ({ children, allowedRoles }: { children: React.ReactNode,
     </div>
   );
   
-  if (!user) return <Navigate to="/login" />;
+  if (!user && !loading) return <Navigate to="/login" />;
+  
+  // If we need roles and profile is still loading, THEN we wait.
+  if (allowedRoles && loading && !profile) return (
+    <div className="min-h-screen flex flex-col items-center justify-center" style={{ background: '#e0e5ec' }}>
+      <div className="w-5 h-5 border-2 border-indigo-500/30 border-t-indigo-600 rounded-full animate-spin" />
+    </div>
+  );
   
   if (allowedRoles && profile && !allowedRoles.includes(profile.role)) {
     return <Navigate to="/" />;

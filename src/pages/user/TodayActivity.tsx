@@ -46,12 +46,12 @@ export const TodayActivity = () => {
     }
   };
 
-  const filteredPickups = pickups.filter(p => 
+  const filteredPickups = pickups.filter(p =>
     p.companies?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     p.pickup_items?.some((item: any) => item.shops?.name?.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
-  const filteredDeliveries = deliveries.filter(d => 
+  const filteredDeliveries = deliveries.filter(d =>
     d.item_number?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     d.shops?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     d.shops?.location?.toLowerCase().includes(searchQuery.toLowerCase())
@@ -63,7 +63,7 @@ export const TodayActivity = () => {
         {/* Header */}
         <div className="flex flex-col gap-6 py-8">
           <div className="flex items-center gap-4">
-            <button 
+            <button
               onClick={() => navigate('/')}
               className="p-3 bg-white border border-slate-200 rounded-2xl text-slate-600 hover:bg-slate-50 transition-all shadow-sm"
             >
@@ -96,8 +96,8 @@ export const TodayActivity = () => {
                 onClick={() => setActiveTab(tab)}
                 className={clsx(
                   "px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all",
-                  activeTab === tab 
-                    ? "bg-white text-blue-600 shadow-sm" 
+                  activeTab === tab
+                    ? "bg-white text-blue-600 shadow-sm"
                     : "text-slate-500 hover:text-slate-700"
                 )}
               >
@@ -126,7 +126,7 @@ export const TodayActivity = () => {
                     {filteredPickups.length} Records
                   </span>
                 </div>
-                
+
                 <div className="space-y-3">
                   {filteredPickups.map((pickup, idx) => (
                     <motion.div
