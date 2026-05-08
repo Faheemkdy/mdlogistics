@@ -180,10 +180,10 @@ export const Pickup = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* ── Page Header ── */}
-      <div className="bg-white/95 backdrop-blur-xl border-b border-gray-100 sticky top-0 z-30 transition-all duration-300">
-        <div className="max-w-4xl lg:max-w-6xl mx-auto px-4">
+      <div className="bg-white/70 backdrop-blur-xl border-b border-gray-100 sticky top-0 z-30 transition-all duration-300">
+        <div className="max-w-4xl lg:max-w-6xl mx-auto px-3 lg:px-4">
           {/* Top bar */}
-          <div className="flex items-center gap-3 py-3 lg:py-4">
+          <div className="flex items-center gap-3 py-2 lg:py-4">
             <AnimatePresence mode="wait">
               {step === 2 && (
                 <motion.button
@@ -226,7 +226,7 @@ export const Pickup = () => {
           </div>
 
           {/* Step progress dots */}
-          <div className="flex items-center gap-1.5 pb-2 lg:pb-3">
+          <div className="flex items-center gap-1.5 pb-1 lg:pb-3">
             {[1, 2].map(s => (
               <div key={s} className={clsx(
                 'rounded-full transition-all duration-500',
@@ -241,7 +241,7 @@ export const Pickup = () => {
               <motion.div
                 initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}
                 exit={{ opacity: 0, height: 0 }}
-                className="flex gap-2 pb-3 overflow-hidden"
+                className="flex gap-2 pb-2 overflow-hidden"
               >
                 <div className="relative flex-1">
                   <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
@@ -271,15 +271,15 @@ export const Pickup = () => {
       </div>
 
       {/* ── Body ── */}
-      <div className="max-w-4xl lg:max-w-6xl mx-auto px-4 pb-36 pt-4">
+      <div className="max-w-4xl lg:max-w-6xl mx-auto px-2 lg:px-4 pb-36 pt-0">
         <AnimatePresence mode="wait">
 
           {/* STEP 1 — Companies */}
           {step === 1 && (
             <motion.div
               key="s1"
-              initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.25 }}
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }} transition={{ duration: 0.15 }}
               className="space-y-3"
             >
               <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-widest">
@@ -325,9 +325,9 @@ export const Pickup = () => {
           {step === 2 && (
             <motion.div
               key="s2"
-              initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 20 }} transition={{ duration: 0.25 }}
-              className="space-y-3"
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }} transition={{ duration: 0.15 }}
+              className="space-y-2"
             >
               {/* Selected summary banner */}
               <AnimatePresence>
@@ -356,8 +356,8 @@ export const Pickup = () => {
                     <motion.div
                       key={shop.id} layout
                       initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, scale: 0.98 }}
-                      transition={{ duration: 0.1, delay: Math.min(index * 0.015, 0.15) }}
+                      exit={{ opacity: 0, y: -10 }}
+                      transition={{ duration: 0.2, ease: "easeOut" }}
                       className={clsx(
                         'bg-white rounded-3xl border-2 overflow-hidden transition-all duration-200 will-change-[transform,opacity]',
                         isSelected
@@ -462,7 +462,7 @@ export const Pickup = () => {
             )}
             style={{ paddingBottom: 'env(safe-area-inset-bottom)', boxShadow: '0 -8px 30px rgba(0,0,0,0.06)' }}
           >
-            <div className="max-w-4xl lg:max-w-6xl mx-auto px-4 py-3 flex items-center gap-3">
+            <div className="max-w-4xl lg:max-w-6xl mx-auto px-3 lg:px-4 py-3 flex items-center gap-3">
               {/* Count info */}
               <div className="flex items-center gap-3 flex-1">
                 <div className="w-10 h-10 rounded-xl bg-orange-50 border border-orange-100 flex items-center justify-center flex-shrink-0">

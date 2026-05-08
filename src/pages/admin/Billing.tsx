@@ -11,8 +11,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { clsx } from 'clsx';
 import { supabase } from '../../lib/supabase';
 import { format } from 'date-fns';
+import { useAuth } from '../../context/AuthContext';
 
 export const Billing = () => {
+  const { user } = useAuth();
   const toast = useToast();
   const [mode, setMode] = useState<'delivery' | 'product' | 'history'>('delivery');
   const [customerName, setCustomerName] = useState('');
@@ -124,6 +126,17 @@ export const Billing = () => {
 
     if (!editingBillId && data && data[0]) {
       setEditingBillId(data[0].id);
+      
+      const currentTotalAmount = billData.totals.amount;
+      if (currentTotalAmount > 0) {
+        await supabase.from('day_sheets').insert([{
+          type: 'income',
+          amount: currentTotalAmount,
+          description: `Bill Payment - ${customerName}`,
+          date: date,
+          created_by: user?.id ?? null
+        }]);
+      }
     }
 
     // Mark voucher as billed if importing

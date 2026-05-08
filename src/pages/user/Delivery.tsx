@@ -137,8 +137,8 @@ export const Delivery = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* ── Sticky Header ── */}
-      <div className="bg-white/95 backdrop-blur-xl border-b border-gray-100 sticky top-0 z-30 transition-all duration-300">
-        <div className="max-w-4xl lg:max-w-6xl mx-auto px-4 pt-3 pb-3">
+      <div className="bg-white/70 backdrop-blur-xl border-b border-gray-100 sticky top-0 z-30 transition-all duration-300">
+        <div className="max-w-4xl lg:max-w-6xl mx-auto px-3 lg:px-4 pt-2 pb-2">
           {/* Title row */}
           <div className="flex items-center justify-between gap-3 mb-3">
             <div className="min-w-0">
@@ -182,7 +182,7 @@ export const Delivery = () => {
       </div>
 
       {/* ── Shop List ── */}
-      <div className="max-w-4xl lg:max-w-6xl mx-auto px-4 pt-4 pb-36 space-y-3">
+      <div className="max-w-4xl lg:max-w-6xl mx-auto px-2 lg:px-4 pt-0 pb-36 space-y-2">
         {/* Selected banner */}
         <AnimatePresence>
           {selectedCount > 0 && (
@@ -209,8 +209,8 @@ export const Delivery = () => {
               return (
                 <motion.div
                 key={shop.id}
-                initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.98 }} transition={{ duration: 0.15, delay: Math.min(index * 0.02, 0.2) }}
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                exit={{ opacity: 0, scale: 0.98 }} transition={{ duration: 0.1 }}
                 className={clsx(
                   'bg-white rounded-2xl border-2 overflow-hidden transition-all duration-200 will-change-[transform,opacity]',
                   isSelected
@@ -306,7 +306,7 @@ export const Delivery = () => {
         )}
         style={{ paddingBottom: 'env(safe-area-inset-bottom)', boxShadow: '0 -8px 30px rgba(0,0,0,0.06)' }}
       >
-        <div className="max-w-4xl lg:max-w-6xl mx-auto px-4 py-3 flex items-center gap-3">
+        <div className="max-w-4xl lg:max-w-6xl mx-auto px-3 lg:px-4 py-3 flex items-center gap-3">
           {/* Count info */}
           <div className="flex items-center gap-3 flex-1">
             <div className="w-10 h-10 rounded-xl bg-green-50 border border-green-100 flex items-center justify-center flex-shrink-0">

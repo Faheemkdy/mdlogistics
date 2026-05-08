@@ -122,16 +122,8 @@ export const UserDashboard = () => {
     { label: 'Active Drivers', value: statsData.activeDrivers.toString(), trend: 'Stable', icon: Users, color: 'text-amber-600', trendUp: null },
   ];
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-[#f8fafc] flex items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
-          <p className="text-slate-500 font-bold animate-pulse">Loading MD-Core...</p>
-        </div>
-      </div>
-    );
-  }
+  // Removed full-screen loading to make navigation faster as requested by user
+
 
   return (
     <div className="min-h-screen bg-[#f8fafc] text-slate-900 font-sans selection:bg-blue-100 selection:text-blue-900 overflow-x-hidden">
@@ -141,7 +133,7 @@ export const UserDashboard = () => {
         <div className="absolute bottom-[-10%] right-[-5%] w-[40%] h-[40%] bg-teal-100/30 rounded-full blur-[120px]" />
       </div>
 
-      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:py-12">
+      <div className="relative z-10 max-w-7xl mx-auto px-3 lg:px-8 py-8 lg:py-12">
         {/* Top Header Section */}
         <header className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12">
           <div className="flex items-center gap-4">

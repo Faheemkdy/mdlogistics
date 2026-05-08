@@ -165,6 +165,7 @@ export const Layout = () => {
     const { profile, signOut } = useAuth();
     const navigate = useNavigate();
     const location = useLocation();
+    const mainRef = React.useRef<HTMLElement>(null);
     const [isSidebarOpen, setIsSidebarOpen] = React.useState(false);
     const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
@@ -173,6 +174,13 @@ export const Layout = () => {
       await signOut();
       navigate('/login');
     };
+
+    // Scroll to top on route change
+    React.useEffect(() => {
+      if (mainRef.current) {
+        mainRef.current.scrollTop = 0;
+      }
+    }, [location.pathname]);
 
     return (
       <div className="min-h-screen bg-slate-50 flex overflow-hidden font-sans relative">
@@ -316,7 +324,9 @@ export const Layout = () => {
         )}
 
         {/* Main Content */}
-        <main className={clsx(
+        <main 
+          ref={mainRef}
+          className={clsx(
           "flex-1 min-w-0 relative overflow-y-auto h-screen scroll-smooth custom-scrollbar",
           profile?.role === 'admin' && "lg:ml-72",
           (profile?.role === 'admin' || location.pathname !== '/')
@@ -328,11 +338,11 @@ export const Layout = () => {
               key={location.pathname}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.4, ease: [0.23, 1, 0.32, 1] }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.2, ease: "easeOut" }}
               className={clsx(
                 "max-w-7xl mx-auto pb-12 min-h-full",
-                (profile?.role === 'admin' || location.pathname !== '/') ? "p-6 lg:p-10" : "p-0"
+                (profile?.role === 'admin' || location.pathname !== '/') ? "px-3 pt-0 pb-6 lg:p-10" : "p-0"
               )}
             >
               <Outlet />
