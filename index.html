@@ -14,11 +14,13 @@
     <meta name="robots" content="noindex, nofollow" />
 
     <!-- PWA / Mobile Web App -->
-    <meta name="theme-color" content="#e0e5ec" />
+    <meta name="theme-color" content="#1e293b" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="MD Logistics" />
+    
+    <link rel="manifest" href="/manifest.json" />
 
     <!-- Open Graph -->
     <meta property="og:title" content="MD Logistics" />
@@ -35,5 +37,12 @@
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js');
+        });
+      }
+    </script>
   </body>
 </html>
