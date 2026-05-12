@@ -37,7 +37,23 @@ export const TodayActivity = () => {
         .eq('date', today)
         .order('created_at', { ascending: false });
 
-      setPickups(pickupsData || []);
+      // Group Pickups by Company Name
+      const groupedPickups = (pickupsData || []).reduce((acc: any, curr: any) => {
+        const companyName = curr.companies?.name || 'Unknown';
+        if (!acc[companyName]) {
+          acc[companyName] = { 
+            id: curr.id, // Use the first pickup's ID as the key
+            companies: { name: companyName }, 
+            pickup_items: [] 
+          };
+        }
+        if (curr.pickup_items) {
+          acc[companyName].pickup_items.push(...curr.pickup_items);
+        }
+        return acc;
+      }, {});
+
+      setPickups(Object.values(groupedPickups));
       setDeliveries(deliveriesData || []);
     } catch (error) {
       console.error('Error fetching today\'s data:', error);
