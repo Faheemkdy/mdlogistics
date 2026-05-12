@@ -1,18 +1,22 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
-import { Download, ChevronDown, ChevronUp, Clock, User, FileText, Box, Trash2, Search, Package, Truck, CalendarDays } from 'lucide-react';
+import { Download, ChevronDown, ChevronUp, Clock, User, FileText, Box, Trash2, Search, Package, Truck, CalendarDays, Check, Send } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { format } from 'date-fns';
+import { useNavigate } from 'react-router-dom';
 import { drawPDFHeader, drawCustomerInfo, drawGreenFooter, savePDF } from '../../utils/pdfGenerator';
 import { useToast } from '../../components/ui/Toast';
 import { getStandardDate, getDateRange } from '../../utils/dateUtils';
 import { motion, AnimatePresence } from 'framer-motion';
+import { BRAND } from '../../constants/branding';
+import { clsx } from 'clsx';
 
 type Tab = 'pickups' | 'deliveries';
 
 export const Reports = () => {
   const toast = useToast();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<Tab>('pickups');
   const [date, setDate] = useState(getStandardDate());
   const [searchQuery, setSearchQuery] = useState('');
@@ -20,6 +24,11 @@ export const Reports = () => {
   const [deliveryData, setDeliveryData] = useState<any[]>([]);
   const [expandedCompany, setExpandedCompany] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  // Multi-date selection
+  const [selectedDates, setSelectedDates] = useState<string[]>([]);
+  const [isMultiDateMode, setIsMultiDateMode] = useState(false);
+  const [multiDateData, setMultiDateData] = useState<any[]>([]);
 
   useEffect(() => {
     if (activeTab === 'pickups') fetchPickups();
@@ -35,15 +44,132 @@ export const Reports = () => {
     if (error) console.error(error);
     const grouped = (data || []).reduce((acc: any, curr: any) => {
       const companyId = curr.companies?.id;
-      if (!acc[companyId]) acc[companyId] = { id: companyId, name: curr.companies?.name || 'Unknown', items: [] };
+      if (!acc[companyId]) acc[companyId] = { id: companyId, name: curr.companies?.name || 'Unknown', pickupIds: [], items: [] };
       const time = format(new Date(curr.created_at), 'hh:mm a');
       const user = curr.profiles?.username || 'Unknown';
-      const shops = curr.pickup_items?.map((pi: any) => ({ ...pi.shops, itemId: pi.id, itemNumber: pi.item_number, pickupTime: time, pickupUser: user })) || [];
+      
+      if (!acc[companyId].pickupIds.includes(curr.id)) {
+        acc[companyId].pickupIds.push(curr.id);
+      }
+      
+      const shops = curr.pickup_items?.map((pi: any) => ({ ...pi.shops, itemId: pi.id, pickupId: curr.id, itemNumber: pi.item_number, pickupTime: time, pickupUser: user })) || [];
       acc[companyId].items.push(...shops);
       return acc;
     }, {});
     setPickupData(Object.values(grouped));
     setLoading(false);
+  };
+
+  const fetchMultiDatePickups = async (dates: string[]) => {
+    setLoading(true);
+    const { data } = await supabase
+      .from('pickups')
+      .select(`date, created_at, companies (id, name), pickup_items ( item_number, shops (id, name, location) )`)
+      .in('date', dates);
+    
+    setMultiDateData(data || []);
+    setLoading(false);
+  };
+
+  const handleSendToBilling = async () => {
+    if (selectedDates.length === 0 || pickupData.length === 0) return;
+    
+    // We'll take the first company from the filtered list for simplicity, 
+    // or we could let them choose. For now, we use the active filter results.
+    const company = filteredPickups[0];
+    if (!company) return;
+
+    setLoading(true);
+    try {
+      // Fetch all pickups for selected dates and this company
+      const { data: pickups } = await supabase
+        .from('pickups')
+        .select(`date, pickup_items ( item_number, shops (name, location) )`)
+        .eq('company_id', company.id)
+        .in('date', selectedDates);
+
+      // Fetch location rates
+      const { data: rates } = await supabase.from('location_rates').select('*');
+      const rateMap = (rates || []).reduce((acc: any, r: any) => {
+        acc[r.location_name.toLowerCase()] = r.rate;
+        return acc;
+      }, {});
+
+      // Group by date
+      const billingRows: any[] = [];
+      const datesGrouped = (pickups || []).reduce((acc: any, p: any) => {
+        if (!acc[p.date]) acc[p.date] = [];
+        acc[p.date].push(...(p.pickup_items || []));
+        return acc;
+      }, {});
+
+      // Validation: Check for missing rates
+      const missingLocations = new Set<string>();
+      (pickups || []).forEach(p => {
+        p.pickup_items?.forEach((item: any) => {
+          const loc = (item.shops?.location || '').toLowerCase().trim();
+          if (loc && !rateMap[loc]) {
+            missingLocations.add(item.shops?.location);
+          }
+        });
+      });
+
+      if (missingLocations.size > 0) {
+        toast.error(
+          'Missing Location Rates', 
+          `Please add rates for: ${Array.from(missingLocations).join(', ')} in the Shops page first.`
+        );
+        setLoading(false);
+        return;
+      }
+
+      Object.entries(datesGrouped).forEach(([dateStr, items]: [string, any]) => {
+        const row: any = { 
+          id: Math.random(), 
+          description: dateStr, 
+          q20: '', q25: '', q30: '', q35: '', q40: '', q50: '', 
+          total: 0, amount: '0' 
+        };
+
+        items.forEach((item: any) => {
+          const loc = (item.shops?.location || '').toLowerCase().trim();
+          const rate = rateMap[loc];
+          if (rate) {
+            const rateKey = `q${Math.round(rate)}` as keyof typeof row;
+            // @ts-ignore
+            row[rateKey] = (Number(row[rateKey]) || 0) + 1;
+          }
+        });
+
+        // Recalculate totals
+        const q20 = Number(row.q20) || 0;
+        const q25 = Number(row.q25) || 0;
+        const q30 = Number(row.q30) || 0;
+        const q35 = Number(row.q35) || 0;
+        const q40 = Number(row.q40) || 0;
+        const q50 = Number(row.q50) || 0;
+        
+        row.total = q20 + q25 + q30 + q35 + q40 + q50;
+        row.amount = ((q20 * 20) + (q25 * 25) + (q30 * 30) + (q35 * 35) + (q40 * 40) + (q50 * 50)).toFixed(2);
+        
+        if (row.total > 0) billingRows.push(row);
+      });
+
+      navigate('/billing', { state: { 
+        importCustomerName: company.name,
+        importItems: billingRows,
+        importMode: 'delivery'
+      }});
+
+    } catch (err: any) {
+      toast.error('Failed to prepare bill', err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const toggleDateSelection = (d: string) => {
+    setSelectedDates(prev => prev.includes(d) ? prev.filter(x => x !== d) : [...prev, d]);
   };
 
   const fetchDeliveries = async () => {
@@ -65,7 +191,7 @@ export const Reports = () => {
     autoTable(doc, {
       head: [['#', 'Shop', 'Location', 'Item No.', 'Time']],
       body: items.map((item, i) => [i + 1, item.name, item.location || '-', item.itemNumber || '-', item.pickupTime]),
-      startY: 75, theme: 'grid',
+      startY: 105, theme: 'grid',
       headStyles: { fillColor: [79, 70, 229], textColor: 255, fontStyle: 'bold' },
       styles: { cellPadding: 3, fontSize: 10 },
     });
@@ -149,7 +275,7 @@ export const Reports = () => {
         rows.push([format(new Date(p.date), 'dd/MM/yy'), p.companies?.name || '-', item.shops?.name || '-', item.item_number || '-', format(new Date(p.created_at), 'hh:mm a')]);
       });
     });
-    autoTable(doc, { head: [['Date', 'Company', 'Shop', 'Item No.', 'Time']], body: rows, startY: 75, theme: 'grid', headStyles: { fillColor: [79, 70, 229], textColor: 255, fontStyle: 'bold' }, styles: { cellPadding: 3, fontSize: 9 } });
+    autoTable(doc, { head: [['Date', 'Company', 'Shop', 'Item No.', 'Time']], body: rows, startY: 105, theme: 'grid', headStyles: { fillColor: [79, 70, 229], textColor: 255, fontStyle: 'bold' }, styles: { cellPadding: 3, fontSize: 9 } });
     drawGreenFooter(doc, 'TOTAL ITEMS:', rows.length);
     savePDF(doc, `Pickups_${days}days_${end}.pdf`);
   };
@@ -165,17 +291,41 @@ export const Reports = () => {
     drawPDFHeader(doc);
     drawCustomerInfo(doc, 'Report:', `${days}-Day Delivery Report`, `${format(new Date(start), 'dd MMM')} to ${format(new Date(end), 'dd MMM yyyy')}`);
     const rows = data.map((d: any) => [format(new Date(d.date), 'dd/MM/yy'), d.shops?.name || '-', d.shops?.location || '-', d.item_number || '-', format(new Date(d.created_at), 'hh:mm a')]);
-    autoTable(doc, { head: [['Date', 'Shop', 'Location', 'Item No.', 'Time']], body: rows, startY: 75, theme: 'grid', headStyles: { fillColor: [16, 185, 129], textColor: 255, fontStyle: 'bold' }, styles: { cellPadding: 3, fontSize: 10 } });
+    autoTable(doc, { head: [['Date', 'Shop', 'Location', 'Item No.', 'Time']], body: rows, startY: 105, theme: 'grid', headStyles: { fillColor: [16, 185, 129], textColor: 255, fontStyle: 'bold' }, styles: { cellPadding: 3, fontSize: 10 } });
     drawGreenFooter(doc, 'TOTAL DELIVERIES:', data.length);
     savePDF(doc, `Deliveries_${days}days_${end}.pdf`);
   };
 
-  const handleDeletePickupItem = async (itemId: string, e: React.MouseEvent) => {
+  const handleDeletePickupItem = async (itemId: string, pickupId: string, e: React.MouseEvent) => {
     e.stopPropagation();
     if (!window.confirm('Delete this pickup item?')) return;
+    
     const { error } = await supabase.from('pickup_items').delete().eq('id', itemId);
+    if (error) { toast.error('Error', error.message); return; }
+    
+    // Check if the parent pickup has any items left
+    if (pickupId) {
+      const { count } = await supabase.from('pickup_items').select('*', { count: 'exact', head: true }).eq('pickup_id', pickupId);
+      if (count === 0) {
+        await supabase.from('pickups').delete().eq('id', pickupId);
+      }
+    }
+    
+    toast.success('Deleted', 'Pickup item removed.'); 
+    fetchPickups(); 
+  };
+
+  const handleDeleteFullPickup = async (pickupIds: string[], e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!window.confirm('Delete all pickups for this company? This will remove the entire visit record.')) return;
+    
+    // Delete the parent pickups directly. Supabase ON DELETE CASCADE handles pickup_items automatically.
+    const { error } = await supabase.from('pickups').delete().in('id', pickupIds);
     if (error) toast.error('Error', error.message);
-    else { toast.success('Deleted', 'Pickup item removed.'); fetchPickups(); }
+    else {
+      toast.success('Deleted', 'Entire company pickup removed.');
+      fetchPickups();
+    }
   };
 
   const handleDeleteDelivery = async (deliveryId: string, e: React.MouseEvent) => {
@@ -217,11 +367,58 @@ export const Reports = () => {
           <input
             type="date"
             value={date}
-            onChange={e => setDate(e.target.value)}
+            onChange={e => { setDate(e.target.value); setIsMultiDateMode(false); setSelectedDates([]); }}
             className="bg-transparent border-none focus:ring-0 text-slate-700 font-bold text-sm w-32 outline-none"
           />
         </label>
       </div>
+
+      {/* ── Multi-date Mode Toggle ── */}
+      <div className="mb-5 flex items-center justify-between bg-white/40 p-2 rounded-2xl border border-white/50 backdrop-blur-sm">
+        <button 
+          onClick={() => { setIsMultiDateMode(!isMultiDateMode); setSelectedDates([]); }}
+          className={clsx(
+            "flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black transition-all",
+            isMultiDateMode ? "bg-indigo-600 text-white shadow-lg" : "text-slate-600 hover:bg-white/60"
+          )}
+        >
+          <CalendarDays size={14} />
+          {isMultiDateMode ? 'Multi-Date Mode ON' : 'Multi-Date Mode OFF'}
+        </button>
+        
+        {isMultiDateMode && selectedDates.length > 0 && (
+          <button 
+            onClick={handleSendToBilling}
+            className="flex items-center gap-2 px-4 py-2 bg-emerald-500 text-white rounded-xl text-xs font-black shadow-lg shadow-emerald-500/20"
+          >
+            <Send size={14} /> Send {selectedDates.length} Days to Billing
+          </button>
+        )}
+      </div>
+
+      {isMultiDateMode && (
+        <div className="mb-5 grid grid-cols-4 sm:grid-cols-7 gap-2">
+          {Array.from({ length: 30 }).map((_, i) => {
+            const d = new Date();
+            d.setDate(d.getDate() - i);
+            const dateStr = d.toISOString().split('T')[0];
+            const isSelected = selectedDates.includes(dateStr);
+            return (
+              <button
+                key={dateStr}
+                onClick={() => toggleDateSelection(dateStr)}
+                className={clsx(
+                  "p-2 rounded-xl border transition-all text-center",
+                  isSelected ? "bg-indigo-500 border-indigo-500 text-white shadow-md" : "bg-white border-slate-100 text-slate-500 hover:border-indigo-200"
+                )}
+              >
+                <span className="block text-[8px] font-black uppercase opacity-60">{format(d, 'EEE')}</span>
+                <span className="block text-xs font-black">{format(d, 'dd')}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {/* ── Sticky Nav & Search ── */}
       <div className="sticky top-0 z-30 bg-slate-50/95 backdrop-blur-xl pb-4 pt-1 -mx-2 px-2 sm:-mx-4 sm:px-4 shadow-sm border-b border-slate-200/50 space-y-3 mb-5">
@@ -305,6 +502,13 @@ export const Reports = () => {
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
                     <button
+                      onClick={e => handleDeleteFullPickup(company.pickupIds, e)}
+                      className="flex items-center justify-center w-7 h-7 rounded-lg bg-red-50 text-red-400 hover:bg-red-100 hover:text-red-600 transition-all mr-1"
+                      title="Delete Entire Company Pickup"
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                    <button
                       onClick={e => { e.stopPropagation(); downloadPickupPDF(company.name, company.items); }}
                       className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-indigo-100 hover:text-indigo-700 text-slate-600 text-[11px] font-bold transition-all">
                       <Download size={12} /> PDF
@@ -329,7 +533,7 @@ export const Reports = () => {
                           <div className="flex justify-between items-start gap-2 mb-2">
                             <span className="font-bold text-slate-800 text-sm leading-tight">{item.name}</span>
                             <button
-                              onClick={e => handleDeletePickupItem(item.itemId, e)}
+                              onClick={e => handleDeletePickupItem(item.itemId, item.pickupId, e)}
                               className="text-red-400 hover:text-red-600 bg-red-50 p-1.5 rounded-lg border border-red-100 flex-shrink-0 transition-colors">
                               <Trash2 size={12} />
                             </button>
@@ -366,7 +570,7 @@ export const Reports = () => {
         </AnimatePresence>
       )}
 
-      {/* ══════════ DELIVERIES TAB ══════════ */}
+      {/* ── DELIVERIES TAB ══════════ */}
       {!loading && activeTab === 'deliveries' && (
         <AnimatePresence mode="wait">
           <motion.div key="deliveries" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-4">

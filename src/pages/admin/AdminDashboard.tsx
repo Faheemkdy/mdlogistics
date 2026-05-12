@@ -58,7 +58,7 @@ export const AdminDashboard = () => {
       supabase.from('companies').select('*', { count: 'exact', head: true }),
       supabase.from('shops').select('*', { count: 'exact', head: true }),
       supabase.from('day_sheets').select('type, amount, description').eq('date', today),
-      supabase.from('pickups').select('*', { count: 'exact', head: true }).eq('date', today),
+      supabase.from('pickup_items').select('id, pickups!inner(date)', { count: 'exact', head: true }).eq('pickups.date', today),
       supabase.from('deliveries').select('*', { count: 'exact', head: true }).eq('date', today)
     ]);
 
@@ -84,7 +84,7 @@ export const AdminDashboard = () => {
       drawPDFHeader(doc);
       drawCustomerInfo(doc, "Report Type:", "Day Sheet Statement", formatReportDate(today));
       const tableData = todayDaySheets.map(e => [e.type.toUpperCase(), e.description, e.amount]);
-      autoTable(doc, { head: [['Type', 'Description', 'Amount']], body: tableData, startY: 80, theme: 'grid', headStyles: { fillColor: [79, 70, 229], textColor: 255, fontStyle: 'bold' }, styles: { cellPadding: 4, fontSize: 11 }, alternateRowStyles: { fillColor: [245, 247, 250] } });
+      autoTable(doc, { head: [['Type', 'Description', 'Amount']], body: tableData, startY: 105, theme: 'grid', headStyles: { fillColor: [79, 70, 229], textColor: 255, fontStyle: 'bold' }, styles: { cellPadding: 4, fontSize: 11 }, alternateRowStyles: { fillColor: [245, 247, 250] } });
       const balance = stats.todayIncome - stats.todayExpense;
       drawGreenFooter(doc, "TOTAL BALANCE:", `Rs. ${balance}`);
       savePDF(doc, `daysheet_${today}.pdf`);
@@ -111,7 +111,7 @@ export const AdminDashboard = () => {
           tableData.push([companyName, item.shops?.name || 'Unknown', item.shops?.location || '-', item.item_number || '-', timeStr]);
         });
       });
-      autoTable(doc, { head: [['Company', 'Shop', 'Location', 'Item No.', 'Time']], body: tableData, startY: 80, theme: 'grid', headStyles: { fillColor: [249, 115, 22], textColor: 255, fontStyle: 'bold' }, styles: { cellPadding: 4, fontSize: 10 }, alternateRowStyles: { fillColor: [255, 247, 237] } });
+      autoTable(doc, { head: [['Company', 'Shop', 'Location', 'Item No.', 'Time']], body: tableData, startY: 105, theme: 'grid', headStyles: { fillColor: [249, 115, 22], textColor: 255, fontStyle: 'bold' }, styles: { cellPadding: 4, fontSize: 10 }, alternateRowStyles: { fillColor: [255, 247, 237] } });
       drawGreenFooter(doc, "TOTAL ITEMS:", tableData.length);
       savePDF(doc, `pickups_${today}.pdf`);
     } catch (e: any) {
@@ -133,7 +133,7 @@ export const AdminDashboard = () => {
         try { timeStr = d.created_at ? format(new Date(d.created_at), 'hh:mm a') : '-'; } catch(e) {}
         return [d.shops?.name || 'Unknown', d.shops?.location || '-', d.item_number || '-', timeStr];
       });
-      autoTable(doc, { head: [['Shop Name', 'Location', 'Item No.', 'Time']], body: tableData, startY: 80, theme: 'grid', headStyles: { fillColor: [34, 197, 94], textColor: 255, fontStyle: 'bold' }, styles: { cellPadding: 4, fontSize: 11 }, alternateRowStyles: { fillColor: [240, 253, 244] } });
+      autoTable(doc, { head: [['Shop Name', 'Location', 'Item No.', 'Time']], body: tableData, startY: 105, theme: 'grid', headStyles: { fillColor: [34, 197, 94], textColor: 255, fontStyle: 'bold' }, styles: { cellPadding: 4, fontSize: 11 }, alternateRowStyles: { fillColor: [240, 253, 244] } });
       drawGreenFooter(doc, "TOTAL DELIVERIES:", data.length);
       savePDF(doc, `deliveries_${today}.pdf`);
     } catch (e: any) {

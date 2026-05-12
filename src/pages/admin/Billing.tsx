@@ -37,6 +37,20 @@ export const Billing = () => {
     if (location.state?.importVoucherId) {
       handleAutoImport(location.state.importVoucherId);
     }
+    
+    // Automated Import from Reports (multi-date)
+    if (location.state?.importItems && location.state?.importCustomerName) {
+      setCustomerName(location.state.importCustomerName);
+      if (location.state.importMode) setMode(location.state.importMode);
+      
+      if (location.state.importMode === 'delivery') {
+        setDeliveryItems(location.state.importItems);
+      } else {
+        setProductItems(location.state.importItems);
+      }
+      
+      toast.success('Report data imported!', `Loaded pickups for ${location.state.importCustomerName}`);
+    }
   }, [location.state]);
 
   const handleAutoImport = async (id: string) => {

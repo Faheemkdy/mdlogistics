@@ -147,9 +147,16 @@ export const Pickup = () => {
       const { error: ie } = await supabase.from('pickup_items').insert(items);
       if (ie) throw ie;
       toast.success('Pickup saved!', `${shopIds.length} shop(s) recorded.`);
-      // Clear persistence on success
+      
+      // Clear persistence and reset form on success
       ['pickup_draft_step', 'pickup_draft_company_id', 'pickup_draft_company_name', 'pickup_draft_selections', 'pickup_draft_search', 'pickup_draft_timestamp'].forEach(k => localStorage.removeItem(k));
-      setTimeout(() => navigate('/'), 900);
+      setStep(1);
+      setSelectedCompany(null);
+      setSelectedCompanyName('');
+      setSelections({});
+      setSearch('');
+
+
     } catch (err: any) { toast.error('Failed to save pickup', err.message); }
     finally { setLoading(false); }
   };
