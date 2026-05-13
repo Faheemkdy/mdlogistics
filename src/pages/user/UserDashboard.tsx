@@ -39,36 +39,22 @@ export const UserDashboard = () => {
       const today = format(new Date(), 'yyyy-MM-dd');
       const sevenDaysAgo = format(subDays(new Date(), 6), 'yyyy-MM-dd');
 
-      // 1. Fetch Total Shipments (Total Dispatches)
-      const { count: totalShipments } = await supabase
-        .from('dispatches')
-        .select('*', { count: 'exact', head: true });
-
-      // 2. Fetch Active Drivers (Profiles with role 'user')
-      const { count: activeDrivers } = await supabase
-        .from('profiles')
-        .select('*', { count: 'exact', head: true })
-        .eq('role', 'user');
-
-      // 3. Fetch Pending Today (Dispatches for today)
-      const { count: pendingToday } = await supabase
-        .from('dispatches')
-        .select('*', { count: 'exact', head: true })
-        .eq('date', today);
-
-      // 4. Fetch In Transit (Sum of dispatches - Sum of deliveries) - Simplified for dashboard
-      // For now, let's just get the count of deliveries today
-      const { count: inTransit } = await supabase
-        .from('deliveries')
-        .select('*', { count: 'exact', head: true })
-        .eq('date', today);
-
-      // 5. Fetch Recent Shipments (Latest Deliveries)
-      const { data: recentDeliveries } = await supabase
-        .from('deliveries')
-        .select('id, item_number, shop_id, date, shops(name, location)')
-        .order('created_at', { ascending: false })
-        .limit(5);
+      // Parallelize all data fetching
+      const [
+        { count: totalShipments },
+        { count: activeDrivers },
+        { count: pendingToday },
+        { count: inTransit },
+        { data: recentDeliveries },
+        { data: weeklyDeliveries }
+      ] = await Promise.all([
+        supabase.from('dispatches').select('*', { count: 'exact', head: true }),
+        supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'user'),
+        supabase.from('dispatches').select('*', { count: 'exact', head: true }).eq('date', today),
+        supabase.from('deliveries').select('*', { count: 'exact', head: true }).eq('date', today),
+        supabase.from('deliveries').select('id, item_number, shop_id, date, shops(name, location)').order('created_at', { ascending: false }).limit(5),
+        supabase.from('deliveries').select('date').gte('date', sevenDaysAgo).lte('date', today)
+      ]);
 
       const formattedRecent = (recentDeliveries || []).map((d: any) => ({
         id: `#MDL-${d.id.substring(0, 4).toUpperCase()}`,
@@ -76,13 +62,6 @@ export const UserDashboard = () => {
         status: 'Delivered',
         color: 'bg-emerald-500'
       }));
-
-      // 6. Fetch Weekly Data
-      const { data: weeklyDeliveries } = await supabase
-        .from('deliveries')
-        .select('date')
-        .gte('date', sevenDaysAgo)
-        .lte('date', today);
 
       const days = eachDayOfInterval({
         start: subDays(new Date(), 6),
@@ -129,8 +108,8 @@ export const UserDashboard = () => {
     <div className="min-h-screen bg-[#f8fafc] text-slate-900 font-sans selection:bg-blue-100 selection:text-blue-900 overflow-x-hidden">
       {/* Background Decorative Elements */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
-        <div className="absolute top-[-10%] left-[-5%] w-[40%] h-[40%] bg-blue-100/40 rounded-full blur-[120px]" />
-        <div className="absolute bottom-[-10%] right-[-5%] w-[40%] h-[40%] bg-teal-100/30 rounded-full blur-[120px]" />
+        <div className="absolute top-[-10%] left-[-5%] w-[40%] h-[40%] bg-blue-100/20 rounded-full blur-[80px]" />
+        <div className="absolute bottom-[-10%] right-[-5%] w-[40%] h-[40%] bg-teal-100/20 rounded-full blur-[80px]" />
       </div>
 
       <div className="relative z-10 max-w-7xl mx-auto px-3 lg:px-8 py-8 lg:py-12">

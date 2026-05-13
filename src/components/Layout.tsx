@@ -261,7 +261,7 @@ export const Layout = () => {
 
         {/* Mobile Header */}
         {(profile?.role === 'admin' || (profile?.role !== 'admin' && location.pathname !== '/')) && (
-          <div className="lg:hidden fixed top-0 left-0 right-0 z-[80] flex items-center justify-between px-6 py-4 pt-[calc(env(safe-area-inset-top)+12px)] bg-white/80 backdrop-blur-xl border-b border-slate-100 shadow-sm"
+          <div className="lg:hidden fixed top-0 left-0 right-0 z-[80] flex items-center justify-between px-6 py-4 pt-[calc(env(safe-area-inset-top)+12px)] bg-white/90 backdrop-blur-md border-b border-slate-100 shadow-sm"
           >
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-slate-900 flex items-center justify-center p-2 shadow-md">
