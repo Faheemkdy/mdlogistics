@@ -34,6 +34,17 @@ export const Login = () => {
     }
   }, []);
 
+  if (authLoading || user) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center" style={{ background: '#e0e5ec' }}>
+        <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-500 to-blue-600 flex items-center justify-center shadow-xl mb-4">
+          <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+        </div>
+        <p className="text-slate-500 font-semibold text-sm tracking-wider">SECURE LOGIN...</p>
+      </div>
+    );
+  }
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);

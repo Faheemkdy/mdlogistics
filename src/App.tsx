@@ -71,7 +71,13 @@ function AppRoutes() {
         </ProtectedRoute>
       }>
         {/* Common Routes */}
-        <Route index element={profile?.role === 'admin' ? <AdminDashboard /> : <UserDashboard />} />
+        <Route index element={
+          loading ? (
+            <div className="flex items-center justify-center h-[60vh]">
+              <div className="w-8 h-8 border-2 border-indigo-500/30 border-t-indigo-600 rounded-full animate-spin" />
+            </div>
+          ) : profile?.role === 'admin' ? <AdminDashboard /> : <UserDashboard />
+        } />
         <Route path="profile" element={<Profile />} />
 
         {/* Admin Routes */}
