@@ -110,6 +110,7 @@ const SidebarContent = ({
               <NavItem to="/pickup" icon={Package} label="Pickup Requests" isActive={location.pathname === "/pickup"} onClick={() => confirmNavigation("/pickup")} />
               <NavItem to="/delivery" icon={Truck} label="Final Delivery" isActive={location.pathname === "/delivery"} onClick={() => confirmNavigation("/delivery")} />
               <NavItem to="/dispatch" icon={ClipboardList} label="Dispatch Hub" isActive={location.pathname === "/dispatch"} onClick={() => confirmNavigation("/dispatch")} />
+              <NavItem to="/courier-exchange" icon={Truck} label="Courier Exchange" isActive={location.pathname === "/courier-exchange"} onClick={() => confirmNavigation("/courier-exchange")} />
               <NavItem to="/day-sheet" icon={FileText} label="Accounting" isActive={location.pathname === "/day-sheet"} onClick={() => confirmNavigation("/day-sheet")} />
               <NavItem to="/vouchers" icon={Receipt} label="Expense Vouchers" isActive={location.pathname === "/vouchers"} onClick={() => confirmNavigation("/vouchers")} />
             </div>

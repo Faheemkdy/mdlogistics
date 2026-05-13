@@ -217,6 +217,7 @@ export const AdminDashboard = () => {
     { label: 'Add Pickup', desc: 'Record daily pickups', to: '/pickup', icon: Package, gradient: 'from-orange-500 to-red-600', shadow: 'shadow-orange-500/20' },
     { label: 'Add Delivery', desc: 'Record daily deliveries', to: '/delivery', icon: Truck, gradient: 'from-green-500 to-emerald-600', shadow: 'shadow-green-500/20' },
     { label: 'Dispatch', desc: 'Hub to shops', to: '/dispatch', icon: ClipboardList, gradient: 'from-blue-600 to-cyan-600', shadow: 'shadow-blue-500/20' },
+    { label: 'Courier Exchange', desc: '3rd party handovers', to: '/courier-exchange', icon: Truck, gradient: 'from-purple-500 to-pink-600', shadow: 'shadow-purple-500/20' },
     { label: 'Reconcile', desc: 'Compare records', to: '/reconciliation', icon: BarChart2, gradient: 'from-slate-700 to-slate-900', shadow: 'shadow-slate-500/20', access: 'master' },
     { label: 'Billing & Invoice', desc: 'Create instant bills', to: '/billing', icon: Receipt, gradient: 'from-emerald-500 to-teal-600', shadow: 'shadow-emerald-500/20', access: 'master' },
   ].filter(action => action.access !== 'master' || isMasterAdmin);

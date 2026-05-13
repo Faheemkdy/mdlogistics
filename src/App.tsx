@@ -20,6 +20,7 @@ import { VoucherEntry } from './pages/VoucherEntry';
 import { VoucherAdmin } from './pages/admin/VoucherAdmin';
 import { Dispatch } from './pages/admin/Dispatch';
 import { Reconciliation } from './pages/admin/Reconciliation';
+import { CourierExchange } from './pages/admin/CourierExchange';
 
 
 
@@ -83,6 +84,7 @@ function AppRoutes() {
         <Route path="vouchers" element={<ProtectedRoute allowedRoles={['admin']}><VoucherAdmin /></ProtectedRoute>} />
         <Route path="dispatch" element={<ProtectedRoute allowedRoles={['admin']}><Dispatch /></ProtectedRoute>} />
         <Route path="reconciliation" element={<ProtectedRoute allowedRoles={['admin']}>{isMasterAdmin ? <Reconciliation /> : <Navigate to="/" />}</ProtectedRoute>} />
+        <Route path="courier-exchange" element={<ProtectedRoute allowedRoles={['admin']}><CourierExchange /></ProtectedRoute>} />
 
         {/* User Routes */}
         <Route path="pickup" element={<ProtectedRoute allowedRoles={['admin', 'user']}><Pickup /></ProtectedRoute>} />
