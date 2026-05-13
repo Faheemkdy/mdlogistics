@@ -6,6 +6,7 @@ import { motion } from 'framer-motion';
 import { AlertCircle, LogIn, Eye, EyeOff } from 'lucide-react';
 import { BRAND, CONTACT_INFO } from '../constants/branding';
 import { Logo } from '../components/ui/Logo';
+import { useAuth } from '../context/AuthContext';
 
 export const Login = () => {
   const { user, loading: authLoading } = useAuth();
