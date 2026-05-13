@@ -8,6 +8,7 @@ import { BRAND, CONTACT_INFO } from '../constants/branding';
 import { Logo } from '../components/ui/Logo';
 
 export const Login = () => {
+  const { user, loading: authLoading } = useAuth();
   const toast = useToast();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -15,6 +16,13 @@ export const Login = () => {
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (user && !authLoading) {
+      navigate('/', { replace: true });
+    }
+  }, [user, authLoading, navigate]);
 
   // Show any auth notices from redirects (e.g., deactivated account)
   useEffect(() => {
@@ -46,7 +54,7 @@ export const Login = () => {
 
       if (data.user) {
         localStorage.setItem('md_courier_username', cleanUsername);
-        setTimeout(() => navigate('/'), 100);
+        setTimeout(() => navigate('/', { replace: true }), 100);
       }
     } catch (err: any) {
       if (err.code === 'invalid_credentials' || err.message.includes('Invalid login credentials')) {
