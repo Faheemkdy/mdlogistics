@@ -7,6 +7,7 @@ import { clsx } from 'clsx';
 import { Logo } from './ui/Logo';
 import { Modal } from './ui/Modal';
 import { Button } from './ui/Button';
+import { useOfflineSync } from '../hooks/useOfflineSync';
 
 const NavItem = React.memo(({ to, icon: Icon, label, badge, isActive, onClick }: { to: string; icon: any; label: string; badge?: string; isActive: boolean; onClick: () => void }) => {
   return (
@@ -168,6 +169,7 @@ export const Layout = () => {
     const mainRef = React.useRef<HTMLElement>(null);
     const [isSidebarOpen, setIsSidebarOpen] = React.useState(false);
     const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+    const { pendingCount, isOnline } = useOfflineSync();
 
     const handleSignOut = async () => {
       setShowLogoutConfirm(false);
@@ -267,23 +269,44 @@ export const Layout = () => {
               <div className="w-10 h-10 rounded-xl bg-slate-900 flex items-center justify-center p-2 shadow-md">
                 <Logo showText={false} className="filter brightness-0 invert" />
               </div>
-              <span className="font-black tracking-tighter text-slate-900">MD LOGISTICS</span>
+              <div className="flex flex-col">
+                <span className="font-black tracking-tighter text-slate-900 leading-none">MD LOGISTICS</span>
+                {pendingCount > 0 && (
+                  <span className="text-[9px] font-black text-orange-500 uppercase tracking-widest mt-1 animate-pulse">
+                    {pendingCount} Pending Sync
+                  </span>
+                )}
+              </div>
             </div>
-            {profile?.role === 'admin' ? (
-              <button
-                onClick={() => setIsSidebarOpen(true)}
-                className="p-2.5 text-slate-600 bg-slate-50 rounded-2xl hover:bg-slate-100 active:scale-95 transition-all border border-slate-100"
-              >
-                <Menu size={22} />
-              </button>
-            ) : (
-              <button
-                onClick={() => navigate('/')}
-                className="p-2.5 text-slate-600 bg-slate-50 rounded-2xl hover:bg-slate-100 active:scale-95 transition-all border border-slate-100"
-              >
-                <LayoutDashboard size={22} />
-              </button>
-            )}
+            
+            <div className="flex items-center gap-2">
+              {/* Sync Status Icon */}
+              {pendingCount > 0 ? (
+                <div className="flex items-center justify-center w-9 h-9 rounded-xl bg-orange-50 text-orange-500 border border-orange-100">
+                  <Compass size={18} className="animate-spin" />
+                </div>
+              ) : !isOnline && (
+                <div className="flex items-center justify-center w-9 h-9 rounded-xl bg-red-50 text-red-500 border border-red-100">
+                  <AlertCircle size={18} />
+                </div>
+              )}
+
+              {profile?.role === 'admin' ? (
+                <button
+                  onClick={() => setIsSidebarOpen(true)}
+                  className="p-2.5 text-slate-600 bg-slate-50 rounded-2xl hover:bg-slate-100 active:scale-95 transition-all border border-slate-100"
+                >
+                  <Menu size={22} />
+                </button>
+              ) : (
+                <button
+                  onClick={() => navigate('/')}
+                  className="p-2.5 text-slate-600 bg-slate-50 rounded-2xl hover:bg-slate-100 active:scale-95 transition-all border border-slate-100"
+                >
+                  <LayoutDashboard size={22} />
+                </button>
+              )}
+            </div>
           </div>
         )}
 

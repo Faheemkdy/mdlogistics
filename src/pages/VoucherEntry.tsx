@@ -125,43 +125,62 @@ export const VoucherEntry = () => {
       return;
     }
 
-    setLoading(true);
-    try {
-      const voucherId = crypto.randomUUID();
-      // 1. Insert Voucher
-      const { error: vError } = await supabase
-        .from('vouchers')
-        .insert({ id: voucherId, customer_name: customerName, status: 'pending', type });
-
-      if (vError) throw vError;
-
-      // 2. Prepare Items
-      const allItems = sections.flatMap(section => 
+    const voucherData = {
+      voucher: { 
+        customer_name: customerName, 
+        status: 'pending', 
+        type 
+      },
+      items: sections.flatMap(section => 
         section.items
           .filter(i => type === 'delivery' ? (i.rate && i.quantity) : (i.product_name && i.quantity && i.amount))
           .map(i => ({
-            voucher_id: voucherId,
             date: section.date,
             rate: type === 'delivery' ? Number(i.rate) : null,
             quantity: Number(i.quantity),
             product_name: type === 'product' ? i.product_name : null,
             amount: type === 'product' ? Number(i.amount) : null
           }))
-      );
+      )
+    };
 
-      if (allItems.length === 0) {
-        throw new Error(`Please add at least one valid item for ${type}.`);
+    if (voucherData.items.length === 0) {
+      toast.warning('No items', `Please add at least one valid item for ${type}.`);
+      setLoading(false);
+      return;
+    }
+
+    try {
+      if (navigator.onLine) {
+        const { data: voucher, error: vError } = await supabase
+          .from('vouchers')
+          .insert([voucherData.voucher])
+          .select().single();
+
+        if (vError) throw vError;
+
+        const itemsWithId = voucherData.items.map(i => ({ ...i, voucher_id: voucher.id }));
+        const { error: iError } = await supabase.from('voucher_items').insert(itemsWithId);
+        if (iError) throw iError;
+
+        toast.success('Submitted successfully!', 'Admin will process your voucher soon.');
+      } else {
+        const { offlineSync } = await import('../lib/offlineSync');
+        await offlineSync.addItem('voucher', voucherData);
+        toast.success('Saved to offline queue', 'Will sync when connection is restored.');
       }
-
-      // 3. Insert Items
-      const { error: iError } = await supabase.from('voucher_items').insert(allItems);
-      if (iError) throw iError;
 
       setSubmitted(true);
       setLastSubmitTime(Date.now());
-      toast.success('Submitted successfully!', 'Admin will process your voucher soon.');
     } catch (err: any) {
-      toast.error('Submission failed', err.message);
+      if (!navigator.onLine || err.message === 'Failed to fetch' || err.name === 'TypeError') {
+        const { offlineSync } = await import('../lib/offlineSync');
+        await offlineSync.addItem('voucher', voucherData);
+        toast.success('Saved to offline queue', 'Network error detected. Data will sync later.');
+        setSubmitted(true);
+      } else {
+        toast.error('Submission failed', err.message);
+      }
     } finally {
       setLoading(false);
     }

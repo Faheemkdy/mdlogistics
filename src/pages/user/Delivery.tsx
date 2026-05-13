@@ -101,21 +101,45 @@ export const Delivery = () => {
     const shopIds = Object.keys(selections);
     if (shopIds.length === 0 || !user) return;
     setLoading(true);
+    
+    const deliveryData = shopIds.map(id => ({
+      shop_id: id, user_id: user.id,
+      date: new Date().toISOString().split('T')[0],
+      item_number: selections[id] || null,
+    }));
+
     try {
-      const deliveries = shopIds.map(id => ({
-        shop_id: id, user_id: user.id,
-        date: new Date().toISOString().split('T')[0],
-        item_number: selections[id] || null,
-      }));
-      const { error } = await supabase.from('deliveries').insert(deliveries);
-      if (error) throw error;
-      toast.success('Deliveries recorded!', `${shopIds.length} shop(s) delivered.`);
+      // Try to save directly if online
+      if (navigator.onLine) {
+        const { error } = await supabase.from('deliveries').insert(deliveryData);
+        if (error) throw error;
+        toast.success('Deliveries recorded!', `${shopIds.length} shop(s) delivered.`);
+      } else {
+        // Queue for later if offline
+        const { offlineSync } = await import('../../lib/offlineSync');
+        await offlineSync.addItem('delivery', deliveryData);
+        toast.success('Saved to offline queue', 'Will sync when connection is restored.');
+      }
+
       setSelections({});
       localStorage.removeItem('delivery_draft_selections');
       localStorage.removeItem('delivery_draft_search');
       localStorage.removeItem('delivery_draft_timestamp');
-    } catch (err: any) { toast.error('Failed to save deliveries', err.message); }
-    finally { setLoading(false); }
+    } catch (err: any) {
+      // If it's a network error, queue it anyway
+      if (!navigator.onLine || err.message === 'Failed to fetch' || err.name === 'TypeError') {
+        const { offlineSync } = await import('../../lib/offlineSync');
+        await offlineSync.addItem('delivery', deliveryData);
+        toast.success('Saved to offline queue', 'Network error detected. Data will sync later.');
+        
+        setSelections({});
+        localStorage.removeItem('delivery_draft_selections');
+      } else {
+        toast.error('Failed to save deliveries', err.message);
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   const toggleShop = (id: string) =>

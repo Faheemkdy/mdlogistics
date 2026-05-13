@@ -137,18 +137,39 @@ export const Pickup = () => {
     const shopIds = Object.keys(selections);
     if (!selectedCompany || shopIds.length === 0 || !user) return;
     setLoading(true);
+
+    const pickupData = {
+      pickup: { 
+        company_id: selectedCompany, 
+        user_id: user.id, 
+        date: new Date().toISOString().split('T')[0] 
+      },
+      items: shopIds.map(id => ({ 
+        shop_id: id, 
+        item_number: selections[id] || null 
+      }))
+    };
+
     try {
-      const { data: pickup, error: pe } = await supabase
-        .from('pickups')
-        .insert([{ company_id: selectedCompany, user_id: user.id, date: new Date().toISOString().split('T')[0] }])
-        .select().single();
-      if (pe) throw pe;
-      const items = shopIds.map(id => ({ pickup_id: pickup.id, shop_id: id, item_number: selections[id] || null }));
-      const { error: ie } = await supabase.from('pickup_items').insert(items);
-      if (ie) throw ie;
-      toast.success('Pickup saved!', `${shopIds.length} shop(s) recorded.`);
+      if (navigator.onLine) {
+        const { data: pickup, error: pe } = await supabase
+          .from('pickups')
+          .insert([pickupData.pickup])
+          .select().single();
+        if (pe) throw pe;
+
+        const itemsWithId = pickupData.items.map(i => ({ ...i, pickup_id: pickup.id }));
+        const { error: ie } = await supabase.from('pickup_items').insert(itemsWithId);
+        if (ie) throw ie;
+
+        toast.success('Pickup saved!', `${shopIds.length} shop(s) recorded.`);
+      } else {
+        const { offlineSync } = await import('../../lib/offlineSync');
+        await offlineSync.addItem('pickup', pickupData);
+        toast.success('Saved to offline queue', 'Will sync when connection is restored.');
+      }
       
-      // Clear persistence and reset form on success
+      // Clear persistence and reset form
       ['pickup_draft_step', 'pickup_draft_company_id', 'pickup_draft_company_name', 'pickup_draft_selections', 'pickup_draft_search', 'pickup_draft_timestamp'].forEach(k => localStorage.removeItem(k));
       setStep(1);
       setSelectedCompany(null);
@@ -156,9 +177,20 @@ export const Pickup = () => {
       setSelections({});
       setSearch('');
 
-
-    } catch (err: any) { toast.error('Failed to save pickup', err.message); }
-    finally { setLoading(false); }
+    } catch (err: any) {
+      if (!navigator.onLine || err.message === 'Failed to fetch' || err.name === 'TypeError') {
+        const { offlineSync } = await import('../../lib/offlineSync');
+        await offlineSync.addItem('pickup', pickupData);
+        toast.success('Saved to offline queue', 'Network error detected. Data will sync later.');
+        
+        setSelections({});
+        ['pickup_draft_step', 'pickup_draft_company_id', 'pickup_draft_selections'].forEach(k => localStorage.removeItem(k));
+      } else {
+        toast.error('Failed to save pickup', err.message);
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   const toggleShop = (id: string) =>
