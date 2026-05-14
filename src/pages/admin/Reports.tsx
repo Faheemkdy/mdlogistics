@@ -373,51 +373,55 @@ export const Reports = () => {
         </label>
       </div>
 
-      {/* ── Multi-date Mode Toggle ── */}
-      <div className="mb-5 flex items-center justify-between bg-white/40 p-2 rounded-2xl border border-white/50 backdrop-blur-sm">
-        <button 
-          onClick={() => { setIsMultiDateMode(!isMultiDateMode); setSelectedDates([]); }}
-          className={clsx(
-            "flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black transition-all",
-            isMultiDateMode ? "bg-indigo-600 text-white shadow-lg" : "text-slate-600 hover:bg-white/60"
-          )}
-        >
-          <CalendarDays size={14} />
-          {isMultiDateMode ? 'Multi-Date Mode ON' : 'Multi-Date Mode OFF'}
-        </button>
-        
-        {isMultiDateMode && selectedDates.length > 0 && (
-          <button 
-            onClick={handleSendToBilling}
-            className="flex items-center gap-2 px-4 py-2 bg-emerald-500 text-white rounded-xl text-xs font-black shadow-lg shadow-emerald-500/20"
-          >
-            <Send size={14} /> Send {selectedDates.length} Days to Billing
-          </button>
-        )}
-      </div>
-
-      {isMultiDateMode && (
-        <div className="mb-5 grid grid-cols-4 sm:grid-cols-7 gap-2">
-          {Array.from({ length: 30 }).map((_, i) => {
-            const d = new Date();
-            d.setDate(d.getDate() - i);
-            const dateStr = d.toISOString().split('T')[0];
-            const isSelected = selectedDates.includes(dateStr);
-            return (
-              <button
-                key={dateStr}
-                onClick={() => toggleDateSelection(dateStr)}
-                className={clsx(
-                  "p-2 rounded-xl border transition-all text-center",
-                  isSelected ? "bg-indigo-500 border-indigo-500 text-white shadow-md" : "bg-white border-slate-100 text-slate-500 hover:border-indigo-200"
-                )}
+      {/* ── Multi-date Mode Toggle - Show only for pickups ── */}
+      {activeTab === 'pickups' && (
+        <>
+          <div className="mb-5 flex items-center justify-between bg-white/40 p-2 rounded-2xl border border-white/50 backdrop-blur-sm">
+            <button 
+              onClick={() => { setIsMultiDateMode(!isMultiDateMode); setSelectedDates([]); }}
+              className={clsx(
+                "flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black transition-all",
+                isMultiDateMode ? "bg-indigo-600 text-white shadow-lg" : "text-slate-600 hover:bg-white/60"
+              )}
+            >
+              <CalendarDays size={14} />
+              {isMultiDateMode ? 'Multi-Date Mode ON' : 'Multi-Date Mode OFF'}
+            </button>
+            
+            {isMultiDateMode && selectedDates.length > 0 && (
+              <button 
+                onClick={handleSendToBilling}
+                className="flex items-center gap-2 px-4 py-2 bg-emerald-500 text-white rounded-xl text-xs font-black shadow-lg shadow-emerald-500/20"
               >
-                <span className="block text-[8px] font-black uppercase opacity-60">{format(d, 'EEE')}</span>
-                <span className="block text-xs font-black">{format(d, 'dd')}</span>
+                <Send size={14} /> Send {selectedDates.length} Days to Billing
               </button>
-            );
-          })}
-        </div>
+            )}
+          </div>
+
+          {isMultiDateMode && (
+            <div className="mb-5 grid grid-cols-4 sm:grid-cols-7 gap-2">
+              {Array.from({ length: 30 }).map((_, i) => {
+                const d = new Date();
+                d.setDate(d.getDate() - i);
+                const dateStr = d.toISOString().split('T')[0];
+                const isSelected = selectedDates.includes(dateStr);
+                return (
+                  <button
+                    key={dateStr}
+                    onClick={() => toggleDateSelection(dateStr)}
+                    className={clsx(
+                      "p-2 rounded-xl border transition-all text-center",
+                      isSelected ? "bg-indigo-500 border-indigo-500 text-white shadow-md" : "bg-white border-slate-100 text-slate-500 hover:border-indigo-200"
+                    )}
+                  >
+                    <span className="block text-[8px] font-black uppercase opacity-60">{format(d, 'EEE')}</span>
+                    <span className="block text-xs font-black">{format(d, 'dd')}</span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </>
       )}
 
       {/* ── Sticky Nav & Search ── */}
