@@ -48,7 +48,7 @@ export const CourierExchange = () => {
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
   const [filterType, setFilterType] = useState<'all' | 'inward' | 'outward'>('all');
-  const [filterDate, setFilterDate] = useState('');
+  const [filterDate, setFilterDate] = useState(new Date().toISOString().split('T')[0]);
   const dateInputRef = useRef<HTMLInputElement>(null);
 
   
