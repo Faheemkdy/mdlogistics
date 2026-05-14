@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useToast } from '../../components/ui/Toast';
 import { Button } from '../../components/ui/Button';
@@ -48,6 +48,9 @@ export const CourierExchange = () => {
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
   const [filterType, setFilterType] = useState<'all' | 'inward' | 'outward'>('all');
+  const [filterDate, setFilterDate] = useState('');
+  const dateInputRef = useRef<HTMLInputElement>(null);
+
   
   // Data
   const [partners, setPartners] = useState<CourierPartner[]>([]);
@@ -66,6 +69,7 @@ export const CourierExchange = () => {
   const [logCount, setLogCount] = useState('');
   const [logShopName, setLogShopName] = useState('');
   const [logDate, setLogDate] = useState(new Date().toISOString().split('T')[0]);
+
 
   useEffect(() => {
     fetchPartners();
@@ -244,7 +248,8 @@ export const CourierExchange = () => {
     const matchesSearch = l.courier_partners.name.toLowerCase().includes(search.toLowerCase()) || 
                          (l.shop_name || '').toLowerCase().includes(search.toLowerCase());
     const matchesType = filterType === 'all' || l.type === filterType;
-    return matchesSearch && matchesType;
+    const matchesDate = !filterDate || l.date === filterDate;
+    return matchesSearch && matchesType && matchesDate;
   });
 
   return (
@@ -319,8 +324,8 @@ export const CourierExchange = () => {
             </button>
           </div>
 
-          <div className="flex items-center gap-2 flex-1 max-w-md">
-            <div className="relative flex-1">
+          <div className="flex flex-wrap items-center justify-end gap-3 flex-1 w-full">
+            <div className="relative flex-1 min-w-[150px] md:min-w-[200px]">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
               <input 
                 placeholder="Search courier or shop..."
@@ -328,6 +333,32 @@ export const CourierExchange = () => {
                 onChange={(e) => setSearch(e.target.value)}
                 className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-100 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20"
               />
+            </div>
+            
+            <div className="relative min-w-[180px]">
+              <div 
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 cursor-pointer z-10"
+                onClick={() => dateInputRef.current?.showPicker()}
+              >
+                <Calendar size={16} />
+              </div>
+              <input 
+                ref={dateInputRef}
+                type="date"
+                value={filterDate}
+                onChange={(e) => setFilterDate(e.target.value)}
+                className="w-full pl-10 pr-10 py-2.5 bg-slate-50 border border-slate-100 rounded-2xl text-sm text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500/20 [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:right-2 [&::-webkit-calendar-picker-indicator]:w-6 [&::-webkit-calendar-picker-indicator]:h-6 [&::-webkit-calendar-picker-indicator]:cursor-pointer"
+                title="Filter by Date"
+              />
+              {filterDate && (
+                <button 
+                  onClick={() => setFilterDate('')}
+                  className="absolute right-10 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 bg-white rounded-full p-0.5 shadow-sm z-10"
+                  title="Clear Date Filter"
+                >
+                  <X size={12} />
+                </button>
+              )}
             </div>
             <div className="flex gap-1">
               <button onClick={() => generateReport(0)} className="p-2.5 bg-slate-50 text-slate-600 rounded-xl hover:bg-slate-100 flex items-center justify-center min-w-[40px]" title="Today's Report"><Download size={18} /></button>
