@@ -56,7 +56,7 @@ const ProtectedRoute = ({ children, allowedRoles }: { children: React.ReactNode,
 };
 
 function AppRoutes() {
-  const { profile, isMasterAdmin } = useAuth();
+  const { profile, isMasterAdmin, loading } = useAuth();
 
   return (
     <Routes>
