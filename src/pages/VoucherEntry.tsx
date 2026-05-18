@@ -369,6 +369,7 @@ export const VoucherEntry = () => {
                                    placeholder="Qty"
                                    value={item.quantity || ''}
                                    onChange={(e) => updateItem(section.id, item.id, 'quantity', e.target.value)}
+                                   onWheel={(e) => e.currentTarget.blur()}
                                    className="w-full pl-9 pr-3 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-400"
                                  />
                               </div>
@@ -417,6 +418,7 @@ export const VoucherEntry = () => {
                                    placeholder="Qty"
                                    value={item.quantity || ''}
                                    onChange={(e) => updateItem(section.id, item.id, 'quantity', e.target.value)}
+                                   onWheel={(e) => e.currentTarget.blur()}
                                    className="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-700 text-center focus:outline-none focus:ring-2 focus:ring-emerald-400"
                                  />
                               </div>
@@ -426,6 +428,7 @@ export const VoucherEntry = () => {
                                    placeholder="Rs."
                                    value={item.amount || ''}
                                    onChange={(e) => updateItem(section.id, item.id, 'amount', e.target.value)}
+                                   onWheel={(e) => e.currentTarget.blur()}
                                    className="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-bold text-emerald-700 text-right focus:outline-none focus:ring-2 focus:ring-emerald-400"
                                  />
                               </div>
