@@ -1,13 +1,15 @@
 import React, { useState } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { LogOut, User, LayoutDashboard, Building2, Store, FileText, Users, Menu, X, Truck, Package, Receipt, ChevronRight, ClipboardList, BarChart2, AlertCircle, Compass, Shield } from 'lucide-react';
+import { LogOut, User, LayoutDashboard, Building2, Store, FileText, Users, Menu, X, Truck, Package, Receipt, ChevronRight, ClipboardList, BarChart2, AlertCircle, Compass, Shield, Palette } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { clsx } from 'clsx';
 import { Logo } from './ui/Logo';
 import { Modal } from './ui/Modal';
 import { Button } from './ui/Button';
 import { useOfflineSync } from '../hooks/useOfflineSync';
+import { ThemeSwitcher } from './ThemeSwitcher';
+import { useTheme } from '../context/ThemeContext';
 
 const NavItem = React.memo(({ to, icon: Icon, label, badge, isActive, onClick }: { to: string; icon: any; label: string; badge?: string; isActive: boolean; onClick: () => void }) => {
   return (
@@ -16,27 +18,27 @@ const NavItem = React.memo(({ to, icon: Icon, label, badge, isActive, onClick }:
       className={clsx(
         "w-full flex items-center gap-3 px-4 py-2.5 rounded-2xl transition-all duration-200 relative group",
         isActive
-          ? "bg-slate-900 text-white shadow-lg shadow-slate-200"
-          : "text-slate-500 hover:text-slate-900 hover:bg-slate-100"
+          ? "bg-primary-500 text-white shadow-lg shadow-primary-500/20"
+          : "text-surface-500 hover:text-surface-900 dark:hover:text-white hover:bg-surface-100 dark:hover:bg-surface-800"
       )}
     >
       <div className={clsx(
         "w-8 h-8 rounded-xl flex items-center justify-center transition-all duration-200 flex-shrink-0",
         isActive
-          ? "bg-white/10"
-          : "bg-slate-50 group-hover:bg-white shadow-sm"
+          ? "bg-white/20"
+          : "bg-surface-50 dark:bg-surface-800 group-hover:bg-white dark:group-hover:bg-surface-700 shadow-sm"
       )}>
         <Icon size={18} strokeWidth={isActive ? 2.5 : 2} />
       </div>
       <span className="font-bold text-sm flex-1 text-left tracking-tight">{label}</span>
       {badge && (
-        <span className="text-[10px] font-black px-2 py-0.5 bg-blue-500 text-white rounded-lg shadow-lg shadow-blue-200">{badge}</span>
+        <span className="text-[10px] font-black px-2 py-0.5 bg-primary-500 text-white rounded-lg shadow-lg shadow-primary-500/20">{badge}</span>
       )}
       {isActive && (
         <motion.div
           layoutId="activePill"
           transition={{ type: "spring", bounce: 0.2, duration: 0.3 }}
-          className="absolute left-0 w-1.5 h-6 bg-blue-500 rounded-r-full"
+          className="absolute left-0 w-1.5 h-6 bg-primary-500 rounded-r-full"
         />
       )}
     </button>
@@ -48,14 +50,18 @@ const SidebarContent = ({
   location,
   navigate,
   setIsSidebarOpen,
-  setShowLogoutConfirm
+  setShowLogoutConfirm,
+  setIsThemeOpen
 }: {
   profile: any;
   location: any;
   navigate: any;
   setIsSidebarOpen: (open: boolean) => void;
   setShowLogoutConfirm: (show: boolean) => void;
+  setIsThemeOpen: (show: boolean) => void;
 }) => {
+  const { mode } = useTheme();
+
   const confirmNavigation = (to: string) => {
     // Check for active drafts
     const drafts = [
@@ -79,13 +85,13 @@ const SidebarContent = ({
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex items-center gap-3 mb-8 px-2 pt-2 pb-6 border-b border-slate-100">
-        <div className="w-12 h-12 rounded-[1.25rem] bg-slate-900 flex items-center justify-center shadow-lg flex-shrink-0 overflow-hidden p-2.5">
+      <div className="flex items-center gap-3 mb-8 px-2 pt-2 pb-6 border-b border-surface-100 dark:border-surface-800">
+        <div className="w-12 h-12 rounded-[1.25rem] bg-primary-500 flex items-center justify-center shadow-lg flex-shrink-0 overflow-hidden p-2.5">
           <Logo showText={false} className="w-full h-full filter brightness-0 invert" />
         </div>
         <div className="min-w-0">
-          <h1 className="font-black text-xl text-slate-900 leading-none tracking-tighter">MD LOGISTICS</h1>
-          <p className="text-[10px] font-black text-blue-500 uppercase tracking-[0.2em] mt-1">Global Network</p>
+          <h1 className="font-black text-xl text-surface-900 dark:text-white leading-none tracking-tighter">MD LOGISTICS</h1>
+          <p className="text-[10px] font-black text-primary-500 uppercase tracking-[0.2em] mt-1">Global Network</p>
         </div>
         <button
           onClick={() => setIsSidebarOpen(false)}
@@ -134,16 +140,28 @@ const SidebarContent = ({
         )}
       </nav>
 
-      <div className="pt-6 border-t border-slate-100 space-y-4 mt-auto pb-4">
+      <div className="pt-6 border-t border-surface-200 dark:border-surface-800 space-y-4 mt-auto pb-4">
         <NavItem to="/profile" icon={User} label="Profile Settings" isActive={location.pathname === "/profile"} onClick={() => confirmNavigation("/profile")} />
 
-        <div className="mx-1 p-4 bg-slate-50/80 rounded-[2rem] border border-slate-100 flex items-center gap-3 shadow-sm">
-          <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-sm font-black text-white shadow-lg flex-shrink-0">
+        {profile?.username === 'md' && (
+          <button
+            onClick={() => { setIsThemeOpen(true); setIsSidebarOpen(false); }}
+            className="w-full flex items-center gap-3 px-4 py-2.5 rounded-2xl text-surface-500 hover:text-surface-900 dark:hover:text-white hover:bg-surface-100 dark:hover:bg-surface-800 transition-all font-bold text-sm group"
+          >
+            <div className="w-8 h-8 rounded-xl bg-surface-100 dark:bg-surface-800 group-hover:bg-surface-50 dark:group-hover:bg-surface-700 flex items-center justify-center transition-all flex-shrink-0 shadow-sm">
+              <Palette size={18} strokeWidth={2} className="text-surface-600 dark:text-surface-300" />
+            </div>
+            <span className="text-surface-600 dark:text-surface-300 group-hover:text-surface-900 dark:group-hover:text-white">Global Theme</span>
+          </button>
+        )}
+
+        <div className="mx-1 p-4 bg-surface-100/80 dark:bg-surface-800/80 rounded-[2rem] border border-surface-200 dark:border-surface-700/50 flex items-center gap-3 shadow-sm">
+          <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center text-sm font-black text-white shadow-lg flex-shrink-0">
             {profile?.username?.charAt(0).toUpperCase()}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-black text-slate-900 truncate tracking-tight">{profile?.username}</p>
-            <div className="flex items-center gap-1 text-[10px] text-blue-600 font-bold uppercase tracking-widest">
+            <p className="text-sm font-black text-surface-900 dark:text-white truncate tracking-tight">{profile?.username}</p>
+            <div className="flex items-center gap-1 text-[10px] text-primary-600 dark:text-primary-400 font-bold uppercase tracking-widest">
               <Shield size={10} /> {profile?.role}
             </div>
           </div>
@@ -151,9 +169,9 @@ const SidebarContent = ({
 
         <button
           onClick={() => setShowLogoutConfirm(true)}
-          className="w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl text-rose-500 hover:bg-rose-50 transition-all font-black text-sm group"
+          className="w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl text-rose-500 hover:bg-rose-500/10 transition-all font-black text-sm group"
         >
-          <div className="w-8 h-8 rounded-xl bg-rose-50 group-hover:bg-rose-100 flex items-center justify-center transition-colors">
+          <div className="w-8 h-8 rounded-xl bg-rose-500/10 group-hover:bg-rose-500/20 flex items-center justify-center transition-colors">
             <LogOut size={18} strokeWidth={2.5} />
           </div>
           Logout
@@ -170,7 +188,9 @@ export const Layout = () => {
     const mainRef = React.useRef<HTMLElement>(null);
     const [isSidebarOpen, setIsSidebarOpen] = React.useState(false);
     const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+    const [isThemeOpen, setIsThemeOpen] = useState(false);
     const { pendingCount, isOnline } = useOfflineSync();
+    const { mode } = useTheme();
 
     const handleSignOut = async () => {
       setShowLogoutConfirm(false);
@@ -186,7 +206,7 @@ export const Layout = () => {
     }, [location.pathname]);
 
     return (
-      <div className="min-h-screen bg-slate-50 flex overflow-hidden font-sans relative">
+      <div className="min-h-screen bg-surface-50 dark:bg-surface-950 flex overflow-hidden font-sans relative transition-colors duration-300">
 
         {/* Background Decorations for non-admin/desktop */}
         {profile?.role !== 'admin' && (
@@ -264,14 +284,14 @@ export const Layout = () => {
 
         {/* Mobile Header */}
         {(profile?.role === 'admin' || (profile?.role !== 'admin' && location.pathname !== '/')) && (
-          <div className="lg:hidden fixed top-0 left-0 right-0 z-[80] flex items-center justify-between px-6 py-4 pt-[calc(env(safe-area-inset-top)+12px)] bg-white/80 backdrop-blur-xl border-b border-slate-100 shadow-sm"
+          <div className="lg:hidden fixed top-0 left-0 right-0 z-[80] flex items-center justify-between px-6 py-4 pt-[calc(env(safe-area-inset-top)+12px)] bg-surface-50/80 dark:bg-surface-900/80 backdrop-blur-xl border-b border-surface-200 dark:border-surface-800 shadow-sm animate-fade-in"
           >
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-slate-900 flex items-center justify-center p-2 shadow-md">
+              <div className="w-10 h-10 rounded-xl bg-surface-900 dark:bg-surface-800 flex items-center justify-center p-2 shadow-md">
                 <Logo showText={false} className="filter brightness-0 invert" />
               </div>
               <div className="flex flex-col">
-                <span className="font-black tracking-tighter text-slate-900 leading-none">MD LOGISTICS</span>
+                <span className="font-black tracking-tighter text-surface-900 dark:text-white leading-none">MD LOGISTICS</span>
                 {pendingCount > 0 && (
                   <span className="text-[9px] font-black text-orange-500 uppercase tracking-widest mt-1 animate-pulse">
                     {pendingCount} Pending Sync
@@ -332,9 +352,9 @@ export const Layout = () => {
               isSidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
             )}
             style={{
-              background: 'rgba(255, 255, 255, 0.95)',
+              background: mode === 'dark' ? 'rgba(15, 23, 42, 0.95)' : 'rgba(255, 255, 255, 0.95)',
               backdropFilter: 'blur(30px)',
-              borderRight: '1px solid rgba(241, 245, 249, 1)'
+              borderRight: mode === 'dark' ? '1px solid rgba(30, 41, 59, 1)' : '1px solid rgba(241, 245, 249, 1)'
             }}
           >
             <SidebarContent
@@ -343,6 +363,7 @@ export const Layout = () => {
               navigate={navigate}
               setIsSidebarOpen={setIsSidebarOpen}
               setShowLogoutConfirm={setShowLogoutConfirm}
+              setIsThemeOpen={setIsThemeOpen}
             />
           </motion.aside>
         )}
@@ -387,13 +408,13 @@ export const Layout = () => {
               </motion.div>
             </div>
             <div className="space-y-2">
-              <h3 className="text-2xl font-black text-slate-900 tracking-tight">Sign Out?</h3>
-              <p className="text-slate-500 font-bold">Are you sure you want to terminate your current active session?</p>
+              <h3 className="text-2xl font-black text-surface-900 dark:text-white tracking-tight">Sign Out?</h3>
+              <p className="text-surface-500 dark:text-surface-400 font-bold">Are you sure you want to terminate your current active session?</p>
             </div>
             <div className="flex gap-4">
               <button
                 onClick={() => setShowLogoutConfirm(false)}
-                className="flex-1 py-4 bg-slate-100 text-slate-900 font-black rounded-2xl hover:bg-slate-200 transition-all active:scale-95"
+                className="flex-1 py-4 bg-surface-100 dark:bg-surface-800 text-surface-900 dark:text-white font-black rounded-2xl hover:bg-slate-200 transition-all active:scale-95"
               >
                 Cancel
               </button>
@@ -406,6 +427,8 @@ export const Layout = () => {
             </div>
           </div>
         </Modal>
+
+        <ThemeSwitcher isOpen={isThemeOpen} onClose={() => setIsThemeOpen(false)} />
       </div>
     );
   };

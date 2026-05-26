@@ -126,48 +126,48 @@ export const UserDashboard = () => {
 
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] text-slate-900 font-sans selection:bg-blue-100 selection:text-blue-900 overflow-x-hidden">
+    <div className="min-h-screen bg-surface-100 dark:bg-surface-950 text-surface-900 dark:text-white font-sans selection:bg-primary-100 selection:text-primary-900 overflow-x-hidden transition-colors duration-300">
       {/* Background Decorative Elements */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
-        <div className="absolute top-[-10%] left-[-5%] w-[40%] h-[40%] bg-blue-100/40 rounded-full blur-[120px]" />
-        <div className="absolute bottom-[-10%] right-[-5%] w-[40%] h-[40%] bg-teal-100/30 rounded-full blur-[120px]" />
+        <div className="absolute top-[-10%] left-[-5%] w-[40%] h-[40%] bg-primary-100/20 dark:bg-primary-950/10 rounded-full blur-[120px]" />
+        <div className="absolute bottom-[-10%] right-[-5%] w-[40%] h-[40%] bg-primary-200/10 dark:bg-primary-900/5 rounded-full blur-[120px]" />
       </div>
 
       <div className="relative z-10 max-w-7xl mx-auto px-3 lg:px-8 py-8 lg:py-12">
         {/* Top Header Section */}
-        <header className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12">
+        <header className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12 bg-surface-50/55 dark:bg-surface-900/55 backdrop-blur-md p-6 rounded-[2.5rem] border border-surface-200/40 dark:border-surface-800/40">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-600 to-teal-500 flex items-center justify-center shadow-lg shadow-blue-500/20 text-white font-black text-xl">
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center shadow-lg shadow-primary-500/20 text-white font-black text-xl">
               MD
             </div>
             <div>
               <h1 className="text-2xl font-black tracking-tight flex items-center gap-2">
-                MD <span className="text-teal-600">Logistics</span>
+                MD <span className="text-primary-600 dark:text-primary-400">Logistics</span>
               </h1>
               <div className="flex items-center gap-2 mt-1">
                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Active Now: {profile?.username}</span>
+                <span className="text-[10px] font-bold text-surface-400 dark:text-surface-500 uppercase tracking-widest">Active Now: {profile?.username}</span>
               </div>
             </div>
           </div>
 
           <div className="flex items-center gap-3">
             <div className="hidden sm:flex flex-col items-end mr-2 text-right">
-              <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Welcome back</p>
-              <p className="text-sm font-black text-slate-800">{profile?.username}</p>
+              <p className="text-xs font-bold text-surface-400 dark:text-surface-500 uppercase tracking-wider">Welcome back</p>
+              <p className="text-sm font-black text-surface-800 dark:text-white">{profile?.username}</p>
             </div>
-            <div className="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center text-slate-600 font-black border-2 border-white shadow-sm overflow-hidden">
+            <div className="w-10 h-10 rounded-full bg-surface-200 dark:bg-surface-800 flex items-center justify-center text-surface-600 dark:text-surface-300 font-black border-2 border-surface-50 shadow-sm overflow-hidden">
                {profile?.username?.charAt(0).toUpperCase()}
             </div>
             <button 
               onClick={() => navigate('/profile')}
-              className="px-4 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-50 transition-all shadow-sm"
+              className="px-4 py-2 bg-surface-50 dark:bg-surface-800 border border-surface-200 dark:border-surface-700 rounded-xl text-xs font-bold text-surface-600 dark:text-surface-300 hover:bg-surface-100 dark:hover:bg-surface-700 transition-all shadow-sm"
             >
               Profile
             </button>
             <button 
               onClick={() => setShowLogoutConfirm(true)}
-              className="px-4 py-2 bg-slate-800 text-white rounded-xl text-xs font-bold hover:bg-slate-900 transition-all shadow-md shadow-slate-900/10"
+              className="px-4 py-2 bg-rose-500 text-white rounded-xl text-xs font-bold hover:bg-rose-600 transition-all shadow-md shadow-rose-500/10"
             >
               Logout
             </button>
@@ -179,9 +179,9 @@ export const UserDashboard = () => {
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="inline-flex items-center gap-2 px-4 py-1.5 bg-blue-50 border border-blue-100 rounded-full text-blue-600 text-[10px] font-black uppercase tracking-widest mb-6"
+            className="inline-flex items-center gap-2 px-4 py-1.5 bg-primary-50 dark:bg-primary-950/20 border border-primary-100 dark:border-primary-900/30 rounded-full text-primary-600 dark:text-primary-400 text-[10px] font-black uppercase tracking-widest mb-6"
           >
-            <Zap size={14} className="fill-blue-600" />
+            <Zap size={14} className="fill-primary-600 dark:fill-primary-400" />
             Operations Dashboard
           </motion.div>
           
@@ -189,16 +189,16 @@ export const UserDashboard = () => {
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.1 }}
-            className="text-5xl lg:text-7xl font-black tracking-tighter text-slate-900 mb-6"
+            className="text-5xl lg:text-7xl font-black tracking-tighter text-surface-900 dark:text-white mb-6"
           >
-            MD <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-teal-500">Logistics</span>
+            MD <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary-500 to-primary-600">Logistics</span>
           </motion.h2>
           
           <motion.p 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.2 }}
-            className="text-slate-500 font-medium text-lg max-w-2xl mx-auto"
+            className="text-surface-500 dark:text-surface-400 font-medium text-lg max-w-2xl mx-auto"
           >
             Manage your courier operations with precision and speed.
           </motion.p>
@@ -212,16 +212,16 @@ export const UserDashboard = () => {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 * idx }}
-              className="bg-white/80 backdrop-blur-xl border border-white p-6 rounded-[2rem] shadow-premium"
+              className="bg-surface-50/80 dark:bg-surface-900/80 backdrop-blur-xl border border-surface-200/40 dark:border-surface-800/40 p-6 rounded-[2rem] shadow-premium"
             >
               <div className="flex flex-col items-center text-center">
-                <p className="text-3xl font-black text-slate-900 mb-1">{stat.value}</p>
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">{stat.label}</p>
+                <p className="text-3xl font-black text-surface-900 dark:text-white mb-1">{stat.value}</p>
+                <p className="text-[10px] font-bold text-surface-400 dark:text-surface-500 uppercase tracking-widest mb-3">{stat.label}</p>
                 {stat.trend && (
                   <div className={clsx(
                     "px-3 py-1 rounded-full text-[10px] font-black",
-                    stat.trendUp === true ? "bg-emerald-50 text-emerald-600" : 
-                    stat.trendUp === false ? "bg-red-50 text-red-600" : "bg-slate-50 text-slate-500"
+                    stat.trendUp === true ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" : 
+                    stat.trendUp === false ? "bg-red-500/10 text-red-600 dark:text-red-400" : "bg-surface-100 dark:bg-surface-800 text-surface-500 dark:text-surface-400"
                   )}>
                     {stat.trend}
                   </div>
@@ -237,28 +237,28 @@ export const UserDashboard = () => {
           <motion.div
             whileHover={{ y: -8 }}
             onClick={() => navigate('/pickup')}
-            className="group cursor-pointer bg-white/40 backdrop-blur-xl border border-white/60 p-8 rounded-[3rem] shadow-premium hover:shadow-2xl hover:shadow-blue-500/5 transition-all duration-500 overflow-hidden relative"
+            className="group cursor-pointer bg-surface-50/40 dark:bg-surface-900/40 backdrop-blur-xl border border-surface-200/50 dark:border-surface-800/50 p-8 rounded-[3rem] shadow-premium hover:shadow-2xl hover:shadow-primary-500/5 transition-all duration-500 overflow-hidden relative"
           >
             <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity">
-               <Package size={160} strokeWidth={0.5} />
+               <Package size={160} strokeWidth={0.5} className="text-surface-800 dark:text-surface-200" />
             </div>
             
             <div className="relative z-10 flex flex-col items-center text-center">
-              <div className="w-20 h-20 rounded-[1.5rem] bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white shadow-xl shadow-blue-500/20 mb-8 transform group-hover:rotate-6 transition-transform">
+              <div className="w-20 h-20 rounded-[1.5rem] bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center text-white shadow-xl shadow-primary-500/20 mb-8 transform group-hover:rotate-6 transition-transform">
                 <Package size={40} />
               </div>
-              <p className="text-[10px] font-black text-blue-500 uppercase tracking-[0.3em] mb-2">Inventory Management</p>
-              <h3 className="text-3xl font-black text-slate-800 mb-4">New Pickup</h3>
-              <p className="text-slate-400 font-medium text-sm max-w-xs mb-8">
+              <p className="text-[10px] font-black text-primary-500 uppercase tracking-[0.3em] mb-2">Inventory Management</p>
+              <h3 className="text-3xl font-black text-surface-900 dark:text-white mb-4">New Pickup</h3>
+              <p className="text-surface-500 dark:text-surface-400 font-medium text-sm max-w-xs mb-8">
                 Schedule package collections from sender locations across your network.
               </p>
               
               <div className="flex items-center justify-between w-full mt-4">
                 <div className="text-left">
-                  <p className="text-2xl font-black text-slate-800">{statsData.pendingToday}</p>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Pending Today</p>
+                  <p className="text-2xl font-black text-surface-900 dark:text-white">{statsData.pendingToday}</p>
+                  <p className="text-[10px] font-bold text-surface-400 dark:text-surface-500 uppercase tracking-widest">Pending Today</p>
                 </div>
-                <div className="w-12 h-12 rounded-full border-2 border-slate-100 flex items-center justify-center text-slate-400 group-hover:bg-blue-600 group-hover:text-white group-hover:border-blue-600 transition-all">
+                <div className="w-12 h-12 rounded-full border-2 border-surface-200 dark:border-surface-800 flex items-center justify-center text-surface-400 dark:text-surface-500 group-hover:bg-primary-600 group-hover:text-white group-hover:border-primary-600 transition-all">
                   <ChevronRight size={24} />
                 </div>
               </div>
@@ -269,28 +269,28 @@ export const UserDashboard = () => {
           <motion.div
             whileHover={{ y: -8 }}
             onClick={() => navigate('/delivery')}
-            className="group cursor-pointer bg-white/40 backdrop-blur-xl border border-white/60 p-8 rounded-[3rem] shadow-premium hover:shadow-2xl hover:shadow-teal-500/5 transition-all duration-500 overflow-hidden relative"
+            className="group cursor-pointer bg-surface-50/40 dark:bg-surface-900/40 backdrop-blur-xl border border-surface-200/50 dark:border-surface-800/50 p-8 rounded-[3rem] shadow-premium hover:shadow-2xl hover:shadow-primary-500/5 transition-all duration-500 overflow-hidden relative"
           >
             <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity">
-               <Truck size={160} strokeWidth={0.5} />
+               <Truck size={160} strokeWidth={0.5} className="text-surface-800 dark:text-surface-200" />
             </div>
 
             <div className="relative z-10 flex flex-col items-center text-center">
-              <div className="w-20 h-20 rounded-[1.5rem] bg-gradient-to-br from-teal-500 to-teal-600 flex items-center justify-center text-white shadow-xl shadow-teal-500/20 mb-8 transform group-hover:-rotate-6 transition-transform">
+              <div className="w-20 h-20 rounded-[1.5rem] bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center text-white shadow-xl shadow-primary-500/20 mb-8 transform group-hover:-rotate-6 transition-transform">
                 <Truck size={40} />
               </div>
-              <p className="text-[10px] font-black text-teal-600 uppercase tracking-[0.3em] mb-2">Client Fulfillment</p>
-              <h3 className="text-3xl font-black text-slate-800 mb-4">New Delivery</h3>
-              <p className="text-slate-400 font-medium text-sm max-w-xs mb-8">
+              <p className="text-[10px] font-black text-primary-600 dark:text-primary-400 uppercase tracking-[0.3em] mb-2">Client Fulfillment</p>
+              <h3 className="text-3xl font-black text-surface-900 dark:text-white mb-4">New Delivery</h3>
+              <p className="text-surface-500 dark:text-surface-400 font-medium text-sm max-w-xs mb-8">
                 Dispatch and track outbound deliveries to their final destinations.
               </p>
               
               <div className="flex items-center justify-between w-full mt-4">
                 <div className="text-left">
-                  <p className="text-2xl font-black text-slate-800">{statsData.inTransit}</p>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">In Transit</p>
+                  <p className="text-2xl font-black text-surface-900 dark:text-white">{statsData.inTransit}</p>
+                  <p className="text-[10px] font-bold text-surface-400 dark:text-surface-500 uppercase tracking-widest">In Transit</p>
                 </div>
-                <div className="w-12 h-12 rounded-full border-2 border-slate-100 flex items-center justify-center text-slate-400 group-hover:bg-teal-600 group-hover:text-white group-hover:border-teal-600 transition-all">
+                <div className="w-12 h-12 rounded-full border-2 border-surface-200 dark:border-surface-800 flex items-center justify-center text-surface-400 dark:text-surface-500 group-hover:bg-primary-600 group-hover:text-white group-hover:border-primary-600 transition-all">
                   <ChevronRight size={24} />
                 </div>
               </div>
@@ -301,10 +301,10 @@ export const UserDashboard = () => {
         {/* Bottom Data Section */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Recent Shipments */}
-          <div className="bg-white/80 backdrop-blur-xl border border-white p-8 rounded-[3rem] shadow-premium">
+          <div className="bg-surface-50/80 dark:bg-surface-900/80 backdrop-blur-xl border border-surface-200/40 dark:border-surface-800/40 p-8 rounded-[3rem] shadow-premium">
             <div className="flex items-center justify-between mb-8">
-              <h3 className="text-xl font-black text-slate-800">Recent Shipments</h3>
-              <button onClick={() => navigate('/today-activity')} className="text-[10px] font-black text-blue-600 uppercase tracking-widest hover:underline">View All</button>
+              <h3 className="text-xl font-black text-surface-900 dark:text-white">Recent Shipments</h3>
+              <button onClick={() => navigate('/today-activity')} className="text-[10px] font-black text-primary-600 dark:text-primary-400 uppercase tracking-widest hover:underline">View All</button>
             </div>
             
             <div className="space-y-6">
@@ -315,41 +315,41 @@ export const UserDashboard = () => {
                       <Package size={18} />
                     </div>
                     <div>
-                      <p className="text-sm font-black text-slate-800">{item.id}</p>
-                      <p className="text-[10px] font-medium text-slate-400">→ {item.location}</p>
+                      <p className="text-sm font-black text-surface-900 dark:text-white">{item.id}</p>
+                      <p className="text-[10px] font-medium text-surface-400 dark:text-surface-500">→ {item.location}</p>
                     </div>
                   </div>
                   <div className={clsx(
                     "px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-wider",
-                    item.status === 'Delivered' ? "bg-emerald-100 text-emerald-700" :
-                    item.status === 'In Transit' ? "bg-blue-100 text-blue-700" : "bg-amber-100 text-amber-700"
+                    item.status === 'Delivered' ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" :
+                    item.status === 'In Transit' ? "bg-primary-500/10 text-primary-600 dark:text-primary-400" : "bg-amber-500/10 text-amber-600 dark:text-amber-400"
                   )}>
                     {item.status}
                   </div>
                 </div>
               )) : (
                 <div className="text-center py-8">
-                  <p className="text-slate-400 text-sm font-medium">No recent shipments found.</p>
+                  <p className="text-surface-450 dark:text-surface-400 text-sm font-medium">No recent shipments found.</p>
                 </div>
               )}
             </div>
           </div>
 
           {/* Weekly Deliveries Chart */}
-          <div className="bg-white/80 backdrop-blur-xl border border-white p-8 rounded-[3rem] shadow-premium">
+          <div className="bg-surface-50/80 dark:bg-surface-900/80 backdrop-blur-xl border border-surface-200/40 dark:border-surface-800/40 p-8 rounded-[3rem] shadow-premium">
             <div className="flex items-center justify-between mb-2">
-              <h3 className="text-xl font-black text-slate-800">Weekly Deliveries</h3>
-              <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">This Week</div>
+              <h3 className="text-xl font-black text-surface-900 dark:text-white">Weekly Deliveries</h3>
+              <div className="text-[10px] font-black text-surface-400 dark:text-surface-500 uppercase tracking-widest">This Week</div>
             </div>
             
             <div className="mb-8">
               <div className="flex items-baseline gap-2">
-                <span className="text-3xl font-black text-slate-800">
+                <span className="text-3xl font-black text-surface-900 dark:text-white">
                   {statsData.weeklyData.reduce((acc, curr) => acc + curr.value, 0)}
                 </span>
-                <span className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">Updated Live</span>
+                <span className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest">Updated Live</span>
               </div>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total Last 7 Days</p>
+              <p className="text-[10px] font-bold text-surface-400 dark:text-surface-500 tracking-widest uppercase">Total Last 7 Days</p>
             </div>
             
             <div className="flex items-end justify-between gap-2 h-40 pt-4">
@@ -363,12 +363,12 @@ export const UserDashboard = () => {
                       transition={{ delay: 0.1 * idx, duration: 1, ease: "easeOut" }}
                       className={clsx(
                         "w-full rounded-t-lg transition-all duration-500",
-                        data.highlight ? "bg-gradient-to-t from-teal-400 to-teal-300" : "bg-slate-100"
+                        data.highlight ? "bg-gradient-to-t from-primary-500 to-primary-400" : "bg-surface-200 dark:bg-surface-800"
                       )}
                     />
                     <span className={clsx(
-                      "text-[9px] font-bold uppercase tracking-tighter",
-                      data.highlight ? "text-teal-600" : "text-slate-400"
+                       "text-[9px] font-bold uppercase tracking-tighter",
+                       data.highlight ? "text-primary-600 dark:text-primary-400" : "text-surface-400 dark:text-surface-500"
                     )}>
                       {data.day}
                     </span>
@@ -380,8 +380,8 @@ export const UserDashboard = () => {
         </div>
 
         {/* Footer */}
-        <footer className="mt-16 text-center text-slate-400">
-           <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/50 border border-white rounded-full text-[9px] font-black uppercase tracking-widest shadow-sm">
+        <footer className="mt-16 text-center text-surface-400 dark:text-surface-500">
+           <div className="inline-flex items-center gap-2 px-4 py-2 bg-surface-50/50 dark:bg-surface-900/50 border border-surface-200/50 dark:border-surface-800/50 rounded-full text-[9px] font-black uppercase tracking-widest shadow-sm">
              <CheckCircle2 size={12} className="text-emerald-500" />
              MD Logistics System Status: Operational
            </div>
@@ -395,25 +395,25 @@ export const UserDashboard = () => {
         title="Confirm Logout"
       >
         <div className="text-center space-y-6 p-4">
-          <div className="w-20 h-20 bg-red-50 rounded-[2rem] flex items-center justify-center mx-auto text-red-500 shadow-inner">
+          <div className="w-20 h-20 bg-rose-500/10 rounded-[2rem] flex items-center justify-center mx-auto text-rose-500 shadow-inner">
             <AlertCircle size={40} />
           </div>
           <div>
-            <h3 className="text-xl font-black text-slate-800">Are you sure?</h3>
-            <p className="text-slate-500 font-medium mt-1">You will need to login again to access your account.</p>
+            <h3 className="text-xl font-black text-surface-900 dark:text-white">Are you sure?</h3>
+            <p className="text-surface-500 dark:text-surface-400 font-medium mt-1">You will need to login again to access your account.</p>
           </div>
           <div className="flex gap-3">
             <Button 
               variant="secondary" 
               onClick={() => setShowLogoutConfirm(false)}
-              className="flex-1 py-4 font-black rounded-2xl"
+              className="flex-1 py-4 font-black rounded-2xl animate-pulse"
             >
               Cancel
             </Button>
             <Button 
               variant="danger" 
               onClick={handleSignOut}
-              className="flex-1 py-4 font-black bg-red-500 text-white shadow-lg shadow-red-500/30 rounded-2xl"
+              className="flex-1 py-4 font-black bg-rose-500 text-white shadow-lg shadow-rose-500/30 rounded-2xl"
             >
               Logout
             </Button>

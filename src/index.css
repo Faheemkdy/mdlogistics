@@ -3,12 +3,222 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    /* Base Surface - Light Mode (Slate) */
+    --color-surface-50: #f8fafc;
+    --color-surface-100: #f1f5f9;
+    --color-surface-200: #e2e8f0;
+    --color-surface-300: #cbd5e1;
+    --color-surface-400: #94a3b8;
+    --color-surface-500: #64748b;
+    --color-surface-600: #475569;
+    --color-surface-700: #334155;
+    --color-surface-800: #1e293b;
+    --color-surface-900: #0f172a;
+    --color-surface-950: #020617;
+  }
+
+  .dark {
+    /* Base Surface - Dark Mode (Slate) */
+    --color-surface-50: #020617;
+    --color-surface-100: #0f172a;
+    --color-surface-200: #1e293b;
+    --color-surface-300: #334155;
+    --color-surface-400: #475569;
+    --color-surface-500: #64748b;
+    --color-surface-600: #94a3b8;
+    --color-surface-700: #cbd5e1;
+    --color-surface-800: #e2e8f0;
+    --color-surface-900: #f1f5f9;
+    --color-surface-950: #f8fafc;
+  }
+
+  /* 1. Theme: Blue (Default) */
+  .theme-blue { --color-primary-50: #eff6ff; --color-primary-100: #dbeafe; --color-primary-200: #bfdbfe; --color-primary-300: #93c5fd; --color-primary-400: #60a5fa; --color-primary-500: #3b82f6; --color-primary-600: #2563eb; --color-primary-700: #1d4ed8; --color-primary-800: #1e40af; --color-primary-900: #1e3a8a; }
+  /* 2. Theme: Indigo */
+  .theme-indigo { --color-primary-50: #eef2ff; --color-primary-100: #e0e7ff; --color-primary-200: #c7d2fe; --color-primary-300: #a5b4fc; --color-primary-400: #818cf8; --color-primary-500: #6366f1; --color-primary-600: #4f46e5; --color-primary-700: #4338ca; --color-primary-800: #3730a3; --color-primary-900: #312e81; }
+  /* 3. Theme: Purple */
+  .theme-purple { --color-primary-50: #faf5ff; --color-primary-100: #f3e8ff; --color-primary-200: #e9d5ff; --color-primary-300: #d8b4fe; --color-primary-400: #c084fc; --color-primary-500: #a855f7; --color-primary-600: #9333ea; --color-primary-700: #7e22ce; --color-primary-800: #6b21a8; --color-primary-900: #581c87; }
+  /* 4. Theme: Rose */
+  .theme-rose { --color-primary-50: #fff1f2; --color-primary-100: #ffe4e6; --color-primary-200: #fecdd3; --color-primary-300: #fda4af; --color-primary-400: #fb7185; --color-primary-500: #f43f5e; --color-primary-600: #e11d48; --color-primary-700: #be123c; --color-primary-800: #9f1239; --color-primary-900: #881337; }
+  /* 5. Theme: Emerald */
+  .theme-emerald { --color-primary-50: #ecfdf5; --color-primary-100: #d1fae5; --color-primary-200: #a7f3d0; --color-primary-300: #6ee7b7; --color-primary-400: #34d399; --color-primary-500: #10b981; --color-primary-600: #059669; --color-primary-700: #047857; --color-primary-800: #065f46; --color-primary-900: #064e3b; }
+  /* 6. Theme: Teal */
+  .theme-teal { --color-primary-50: #f0fdfa; --color-primary-100: #ccfbf1; --color-primary-200: #99f6e4; --color-primary-300: #5eead4; --color-primary-400: #2dd4bf; --color-primary-500: #14b8a6; --color-primary-600: #0d9488; --color-primary-700: #0f766e; --color-primary-800: #115e59; --color-primary-900: #134e4a; }
+  /* 7. Theme: Cyan */
+  .theme-cyan { --color-primary-50: #ecfeff; --color-primary-100: #cffafe; --color-primary-200: #a5f3fc; --color-primary-300: #67e8f9; --color-primary-400: #22d3ee; --color-primary-500: #06b6d4; --color-primary-600: #0891b2; --color-primary-700: #0e7490; --color-primary-800: #155e75; --color-primary-900: #164e63; }
+  /* 8. Theme: Orange */
+  .theme-orange { --color-primary-50: #fff7ed; --color-primary-100: #ffedd5; --color-primary-200: #fed7aa; --color-primary-300: #fdba74; --color-primary-400: #fb923c; --color-primary-500: #f97316; --color-primary-600: #ea580c; --color-primary-700: #c2410c; --color-primary-800: #9a3412; --color-primary-900: #7c2d12; }
+  /* 9. Theme: Zinc */
+  .theme-zinc { --color-primary-50: #fafafa; --color-primary-100: #f4f4f5; --color-primary-200: #e4e4e7; --color-primary-300: #d4d4d8; --color-primary-400: #a1a1aa; --color-primary-500: #71717a; --color-primary-600: #52525b; --color-primary-700: #3f3f46; --color-primary-800: #27272a; --color-primary-900: #18181b; }
+  /* 10. Theme: Slate */
+  .theme-slate { --color-primary-50: #f8fafc; --color-primary-100: #f1f5f9; --color-primary-200: #e2e8f0; --color-primary-300: #cbd5e1; --color-primary-400: #94a3b8; --color-primary-500: #64748b; --color-primary-600: #475569; --color-primary-700: #334155; --color-primary-800: #1e293b; --color-primary-900: #0f172a; }
+  /* 11. Theme: Red */
+  .theme-red { --color-primary-50: #fef2f2; --color-primary-100: #fee2e2; --color-primary-200: #fecaca; --color-primary-300: #fca5a5; --color-primary-400: #f87171; --color-primary-500: #ef4444; --color-primary-600: #dc2626; --color-primary-700: #b91c1c; --color-primary-800: #991b1b; --color-primary-900: #7f1d1d; }
+  /* 12. Theme: Amber */
+  .theme-amber { --color-primary-50: #fffbeb; --color-primary-100: #fef3c7; --color-primary-200: #fde68a; --color-primary-300: #fcd34d; --color-primary-400: #fbbf24; --color-primary-500: #f59e0b; --color-primary-600: #d97706; --color-primary-700: #b45309; --color-primary-800: #92400e; --color-primary-900: #78350f; }
+  /* 13. Theme: Yellow */
+  .theme-yellow { --color-primary-50: #fefce8; --color-primary-100: #fef9c3; --color-primary-200: #fef08a; --color-primary-300: #fde047; --color-primary-400: #facc15; --color-primary-500: #eab308; --color-primary-600: #ca8a04; --color-primary-700: #a16207; --color-primary-800: #854d0e; --color-primary-900: #713f12; }
+  /* 14. Theme: Lime */
+  .theme-lime { --color-primary-50: #f7fee7; --color-primary-100: #ecfccb; --color-primary-200: #d9f99d; --color-primary-300: #bef264; --color-primary-400: #a3e635; --color-primary-500: #84cc16; --color-primary-600: #65a30d; --color-primary-700: #4d7c0f; --color-primary-800: #3f6212; --color-primary-900: #365314; }
+  /* 15. Theme: Green */
+  .theme-green { --color-primary-50: #f0fdf4; --color-primary-100: #dcfce7; --color-primary-200: #bbf7d0; --color-primary-300: #86efac; --color-primary-400: #4ade80; --color-primary-500: #22c55e; --color-primary-600: #16a34a; --color-primary-700: #15803d; --color-primary-800: #166534; --color-primary-900: #14532d; }
+  /* 16. Theme: Sky */
+  .theme-sky { --color-primary-50: #f0f9ff; --color-primary-100: #e0f2fe; --color-primary-200: #bae6fd; --color-primary-300: #7dd3fc; --color-primary-400: #38bdf8; --color-primary-500: #0ea5e9; --color-primary-600: #0284c7; --color-primary-700: #0369a1; --color-primary-800: #075985; --color-primary-900: #0c4a6e; }
+  /* 17. Theme: Violet */
+  .theme-violet { --color-primary-50: #f5f3ff; --color-primary-100: #ede9fe; --color-primary-200: #ddd6fe; --color-primary-300: #c4b5fd; --color-primary-400: #a78bfa; --color-primary-500: #8b5cf6; --color-primary-600: #7c3aed; --color-primary-700: #6d28d9; --color-primary-800: #5b21b6; --color-primary-900: #4c1d95; }
+  /* 18. Theme: Fuchsia */
+  .theme-fuchsia { --color-primary-50: #fdf4ff; --color-primary-100: #fae8ff; --color-primary-200: #f5d0fe; --color-primary-300: #f0abfc; --color-primary-400: #e879f9; --color-primary-500: #d946ef; --color-primary-600: #c026d3; --color-primary-700: #a21caf; --color-primary-800: #86198f; --color-primary-900: #701a75; }
+  /* 19. Theme: Pink */
+  .theme-pink { --color-primary-50: #fdf2f8; --color-primary-100: #fce7f3; --color-primary-200: #fbcfe8; --color-primary-300: #f9a8d4; --color-primary-400: #f472b6; --color-primary-500: #ec4899; --color-primary-600: #db2777; --color-primary-700: #be185d; --color-primary-800: #9d174d; --color-primary-900: #831843; }
+
+  /* --- DESIGN STYLES --- */
+  
+  /* 1. Modern (Default) */
+  .style-modern { 
+    --radius-none: 0px; --radius-sm: 0.25rem; --radius: 0.5rem; --radius-md: 0.75rem; --radius-lg: 1rem; --radius-xl: 1.25rem; --radius-2xl: 1.5rem; --radius-3xl: 2rem;
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05); --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1); --shadow-md: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1); --shadow-lg: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+    --font-sans: 'Inter', sans-serif;
+  }
+  
+  /* 2. Minimalist */
+  .style-minimalist { 
+    --radius-none: 0px; --radius-sm: 0px; --radius: 0px; --radius-md: 0px; --radius-lg: 0px; --radius-xl: 0px; --radius-2xl: 0px; --radius-3xl: 0px;
+    --shadow-sm: none; --shadow: none; --shadow-md: none; --shadow-lg: none;
+    --font-sans: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  }
+
+  /* 3. Glassmorphism */
+  .style-glassmorphism { 
+    --radius-none: 0px; --radius-sm: 0.5rem; --radius: 1rem; --radius-md: 1.25rem; --radius-lg: 1.5rem; --radius-xl: 2rem; --radius-2xl: 2.5rem; --radius-3xl: 3rem;
+    --shadow-sm: 0 4px 15px rgba(0, 0, 0, 0.03); --shadow: 0 8px 32px rgba(0, 0, 0, 0.07); --shadow-md: 0 12px 48px rgba(0, 0, 0, 0.1); --shadow-lg: 0 16px 64px rgba(0, 0, 0, 0.15);
+    --font-sans: 'Outfit', sans-serif;
+  }
+
+  /* 4. Material */
+  .style-material { 
+    --radius-none: 0px; --radius-sm: 4px; --radius: 4px; --radius-md: 8px; --radius-lg: 12px; --radius-xl: 16px; --radius-2xl: 24px; --radius-3xl: 32px;
+    --shadow-sm: 0px 2px 1px -1px rgba(0,0,0,0.2), 0px 1px 1px 0px rgba(0,0,0,0.14), 0px 1px 3px 0px rgba(0,0,0,0.12);
+    --shadow: 0px 3px 3px -2px rgba(0,0,0,0.2), 0px 3px 4px 0px rgba(0,0,0,0.14), 0px 1px 8px 0px rgba(0,0,0,0.12);
+    --shadow-md: 0px 6px 6px -3px rgba(0,0,0,0.2), 0px 10px 14px 1px rgba(0,0,0,0.14), 0px 4px 18px 3px rgba(0,0,0,0.12);
+    --shadow-lg: 0px 8px 10px -5px rgba(0,0,0,0.2), 0px 16px 24px 2px rgba(0,0,0,0.14), 0px 6px 30px 5px rgba(0,0,0,0.12);
+    --font-sans: 'Roboto', sans-serif;
+  }
+
+
+
+  /* 6. Neumorphism */
+  .style-neumorphism { 
+    --radius-none: 0px; --radius-sm: 8px; --radius: 12px; --radius-md: 16px; --radius-lg: 24px; --radius-xl: 32px; --radius-2xl: 40px; --radius-3xl: 48px;
+    --shadow-sm: 3px 3px 6px #d1d5db, -3px -3px 6px #ffffff;
+    --shadow: 6px 6px 12px #d1d5db, -6px -6px 12px #ffffff;
+    --shadow-md: 9px 9px 18px #d1d5db, -9px -9px 18px #ffffff;
+    --shadow-lg: 12px 12px 24px #d1d5db, -12px -12px 24px #ffffff;
+    --font-sans: 'Nunito', sans-serif;
+  }
+
+  /* 7. Corporate */
+  .style-corporate { 
+    --radius-none: 0px; --radius-sm: 2px; --radius: 3px; --radius-md: 4px; --radius-lg: 6px; --radius-xl: 8px; --radius-2xl: 12px; --radius-3xl: 16px;
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.08); --shadow: 0 2px 6px rgba(0,0,0,0.1); --shadow-md: 0 4px 12px rgba(0,0,0,0.12); --shadow-lg: 0 8px 24px rgba(0,0,0,0.14);
+    --font-sans: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  }
+
+  /* 8. Playful */
+  .style-playful { 
+    --radius-none: 0px; --radius-sm: 1rem; --radius: 1.5rem; --radius-md: 2rem; --radius-lg: 2.5rem; --radius-xl: 3rem; --radius-2xl: 4rem; --radius-3xl: 5rem;
+    --shadow-sm: 0 6px 0px rgba(0,0,0,0.1); --shadow: 0 8px 0px rgba(0,0,0,0.15); --shadow-md: 0 12px 0px rgba(0,0,0,0.2); --shadow-lg: 0 16px 0px rgba(0,0,0,0.2);
+    --font-sans: 'Quicksand', sans-serif;
+  }
+
+  /* 9. Elegance */
+  .style-elegance { 
+    --radius-none: 0px; --radius-sm: 0px; --radius: 2px; --radius-md: 4px; --radius-lg: 8px; --radius-xl: 12px; --radius-2xl: 16px; --radius-3xl: 20px;
+    --shadow-sm: 0 20px 40px -20px rgba(0,0,0,0.1); --shadow: 0 30px 60px -30px rgba(0,0,0,0.15); --shadow-md: 0 40px 80px -40px rgba(0,0,0,0.2); --shadow-lg: 0 50px 100px -50px rgba(0,0,0,0.25);
+    --font-sans: 'Playfair Display', serif;
+  }
+
+  /* 10. Terminal */
+  .style-terminal { 
+    --radius-none: 0px; --radius-sm: 0px; --radius: 0px; --radius-md: 0px; --radius-lg: 0px; --radius-xl: 0px; --radius-2xl: 0px; --radius-3xl: 0px;
+    --shadow-sm: none; --shadow: none; --shadow-md: none; --shadow-lg: none;
+    --font-sans: 'Fira Code', 'Courier New', monospace;
+  }
+
+  /* 11. MacOS */
+  .style-macos { 
+    --radius-none: 0px; --radius-sm: 6px; --radius: 10px; --radius-md: 14px; --radius-lg: 18px; --radius-xl: 24px; --radius-2xl: 32px; --radius-3xl: 40px;
+    --shadow-sm: 0 0 1px rgba(0,0,0,0.2), 0 2px 4px rgba(0,0,0,0.1); --shadow: 0 0 1px rgba(0,0,0,0.2), 0 5px 10px rgba(0,0,0,0.1); --shadow-md: 0 0 1px rgba(0,0,0,0.2), 0 15px 30px rgba(0,0,0,0.15); --shadow-lg: 0 0 1px rgba(0,0,0,0.2), 0 30px 60px rgba(0,0,0,0.2);
+    --font-sans: '-apple-system', BlinkMacSystemFont, sans-serif;
+  }
+
+  /* 12. Windows */
+  .style-windows { 
+    --radius-none: 0px; --radius-sm: 2px; --radius: 4px; --radius-md: 8px; --radius-lg: 12px; --radius-xl: 16px; --radius-2xl: 20px; --radius-3xl: 24px;
+    --shadow-sm: 0 2px 4px rgba(0,0,0,0.1); --shadow: 0 4px 8px rgba(0,0,0,0.15); --shadow-md: 0 8px 16px rgba(0,0,0,0.2); --shadow-lg: 0 16px 32px rgba(0,0,0,0.25);
+    --font-sans: 'Segoe UI Variable', 'Segoe UI', sans-serif;
+  }
+
+  /* 13. Mobile */
+  .style-mobile { 
+    --radius-none: 0px; --radius-sm: 12px; --radius: 16px; --radius-md: 20px; --radius-lg: 24px; --radius-xl: 32px; --radius-2xl: 40px; --radius-3xl: 48px;
+    --shadow-sm: 0 1px 2px rgba(0,0,0,0.05); --shadow: 0 2px 8px rgba(0,0,0,0.08); --shadow-md: 0 4px 16px rgba(0,0,0,0.1); --shadow-lg: 0 8px 24px rgba(0,0,0,0.12);
+    --font-sans: '-apple-system', sans-serif;
+  }
+
+  /* 14. Card-heavy */
+  .style-card-heavy { 
+    --radius-none: 0px; --radius-sm: 8px; --radius: 16px; --radius-md: 24px; --radius-lg: 32px; --radius-xl: 40px; --radius-2xl: 48px; --radius-3xl: 56px;
+    --shadow-sm: 0 2px 10px rgba(0,0,0,0.05); --shadow: 0 8px 20px rgba(0,0,0,0.08); --shadow-md: 0 16px 40px rgba(0,0,0,0.1); --shadow-lg: 0 24px 60px rgba(0,0,0,0.12);
+    --font-sans: 'Inter', sans-serif;
+  }
+
+  /* 15. Flat */
+  .style-flat { 
+    --radius-none: 0px; --radius-sm: 2px; --radius: 4px; --radius-md: 6px; --radius-lg: 8px; --radius-xl: 10px; --radius-2xl: 12px; --radius-3xl: 14px;
+    --shadow-sm: none; --shadow: none; --shadow-md: none; --shadow-lg: none;
+    --font-sans: 'Arial', sans-serif;
+  }
+
+  /* 16. Soft */
+  .style-soft { 
+    --radius-none: 0px; --radius-sm: 8px; --radius: 12px; --radius-md: 16px; --radius-lg: 24px; --radius-xl: 32px; --radius-2xl: 40px; --radius-3xl: 48px;
+    --shadow-sm: 0 4px 20px rgba(0,0,0,0.03); --shadow: 0 8px 30px rgba(0,0,0,0.05); --shadow-md: 0 12px 40px rgba(0,0,0,0.08); --shadow-lg: 0 20px 60px rgba(0,0,0,0.1);
+    --font-sans: 'Poppins', sans-serif;
+  }
+
+
+
+  /* 19. Cyberpunk */
+  .style-cyberpunk { 
+    --radius-none: 0px; --radius-sm: 0px; --radius: 2px; --radius-md: 4px; --radius-lg: 6px; --radius-xl: 8px; --radius-2xl: 10px; --radius-3xl: 12px;
+    --shadow-sm: 0 0 5px var(--color-primary-500); --shadow: 0 0 10px var(--color-primary-500); --shadow-md: 0 0 20px var(--color-primary-500); --shadow-lg: 0 0 40px var(--color-primary-500);
+    --font-sans: 'Rajdhani', sans-serif;
+  }
+
+  /* 20. 3D */
+  .style-3d { 
+    --radius-none: 0px; --radius-sm: 8px; --radius: 12px; --radius-md: 16px; --radius-lg: 20px; --radius-xl: 24px; --radius-2xl: 28px; --radius-3xl: 32px;
+    --shadow-sm: inset 0 2px 4px rgba(255,255,255,0.3), 0 2px 4px rgba(0,0,0,0.2);
+    --shadow: inset 0 4px 8px rgba(255,255,255,0.3), 0 4px 8px rgba(0,0,0,0.2);
+    --shadow-md: inset 0 6px 12px rgba(255,255,255,0.3), 0 8px 16px rgba(0,0,0,0.25);
+    --shadow-lg: inset 0 8px 16px rgba(255,255,255,0.3), 0 12px 24px rgba(0,0,0,0.3);
+    --font-sans: 'Arial Rounded MT Bold', sans-serif;
+  }
+
+  /* 21. Zen */
+  .style-zen { 
+    --radius-none: 0px; --radius-sm: 4px; --radius: 8px; --radius-md: 12px; --radius-lg: 16px; --radius-xl: 20px; --radius-2xl: 24px; --radius-3xl: 28px;
+    --shadow-sm: 0 10px 30px -10px rgba(0,0,0,0.05); --shadow: 0 20px 40px -15px rgba(0,0,0,0.05); --shadow-md: 0 30px 50px -20px rgba(0,0,0,0.08); --shadow-lg: 0 40px 60px -25px rgba(0,0,0,0.1);
+    --font-sans: 'Merriweather', serif;
+  }
+
   body {
-    @apply bg-[#e0e5ec] text-slate-700 min-h-screen;
+    @apply bg-surface-100 text-surface-900 min-h-screen transition-colors duration-300;
     /* Subtle 3D-like noise/gradient pattern */
     background-image: 
-      radial-gradient(at 0% 0%, rgba(255,255,255,0.5) 0px, transparent 50%),
-      radial-gradient(at 100% 100%, rgba(163,177,198,0.1) 0px, transparent 50%);
+      radial-gradient(at 0% 0%, rgba(255,255,255,0.2) 0px, transparent 50%),
+      radial-gradient(at 100% 100%, var(--color-primary-500) 0px, transparent 150%);
     background-attachment: scroll;
     background-repeat: no-repeat;
     background-size: cover;
