@@ -22,7 +22,7 @@ CREATE POLICY "Allow authenticated users to manage bills"
 -- As temporary allowance if app auth isn't fully strictly tied (similar to other tables)
 CREATE POLICY "Allow public access to bills"
     ON public.bills
-    FOR ALL
+    FOR SELECT
     USING (true);
 
 -- Trigger Function: Auto-delete old records after 3 months

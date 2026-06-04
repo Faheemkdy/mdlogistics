@@ -107,7 +107,6 @@ export const UserManagement = () => {
 
   // Edit State
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editUsername, setEditUsername] = useState('');
 
   // Password Reset State
   const [resetId, setResetId] = useState<string | null>(null);
@@ -201,17 +200,53 @@ export const UserManagement = () => {
 
   const startEdit = (user: any) => {
     setEditingId(user.id);
-    setEditUsername(user.username);
+    setUsername(user.username);
+    setRole(user.role || 'user');
     setResetId(null);
+    document.getElementById('create-user-form')?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  const saveEdit = async () => {
-    if (!editUsername.trim() || !editingId) return;
-    const { error } = await supabase.from('profiles').update({ username: editUsername }).eq('id', editingId);
-    if (error) { toast.error('Update failed', error.message); return; }
-    toast.success('Username updated!');
+  const saveEdit = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!username.trim() || !editingId) return;
+
+    if (password && password.length < 6) {
+      toast.warning('Password too short', 'Must be at least 6 characters.');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const { error: userError } = await supabase.from('profiles').update({ username, role }).eq('id', editingId);
+      if (userError) throw userError;
+
+      if (password) {
+        const { error: passError } = await supabase.rpc('update_user_password', {
+          target_user_id: editingId,
+          new_password: password
+        });
+        if (passError) throw passError;
+      }
+
+      toast.success('Member updated!', password ? 'Username and password updated.' : 'Username updated.');
+      
+      setEditingId(null);
+      setUsername('');
+      setPassword('');
+      setRole('user');
+      fetchUsers();
+    } catch (error: any) {
+      toast.error('Update failed', error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const cancelEdit = () => {
     setEditingId(null);
-    fetchUsers();
+    setUsername('');
+    setPassword('');
+    setRole('user');
   };
 
   const handlePasswordReset = async (userId: string) => {
@@ -313,8 +348,9 @@ export const UserManagement = () => {
       </motion.div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Create User Form - Light Card */}
+        {/* Create / Edit User Form - Light Card */}
         <motion.div
+          id="create-user-form"
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.1, ease: [0.23, 1, 0.32, 1] }}
@@ -325,15 +361,19 @@ export const UserManagement = () => {
           
           <div className="flex items-center gap-4 mb-8 relative">
             <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-indigo-600 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-blue-500/20">
-              <UserPlus size={24} strokeWidth={2.5} />
+              {editingId ? <Edit2 size={24} strokeWidth={2.5} /> : <UserPlus size={24} strokeWidth={2.5} />}
             </div>
             <div>
-              <h3 className="font-black text-xl text-slate-900 tracking-tight">New Member</h3>
-              <p className="text-slate-500 text-sm font-semibold">Onboard new staff</p>
+              <h3 className="font-black text-xl text-slate-900 tracking-tight">
+                {editingId ? 'Edit Member' : 'New Member'}
+              </h3>
+              <p className="text-slate-500 text-sm font-semibold">
+                {editingId ? 'Update user details' : 'Onboard new staff'}
+              </p>
             </div>
           </div>
 
-          <form onSubmit={handleCreateUser} className="space-y-6 relative">
+          <form onSubmit={editingId ? saveEdit : handleCreateUser} className="space-y-6 relative">
             <div className="space-y-2">
               <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Account Identity</label>
               <div className="relative group">
@@ -355,8 +395,8 @@ export const UserManagement = () => {
                   type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Secret Password"
-                  required
+                  placeholder={editingId ? "New password (optional)" : "Secret Password"}
+                  required={!editingId}
                   className="w-full pl-5 pr-14 py-4 bg-slate-50/50 border border-slate-100 rounded-2xl text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500/30 transition-all font-medium"
                 />
                 <button
@@ -404,22 +444,38 @@ export const UserManagement = () => {
               )}
             </AnimatePresence>
 
-            <motion.button
-              type="submit"
-              disabled={loading}
-              whileHover={{ scale: 1.02, y: -2 }}
-              whileTap={{ scale: 0.98 }}
-              className="w-full py-4 bg-slate-900 text-white font-black rounded-2xl hover:bg-blue-600 transition-all disabled:opacity-50 flex items-center justify-center gap-3 shadow-xl shadow-slate-200 mt-4 tracking-tight"
-            >
-              {loading ? (
-                <motion.div
-                  animate={{ rotate: 360 }}
-                  transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-                  className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full"
-                />
-              ) : <UserPlus size={20} strokeWidth={2.5} />}
-              {loading ? 'Processing...' : 'Register Member'}
-            </motion.button>
+            <div className="flex gap-3 mt-4">
+              <motion.button
+                type="submit"
+                disabled={loading}
+                whileHover={{ scale: 1.02, y: -2 }}
+                whileTap={{ scale: 0.98 }}
+                className="flex-1 py-4 bg-slate-900 text-white font-black rounded-2xl hover:bg-blue-600 transition-all disabled:opacity-50 flex items-center justify-center gap-3 shadow-xl shadow-slate-200 tracking-tight"
+              >
+                {loading ? (
+                  <motion.div
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                    className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full"
+                  />
+                ) : (
+                  editingId ? <Check size={20} strokeWidth={2.5} /> : <UserPlus size={20} strokeWidth={2.5} />
+                )}
+                {loading ? 'Processing...' : (editingId ? 'Update Member' : 'Register Member')}
+              </motion.button>
+              
+              {editingId && (
+                <motion.button
+                  type="button"
+                  onClick={cancelEdit}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  className="px-6 py-4 bg-slate-100 text-slate-600 font-black rounded-2xl hover:bg-slate-200 transition-all flex items-center justify-center gap-2"
+                >
+                  <X size={20} strokeWidth={2.5} />
+                </motion.button>
+              )}
+            </div>
           </form>
         </motion.div>
 
@@ -487,7 +543,7 @@ export const UserManagement = () => {
                   const isSelf = profile?.id === user.id;
 
                   return (
-                    <motion.div
+                     <motion.div
                       key={user.id}
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
@@ -500,7 +556,7 @@ export const UserManagement = () => {
                           : 'bg-white border-slate-100 hover:border-blue-200 hover:shadow-[0_8px_30px_rgb(0,0,0,0.04)]'
                       }`}
                     >
-                      <div className="flex items-center justify-between p-5 gap-4">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between p-5 gap-4">
                         <div className="flex items-center gap-4 min-w-0">
                           {/* User Avatar/Icon */}
                           <div className={`w-14 h-14 rounded-2xl flex items-center justify-center font-bold text-white shadow-sm flex-shrink-0 relative ${
@@ -518,63 +574,50 @@ export const UserManagement = () => {
                           </div>
 
                           <div className="min-w-0 flex-1">
-                            {editingId === user.id ? (
-                              <div className="relative">
-                                <input
-                                  value={editUsername}
-                                  onChange={(e) => setEditUsername(e.target.value)}
-                                  autoFocus
-                                  className="w-full px-3 py-1.5 bg-slate-50 border border-blue-200 rounded-xl text-slate-800 text-sm font-black focus:outline-none focus:ring-4 focus:ring-blue-500/10"
-                                />
-                                <div className="absolute right-2 top-1/2 -translate-y-1/2 flex gap-1">
-                                  <button onClick={saveEdit} className="p-1 text-emerald-500 hover:bg-emerald-50 rounded-lg transition-colors"><Check size={16} /></button>
-                                  <button onClick={() => setEditingId(null)} className="p-1 text-slate-400 hover:bg-slate-100 rounded-lg transition-colors"><X size={16} /></button>
-                                </div>
+                            <div className="space-y-1">
+                              <div className="flex items-center gap-2">
+                                <p className="font-black text-slate-900 truncate leading-tight tracking-tight">
+                                  {user.username}
+                                  {isSelf && <span className="ml-2 text-[10px] text-blue-500 bg-blue-50 px-1.5 py-0.5 rounded-md uppercase tracking-wider">You</span>}
+                                </p>
                               </div>
-                            ) : (
-                              <div className="space-y-1">
-                                <div className="flex items-center gap-2">
-                                  <p className="font-black text-slate-900 truncate leading-tight tracking-tight">
-                                    {user.username}
-                                    {isSelf && <span className="ml-2 text-[10px] text-blue-500 bg-blue-50 px-1.5 py-0.5 rounded-md uppercase tracking-wider">You</span>}
-                                  </p>
-                                </div>
-                                <div className="flex flex-wrap gap-2 items-center">
-                                  <span className={`text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-lg inline-flex items-center gap-1.5 ${
-                                    isMasterUser
-                                      ? 'bg-amber-50 text-amber-600 border border-amber-100'
-                                      : user.role === 'admin'
-                                        ? 'bg-rose-50 text-rose-600 border border-rose-100'
-                                        : 'bg-blue-50 text-blue-600 border border-blue-100'
-                                  }`}>
-                                    {isMasterUser ? 'Master Admin' : user.role === 'admin' ? 'Administrator' : 'Standard Staff'}
-                                  </span>
-                                  {isDeactivated && (
-                                    <span className="text-[10px] font-black uppercase tracking-widest px-2.5 py-1 bg-slate-100 text-slate-500 border border-slate-200 rounded-lg">Suspended</span>
-                                  )}
-                                </div>
+                              <div className="flex flex-wrap gap-2 items-center">
+                                <span className={`text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-lg inline-flex items-center gap-1.5 ${
+                                  isMasterUser
+                                    ? 'bg-amber-50 text-amber-600 border border-amber-100'
+                                    : user.role === 'admin'
+                                      ? 'bg-rose-50 text-rose-600 border border-rose-100'
+                                      : 'bg-blue-50 text-blue-600 border border-blue-100'
+                                }`}>
+                                  {isMasterUser ? 'Master Admin' : user.role === 'admin' ? 'Administrator' : 'Standard Staff'}
+                                </span>
+                                {isDeactivated && (
+                                  <span className="text-[10px] font-black uppercase tracking-widest px-2.5 py-1 bg-slate-100 text-slate-500 border border-slate-200 rounded-lg">Suspended</span>
+                                )}
                               </div>
-                            )}
+                            </div>
                           </div>
                         </div>
 
                         {/* Action Buttons */}
-                        <div className="flex items-center gap-1.5 bg-slate-50/80 p-2 rounded-2xl border border-slate-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all duration-300">
-                          <motion.button
-                            whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
-                            onClick={() => { setResetId(resetId === user.id ? null : user.id); setEditingId(null); }}
-                            className={`p-2.5 rounded-xl transition-all ${resetId === user.id ? 'bg-orange-500 text-white shadow-lg shadow-orange-200' : 'text-orange-500 hover:bg-orange-100'}`}
-                            title="Reset Password"
-                          >
-                            <KeyRound size={18} />
-                          </motion.button>
+                        <div className="flex flex-wrap items-center gap-2 bg-slate-50/80 p-2 rounded-2xl border border-slate-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all duration-300 w-full sm:w-auto justify-end sm:justify-start">
+                          {isMasterUser && (
+                            <motion.button
+                              whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
+                              onClick={() => { setResetId(resetId === user.id ? null : user.id); setEditingId(null); }}
+                              className={`p-2.5 rounded-xl transition-all ${resetId === user.id ? 'bg-orange-500 text-white shadow-lg shadow-orange-200' : 'text-orange-500 hover:bg-orange-100'}`}
+                              title="Reset Password"
+                            >
+                              <KeyRound size={18} />
+                            </motion.button>
+                          )}
                           
                           {!isMasterUser && (
                             <motion.button
                               whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
                               onClick={() => startEdit(user)}
                               className="p-2.5 text-blue-500 hover:bg-blue-100 rounded-xl transition-all"
-                              title="Edit Identity"
+                              title="Edit Member"
                             >
                               <Edit2 size={18} />
                             </motion.button>
@@ -607,9 +650,9 @@ export const UserManagement = () => {
                         </div>
                       </div>
 
-                      {/* Expandable Password Reset */}
+                      {/* Expandable Password Reset (Master User Only) */}
                       <AnimatePresence>
-                        {resetId === user.id && (
+                        {resetId === user.id && isMasterUser && (
                           <motion.div
                             initial={{ height: 0, opacity: 0 }}
                             animate={{ height: 'auto', opacity: 1 }}
@@ -617,56 +660,24 @@ export const UserManagement = () => {
                             className="bg-slate-50 border-t border-slate-100"
                           >
                             <div className="p-6">
-                              {isMasterUser ? (
-                                <div className="space-y-4">
-                                  <div className="flex items-center gap-3 text-orange-600 font-bold text-sm">
-                                    <AlertCircle size={18} />
-                                    <span>High-Security Account</span>
-                                  </div>
-                                  <p className="text-sm text-slate-500 font-medium leading-relaxed">
-                                    To reset the Master Admin password, a secure magic link will be sent to 
-                                    <span className="text-slate-900 font-bold ml-1">mdcourierkdy@gmail.com</span>.
-                                  </p>
-                                  <motion.button
-                                    whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
-                                    onClick={sendMasterAdminOTPLink}
-                                    className="w-full py-3.5 bg-orange-500 text-white font-black rounded-2xl hover:bg-orange-600 transition-all flex items-center justify-center gap-3 shadow-lg shadow-orange-100"
-                                  >
-                                    <Mail size={18} strokeWidth={2.5} />
-                                    Send Security Link
-                                  </motion.button>
+                              <div className="space-y-4">
+                                <div className="flex items-center gap-3 text-orange-600 font-bold text-sm">
+                                  <AlertCircle size={18} />
+                                  <span>High-Security Account</span>
                                 </div>
-                              ) : (
-                                <div className="space-y-4">
-                                  <p className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">New Security Credential</p>
-                                  <div className="flex flex-col sm:flex-row gap-3">
-                                    <div className="relative flex-1 group">
-                                      <input
-                                        type={showResetPassword ? "text" : "password"}
-                                        placeholder="Min 6 characters"
-                                        value={newPassword}
-                                        onChange={(e) => setNewPassword(e.target.value)}
-                                        className="w-full pl-12 pr-12 py-3.5 bg-white border border-slate-200 rounded-2xl text-sm font-bold focus:outline-none focus:ring-4 focus:ring-orange-500/10 focus:border-orange-500/30 transition-all"
-                                      />
-                                      <KeyRound size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-orange-400" />
-                                      <button
-                                        type="button"
-                                        onClick={() => setShowResetPassword(!showResetPassword)}
-                                        className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-600 p-1"
-                                      >
-                                        {showResetPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                                      </button>
-                                    </div>
-                                    <motion.button
-                                      whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
-                                      onClick={() => handlePasswordReset(user.id)}
-                                      className="px-8 py-3.5 bg-slate-900 text-white font-black rounded-2xl hover:bg-orange-500 transition-all shadow-lg shadow-slate-200 whitespace-nowrap"
-                                    >
-                                      Update Key
-                                    </motion.button>
-                                  </div>
-                                </div>
-                              )}
+                                <p className="text-sm text-slate-500 font-medium leading-relaxed">
+                                  To reset the Master Admin password, a secure magic link will be sent to 
+                                  <span className="text-slate-900 font-bold ml-1">mdcourierkdy@gmail.com</span>.
+                                </p>
+                                <motion.button
+                                  whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+                                  onClick={sendMasterAdminOTPLink}
+                                  className="w-full py-3.5 bg-orange-500 text-white font-black rounded-2xl hover:bg-orange-600 transition-all flex items-center justify-center gap-3 shadow-lg shadow-orange-100"
+                                >
+                                  <Mail size={18} strokeWidth={2.5} />
+                                  Send Security Link
+                                </motion.button>
+                              </div>
                             </div>
                           </motion.div>
                         )}
