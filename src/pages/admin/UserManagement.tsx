@@ -4,6 +4,7 @@ import { useToast } from '../../components/ui/Toast';
 import { UserPlus, CheckCircle, AlertCircle, Ban, Edit2, X, Check, User, KeyRound, Users, Search, Crown, CheckCircle2, Mail, Eye, EyeOff, Trash2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../../context/AuthContext';
+import { useSupabasePagination } from '../../hooks/useSupabasePagination';
 
 interface DeactivateModalProps {
   user: any;
@@ -94,16 +95,30 @@ const DeactivateModal: React.FC<DeactivateModalProps> = ({ user, onConfirm, onCa
 
 export const UserManagement = () => {
   const toast = useToast();
-  const [users, setUsers] = useState<any[]>([]);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [role, setRole] = useState<'admin' | 'user'>('user');
-  const [loading, setLoading] = useState(false);
-  const [fetchLoading, setFetchLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
-  const [searchQuery, setSearchQuery] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showResetPassword, setShowResetPassword] = useState(false);
+
+  const {
+    data: users,
+    loading: fetchLoading,
+    loadingMore,
+    searchQuery,
+    setSearchQuery,
+    loadMore,
+    hasMore,
+    totalCount,
+    refetch: fetchUsers
+  } = useSupabasePagination({
+    table: 'profiles',
+    searchFields: ['username', 'role'],
+    limit: 20
+  });
+
 
   // Edit State
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -120,25 +135,10 @@ export const UserManagement = () => {
   const { profile, isMasterAdmin } = useAuth();
   // removed redundant currentUserProfile state
 
-  useEffect(() => {
-    fetchUsers();
-  }, []);
-  
-  // Redundant getCurrentUser removed
-
-  const fetchUsers = async () => {
-    setFetchLoading(true);
-    const { data } = await supabase
-      .from('profiles')
-      .select('*')
-      .order('created_at', { ascending: false });
-    setUsers(data || []);
-    setFetchLoading(false);
-  };
 
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
+    setSubmitting(true);
     setMessage(null);
 
     try {
@@ -166,7 +166,7 @@ export const UserManagement = () => {
       setMessage({ type: 'error', text: err.message });
       toast.error('Create failed', err.message);
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
   };
 
@@ -215,7 +215,7 @@ export const UserManagement = () => {
       return;
     }
 
-    setLoading(true);
+    setSubmitting(true);
     try {
       const { error: userError } = await supabase.from('profiles').update({ username, role }).eq('id', editingId);
       if (userError) throw userError;
@@ -238,7 +238,7 @@ export const UserManagement = () => {
     } catch (error: any) {
       toast.error('Update failed', error.message);
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
   };
 
@@ -283,7 +283,7 @@ export const UserManagement = () => {
 
   const handleDeleteUser = async (userId: string) => {
     if (!window.confirm("Are you sure you want to permanently delete this user? This cannot be undone.")) return;
-    setLoading(true);
+    setSubmitting(true);
     try {
       const { data, error } = await supabase.rpc('delete_user_account', { target_user_id: userId });
       if (error) throw error;
@@ -293,14 +293,10 @@ export const UserManagement = () => {
     } catch (error: any) {
       toast.error('Deletion Failed', error.message || 'Could not delete user.');
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
   };
 
-  const filteredUsers = users.filter(u =>
-    u.username?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    u.role?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
 
   const adminCount = users.filter(u => u.role === 'admin').length;
   const staffCount = users.filter(u => u.role === 'user').length;
@@ -333,18 +329,11 @@ export const UserManagement = () => {
             <span>Manage organization access & permissions</span>
           </div>
         </div>
-        <div className="flex items-center gap-3">
           <div className="flex items-center gap-2.5 px-5 py-2.5 bg-white/60 backdrop-blur-md text-slate-700 rounded-2xl text-xs font-black border border-white shadow-sm">
             <Crown size={14} className="text-amber-500" />
-            <span className="opacity-70 uppercase tracking-widest">Admins:</span>
-            <span className="text-slate-900 text-sm">{adminCount}</span>
+            <span className="opacity-70 uppercase tracking-widest">Total Users:</span>
+            <span className="text-slate-900 text-sm">{totalCount}</span>
           </div>
-          <div className="flex items-center gap-2.5 px-5 py-2.5 bg-white/60 backdrop-blur-md text-slate-700 rounded-2xl text-xs font-black border border-white shadow-sm">
-            <Users size={14} className="text-blue-500" />
-            <span className="opacity-70 uppercase tracking-widest">Staff:</span>
-            <span className="text-slate-900 text-sm">{staffCount}</span>
-          </div>
-        </div>
       </motion.div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -447,12 +436,12 @@ export const UserManagement = () => {
             <div className="flex gap-3 mt-4">
               <motion.button
                 type="submit"
-                disabled={loading}
+                disabled={submitting}
                 whileHover={{ scale: 1.02, y: -2 }}
                 whileTap={{ scale: 0.98 }}
                 className="flex-1 py-4 bg-slate-900 text-white font-black rounded-2xl hover:bg-blue-600 transition-all disabled:opacity-50 flex items-center justify-center gap-3 shadow-xl shadow-slate-200 tracking-tight"
               >
-                {loading ? (
+                {submitting ? (
                   <motion.div
                     animate={{ rotate: 360 }}
                     transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
@@ -461,7 +450,7 @@ export const UserManagement = () => {
                 ) : (
                   editingId ? <Check size={20} strokeWidth={2.5} /> : <UserPlus size={20} strokeWidth={2.5} />
                 )}
-                {loading ? 'Processing...' : (editingId ? 'Update Member' : 'Register Member')}
+                {submitting ? 'Processing...' : (editingId ? 'Update Member' : 'Register Member')}
               </motion.button>
               
               {editingId && (
@@ -492,7 +481,7 @@ export const UserManagement = () => {
               <h3 className="font-black text-2xl text-slate-900 tracking-tight">
                 Organization
                 <span className="ml-2 text-sm font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-lg">
-                  {filteredUsers.length}
+                  {totalCount}
                 </span>
               </h3>
             </div>
@@ -524,7 +513,7 @@ export const UserManagement = () => {
                   />
                   <p className="text-slate-400 font-medium text-sm">Loading users...</p>
                 </motion.div>
-              ) : filteredUsers.length === 0 ? (
+              ) : users.length === 0 ? (
                 <motion.div
                   key="empty"
                   initial={{ opacity: 0 }}
@@ -537,7 +526,7 @@ export const UserManagement = () => {
                   <p className="text-slate-400 font-medium">No users found</p>
                 </motion.div>
               ) : (
-                filteredUsers.map((user, index) => {
+                users.map((user: any, index: number) => {
                   const isMasterUser = user.username === 'md';
                   const isDeactivated = user.is_active === false;
                   const isSelf = profile?.id === user.id;
@@ -687,6 +676,29 @@ export const UserManagement = () => {
                 })
               )}
             </AnimatePresence>
+            
+            {hasMore && (
+              <div className="pt-4 pb-8 flex justify-center">
+                <button
+                  onClick={loadMore}
+                  disabled={loadingMore}
+                  className="px-6 py-3 bg-white/80 backdrop-blur-md border border-slate-200 text-slate-600 rounded-2xl font-bold hover:bg-blue-50 hover:text-blue-600 transition-all shadow-sm flex items-center gap-2"
+                >
+                  {loadingMore ? (
+                    <>
+                      <motion.div
+                        animate={{ rotate: 360 }}
+                        transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                        className="w-4 h-4 border-2 border-blue-600/30 border-t-blue-600 rounded-full"
+                      />
+                      Loading more...
+                    </>
+                  ) : (
+                    'Load More Users'
+                  )}
+                </button>
+              </div>
+            )}
           </div>
         </motion.div>
       </div>

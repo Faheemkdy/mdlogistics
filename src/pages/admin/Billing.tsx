@@ -12,6 +12,7 @@ import { clsx } from 'clsx';
 import { supabase } from '../../lib/supabase';
 import { format } from 'date-fns';
 import { useAuth } from '../../context/AuthContext';
+import { useSupabasePagination } from '../../hooks/useSupabasePagination';
 
 export const Billing = () => {
   const { user } = useAuth();
@@ -20,11 +21,27 @@ export const Billing = () => {
   const [customerName, setCustomerName] = useState('');
   const [date, setDate] = useState(getStandardDate());
   
-  const [savedBills, setSavedBills] = useState<any[]>([]);
-  const [searchName, setSearchName] = useState('');
   const [searchDate, setSearchDate] = useState('');
-  const [loading, setLoading] = useState(false);
   const [editingBillId, setEditingBillId] = useState<string | null>(null);
+
+  const billingFilters = searchDate ? { date: searchDate } : {};
+
+  const {
+    data: savedBills,
+    loading,
+    loadingMore,
+    searchQuery: searchName,
+    setSearchQuery: setSearchName,
+    loadMore,
+    hasMore,
+    refetch: fetchSavedBills
+  } = useSupabasePagination({
+    table: 'bills',
+    searchFields: ['customer_name'],
+    limit: 20,
+    orderBy: { column: 'date', ascending: false },
+    filters: billingFilters
+  });
   const [deliveryItems, setDeliveryItems] = useState([
     { id: 1, description: '', q20: '', q25: '', q30: '', q35: '', q40: '', q50: '', total: 0, amount: '' }
   ]);
@@ -101,17 +118,6 @@ export const Billing = () => {
   const removeProductRow = (id: number) => { if (productItems.length > 1) setProductItems(prev => prev.filter(i => i.id !== id)); };
 
   // --- Database Logic ---
-  const fetchSavedBills = async () => {
-    setLoading(true);
-    let query = supabase.from('bills').select('*').order('date', { ascending: false });
-    if (searchName) query = query.ilike('customer_name', `%${searchName}%`);
-    if (searchDate) query = query.eq('date', searchDate);
-    
-    const { data, error } = await query;
-    if (error) console.error('Error fetching bills:', error);
-    else setSavedBills(data || []);
-    setLoading(false);
-  };
 
   const performSave = async () => {
     if (!customerName) {
@@ -127,14 +133,12 @@ export const Billing = () => {
       totals: mode === 'delivery' ? { qty: deliveryTotalQty, amount: deliveryTotalAmount } : { amount: productTotal }
     };
 
-    setLoading(true);
     const { data, error } = editingBillId 
       ? await supabase.from('bills').update(billData).eq('id', editingBillId).select()
       : await supabase.from('bills').insert(billData).select();
 
     if (error) {
       toast.error('Save failed', error.message);
-      setLoading(false);
       return false;
     }
 
@@ -196,7 +200,6 @@ export const Billing = () => {
     }
     
     setEditingBillId(null);
-    setLoading(false);
     fetchSavedBills();
   };
 
@@ -342,9 +345,6 @@ export const Billing = () => {
     setProductTotal(productItems.reduce((acc, curr) => acc + Number(curr.amount || 0), 0));
   }, [productItems]);
 
-  useEffect(() => {
-    if (mode === 'history') fetchSavedBills();
-  }, [mode, searchName, searchDate]);
 
   const currentTotal = mode === 'delivery' ? deliveryTotalAmount : productTotal;
 
@@ -674,31 +674,43 @@ export const Billing = () => {
               <div className="lg:col-span-2 text-center py-20 text-slate-400 font-bold">Loading saved bills...</div>
             ) : savedBills.length === 0 ? (
               <div className="lg:col-span-2 text-center py-20 text-slate-400 font-bold">No saved bills found.</div>
-            ) : savedBills.map((bill) => (
-              <div key={bill.id} className="bg-gradient-to-br from-[#eef2f7] to-[#d3d8df] p-5 rounded-3xl shadow-md border border-white/50 flex items-center gap-4 group">
-                <div className={clsx(
-                  "w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg text-white font-black",
-                  bill.type === 'delivery' ? 'bg-blue-500' : 'bg-emerald-500'
-                )}>
-                  {bill.type === 'delivery' ? 'D' : 'P'}
-                </div>
-                <div className="flex-1">
-                  <h4 className="font-black text-slate-800">{bill.customer_name}</h4>
-                  <p className="text-slate-500 text-xs font-medium">{format(new Date(bill.date), 'dd MMM yyyy')} · Rs.{bill.totals.amount.toFixed(2)}</p>
-                </div>
-                <div className="flex gap-2">
-                  <button onClick={() => generateBillingPDF(bill.type, bill.customer_name, bill.date, bill.items, bill.totals)} className="p-2.5 rounded-xl bg-white/60 text-slate-600 hover:bg-slate-800 hover:text-white transition-all shadow-sm">
-                    <Download size={16} />
-                  </button>
-                  <button onClick={() => editSavedBill(bill)} className="p-2.5 rounded-xl bg-white/60 text-slate-600 hover:bg-indigo-600 hover:text-white transition-all shadow-sm">
-                    <Edit3 size={16} />
-                  </button>
-                  <button onClick={() => deleteBill(bill.id)} className="p-2.5 rounded-xl bg-white/60 text-slate-600 hover:bg-red-500 hover:text-white transition-all shadow-sm">
-                    <Trash size={16} />
-                  </button>
-                </div>
-              </div>
-            ))}
+            ) : (
+              <>
+                {savedBills.map((bill) => (
+                  <div key={bill.id} className="bg-gradient-to-br from-[#eef2f7] to-[#d3d8df] p-5 rounded-3xl shadow-md border border-white/50 flex items-center gap-4 group">
+                    <div className={clsx(
+                      "w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg text-white font-black",
+                      bill.type === 'delivery' ? 'bg-blue-500' : 'bg-emerald-500'
+                    )}>
+                      {bill.type === 'delivery' ? 'D' : 'P'}
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="font-black text-slate-800">{bill.customer_name}</h4>
+                      <p className="text-slate-500 text-xs font-medium">{format(new Date(bill.date), 'dd MMM yyyy')} · Rs.{bill.totals.amount.toFixed(2)}</p>
+                    </div>
+                    <div className="flex gap-2">
+                      <button onClick={() => generateBillingPDF(bill.type, bill.customer_name, bill.date, bill.items, bill.totals)} className="p-2.5 rounded-xl bg-white/60 text-slate-600 hover:bg-slate-800 hover:text-white transition-all shadow-sm">
+                        <Download size={16} />
+                      </button>
+                      <button onClick={() => editSavedBill(bill)} className="p-2.5 rounded-xl bg-white/60 text-slate-600 hover:bg-indigo-600 hover:text-white transition-all shadow-sm">
+                        <Edit3 size={16} />
+                      </button>
+                      <button onClick={() => deleteBill(bill.id)} className="p-2.5 rounded-xl bg-white/60 text-slate-600 hover:bg-red-500 hover:text-white transition-all shadow-sm">
+                        <Trash size={16} />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+                
+                {hasMore && (
+                  <div className="lg:col-span-2 flex justify-center pt-4 pb-8">
+                    <button onClick={loadMore} disabled={loadingMore} className="px-6 py-3 bg-white/60 border border-white text-slate-700 rounded-2xl font-bold shadow-sm hover:bg-white transition-all">
+                      {loadingMore ? 'Loading...' : 'Load More Bills'}
+                    </button>
+                  </div>
+                )}
+              </>
+            )}
           </div>
         </motion.div>
       )}

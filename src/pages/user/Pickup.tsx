@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useSupabasePagination } from '../../hooks/useSupabasePagination';
 
 export const Pickup = () => {
   const { user, profile } = useAuth();
@@ -29,8 +30,35 @@ export const Pickup = () => {
     }
     return saved ? (parseInt(saved) as 1 | 2) : 1;
   });
-  const [companies, setCompanies] = useState<any[]>([]);
-  const [shops, setShops] = useState<any[]>([]);
+  
+  const {
+    data: companies,
+    loadingMore: loadingMoreCompanies,
+    searchQuery: searchCompanies,
+    setSearchQuery: setSearchCompanies,
+    loadMore: loadMoreCompanies,
+    hasMore: hasMoreCompanies,
+    totalCount: totalCompanies
+  } = useSupabasePagination({
+    table: 'companies',
+    searchFields: ['name'],
+    limit: 20
+  });
+
+  const {
+    data: shops,
+    loadingMore: loadingMoreShops,
+    searchQuery: searchShops,
+    setSearchQuery: setSearchShops,
+    loadMore: loadMoreShops,
+    hasMore: hasMoreShops,
+    totalCount: totalShops
+  } = useSupabasePagination({
+    table: 'shops',
+    searchFields: ['name', 'location'],
+    limit: 20
+  });
+
   const [selectedCompany, setSelectedCompany] = useState<string | null>(() => {
     const timestamp = localStorage.getItem('pickup_draft_timestamp');
     const now = Date.now();
@@ -50,25 +78,27 @@ export const Pickup = () => {
     if (timestamp && now - parseInt(timestamp) > 5 * 60 * 60 * 1000) return {};
     return saved ? JSON.parse(saved) : {};
   });
-  const [search, setSearch] = useState(() => {
+
+  const [initialSearch] = useState(() => {
     const saved = localStorage.getItem('pickup_draft_search');
     const timestamp = localStorage.getItem('pickup_draft_timestamp');
     const now = Date.now();
     if (timestamp && now - parseInt(timestamp) > 5 * 60 * 60 * 1000) return '';
     return saved || '';
   });
-  const [debouncedSearch, setDebouncedSearch] = useState(search);
+  useEffect(() => {
+    if (initialSearch) {
+      if (step === 1) setSearchCompanies(initialSearch);
+      else setSearchShops(initialSearch);
+    }
+  }, []);
+
   const [loading, setLoading] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [newShopName, setNewShopName] = useState('');
   const [newShopLocation, setNewShopLocation] = useState('');
   const [addingShop, setAddingShop] = useState(false);
 
-  // Search Debounce
-  useEffect(() => {
-    const timer = setTimeout(() => setDebouncedSearch(search), 150);
-    return () => clearTimeout(timer);
-  }, [search]);
 
   // Persistence Effects
   useEffect(() => { 
@@ -89,9 +119,9 @@ export const Pickup = () => {
     localStorage.setItem('pickup_draft_timestamp', Date.now().toString());
   }, [selections]);
   useEffect(() => { 
-    localStorage.setItem('pickup_draft_search', search); 
+    localStorage.setItem('pickup_draft_search', step === 1 ? searchCompanies : searchShops); 
     localStorage.setItem('pickup_draft_timestamp', Date.now().toString());
-  }, [search]);
+  }, [searchCompanies, searchShops, step]);
 
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
@@ -104,16 +134,6 @@ export const Pickup = () => {
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [selections]);
 
-  useEffect(() => { fetchData(); }, []);
-
-  const fetchData = async () => {
-    const [{ data: cData }, { data: sData }] = await Promise.all([
-      supabase.from('companies').select('*').order('name'),
-      supabase.from('shops').select('*').order('name'),
-    ]);
-    setCompanies(cData || []);
-    setShops(sData || []);
-  };
 
   const handleQuickAddShop = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -127,7 +147,7 @@ export const Pickup = () => {
       setShops(prev => [data, ...prev]);
       toggleShop(data.id);
       setNewShopName(''); setNewShopLocation('');
-      setIsAddModalOpen(false); setSearch('');
+      setIsAddModalOpen(false); setSearchShops('');
       toast.success('Shop added & selected!');
     } catch (err: any) { toast.error('Failed to add shop', err.message); }
     finally { setAddingShop(false); }
@@ -175,7 +195,8 @@ export const Pickup = () => {
       setSelectedCompany(null);
       setSelectedCompanyName('');
       setSelections({});
-      setSearch('');
+      setSearchCompanies('');
+      setSearchShops('');
 
     } catch (err: any) {
       if (!navigator.onLine || err.message === 'Failed to fetch' || err.name === 'TypeError') {
@@ -199,20 +220,6 @@ export const Pickup = () => {
   const updateItemNumber = (id: string, val: string) =>
     setSelections(prev => ({ ...prev, [id]: val }));
 
-  const filteredCompanies = React.useMemo(() => {
-    if (step !== 1) return [];
-    const q = debouncedSearch.toLowerCase();
-    return companies.filter(c => c.name.toLowerCase().includes(q));
-  }, [companies, debouncedSearch, step]);
-
-  const filteredShops = React.useMemo(() => {
-    if (step !== 2) return [];
-    const q = debouncedSearch.toLowerCase();
-    return shops.filter(s =>
-      s.name.toLowerCase().includes(q) ||
-      (s.location || '').toLowerCase().includes(q)
-    );
-  }, [shops, debouncedSearch, step]);
 
   const selectedCount = Object.keys(selections).length;
 
@@ -229,7 +236,7 @@ export const Pickup = () => {
                   key="back-btn"
                   initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.8 }}
                   whileTap={{ scale: 0.9 }}
-                  onClick={() => { setStep(1); setSelections({}); setSearch(''); }}
+                  onClick={() => { setStep(1); setSelections({}); setSearchShops(''); }}
                   className="w-9 h-9 rounded-2xl bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-600 transition-colors flex-shrink-0"
                 >
                   <ChevronLeft size={20} />
@@ -286,12 +293,12 @@ export const Pickup = () => {
                   <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
                   <input
                     placeholder="Search shops..."
-                    value={search}
-                    onChange={e => setSearch(e.target.value)}
+                    value={searchShops}
+                    onChange={e => setSearchShops(e.target.value)}
                     className="w-full h-11 pl-10 pr-10 bg-gray-50 border border-gray-200 rounded-2xl text-sm text-gray-700 placeholder-gray-400 focus:outline-none focus:border-orange-400 focus:ring-4 focus:ring-orange-500/5 transition-all shadow-inner"
                   />
-                  {search && (
-                    <button onClick={() => setSearch('')} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                  {searchShops && (
+                    <button onClick={() => setSearchShops('')} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
                       <X size={14} />
                     </button>
                   )}
@@ -322,15 +329,26 @@ export const Pickup = () => {
               className="space-y-3"
             >
               <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-widest">
-                {filteredCompanies.length} Companies
+                {totalCompanies} Companies
               </p>
+              
+              <div className="relative">
+                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                <input
+                  placeholder="Search companies..."
+                  value={searchCompanies}
+                  onChange={e => setSearchCompanies(e.target.value)}
+                  className="w-full h-11 pl-10 pr-10 mb-4 bg-gray-50 border border-gray-200 rounded-2xl text-sm text-gray-700 placeholder-gray-400 focus:outline-none focus:border-orange-400 focus:ring-4 focus:ring-orange-500/5 transition-all shadow-inner"
+                />
+              </div>
+
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                {filteredCompanies.map((company, index) => (
+                {companies.map((company, index) => (
                     <motion.button
                       key={company.id}
                       initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
                       transition={{ duration: 0.15, delay: Math.min(index * 0.02, 0.2) }}
-                      onClick={() => { setSelectedCompany(company.id); setSelectedCompanyName(company.name); setStep(2); setSearch(''); }}
+                      onClick={() => { setSelectedCompany(company.id); setSelectedCompanyName(company.name); setStep(2); setSearchCompanies(''); }}
                       className="w-full text-left p-4 lg:p-5 rounded-3xl bg-white border-2 border-gray-100 hover:border-orange-400 hover:shadow-xl hover:shadow-orange-500/5 transition-all duration-300 group relative overflow-hidden will-change-[transform,opacity]"
                     >
                     <div className="flex items-center gap-4">
@@ -349,12 +367,19 @@ export const Pickup = () => {
                 ))}
               </div>
 
-              {filteredCompanies.length === 0 && (
+              {companies.length === 0 && (
                 <div className="text-center py-16">
                   <div className="w-14 h-14 rounded-2xl bg-gray-100 flex items-center justify-center mx-auto mb-3">
                     <Building2 size={24} className="text-gray-300" />
                   </div>
                   <p className="text-gray-500 font-medium">No companies found</p>
+                </div>
+              )}
+              {hasMoreCompanies && (
+                <div className="flex justify-center pt-4">
+                  <button onClick={loadMoreCompanies} disabled={loadingMoreCompanies} className="px-5 py-2.5 bg-orange-50 text-orange-600 rounded-xl font-bold text-sm hover:bg-orange-100 transition-colors">
+                    {loadingMoreCompanies ? 'Loading...' : 'Load More Companies'}
+                  </button>
                 </div>
               )}
             </motion.div>
@@ -384,12 +409,12 @@ export const Pickup = () => {
               </AnimatePresence>
 
               <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-widest">
-                {filteredShops.length} Shops
+                {totalShops} Shops
               </p>
 
               <motion.div layout className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <AnimatePresence>
-                  {filteredShops.map((shop, index) => {
+                  {shops.map((shop, index) => {
                   const isSelected = selections[shop.id] !== undefined;
                   return (
                     <motion.div
@@ -469,7 +494,7 @@ export const Pickup = () => {
                 </AnimatePresence>
               </motion.div>
 
-              {filteredShops.length === 0 && (
+              {shops.length === 0 && (
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-14">
                   <div className="w-14 h-14 rounded-2xl bg-gray-100 flex items-center justify-center mx-auto mb-3">
                     <Search size={22} className="text-gray-300" />
@@ -483,6 +508,14 @@ export const Pickup = () => {
                     <Plus size={15} /> Add New Shop
                   </button>
                 </motion.div>
+              )}
+              
+              {hasMoreShops && (
+                <div className="flex justify-center pt-4">
+                  <button onClick={loadMoreShops} disabled={loadingMoreShops} className="px-5 py-2.5 bg-orange-50 text-orange-600 rounded-xl font-bold text-sm hover:bg-orange-100 transition-colors">
+                    {loadingMoreShops ? 'Loading...' : 'Load More Shops'}
+                  </button>
+                </div>
               )}
             </motion.div>
           )}

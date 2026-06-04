@@ -7,19 +7,34 @@ import { useToast } from '../../components/ui/Toast';
 import { Trash2, Plus, MapPin, Edit2, X, Check, Upload, Search, Store, LayoutGrid, FileSpreadsheet, CheckCircle2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import * as XLSX from 'xlsx';
+import { useSupabasePagination } from '../../hooks/useSupabasePagination';
 
 export const Shops = () => {
   const toast = useToast();
-  const [shops, setShops] = useState<any[]>([]);
   const [name, setName] = useState(() => localStorage.getItem('shops_draft_name') || '');
   const [location, setLocation] = useState(() => localStorage.getItem('shops_draft_location') || '');
-  const [loading, setLoading] = useState(false);
-  const [search, setSearch] = useState('');
+  const [submitting, setSubmitting] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
   const [editLocation, setEditLocation] = useState('');
   const [importing, setImporting] = useState(false);
   const [importSummary, setImportSummary] = useState<{ added: number; skipped: number } | null>(null);
+  
+  const {
+    data: shops,
+    loading,
+    loadingMore,
+    searchQuery: search,
+    setSearchQuery: setSearch,
+    loadMore,
+    hasMore,
+    totalCount,
+    refetch
+  } = useSupabasePagination({
+    table: 'shops',
+    searchFields: ['name', 'location'],
+    limit: 20
+  });
   
   // Location Rates States
   const [showRates, setShowRates] = useState(false);
@@ -39,14 +54,8 @@ export const Shops = () => {
   useEffect(() => { localStorage.setItem('shops_draft_location', location); }, [location]);
 
   useEffect(() => { 
-    fetchShops(); 
     fetchLocationRates();
   }, []);
-
-  const fetchShops = async () => {
-    const { data } = await supabase.from('shops').select('*').order('created_at', { ascending: false });
-    setShops(data || []);
-  };
 
   const fetchLocationRates = async () => {
     const { data } = await supabase.from('location_rates').select('*').order('location_name');
@@ -108,7 +117,7 @@ export const Shops = () => {
       return;
     }
 
-    setLoading(true);
+    setSubmitting(true);
     const { error } = await supabase.from('shops').insert([{ name: name.trim(), location: location.trim() }]);
     if (error) { toast.error('Failed to add shop', error.message); }
     else { 
@@ -116,9 +125,9 @@ export const Shops = () => {
       setName(''); setLocation('');
       localStorage.removeItem('shops_draft_name');
       localStorage.removeItem('shops_draft_location');
+      refetch();
     }
-    fetchShops();
-    setLoading(false);
+    setSubmitting(false);
   };
 
   const startEdit = (shop: any) => { setEditingId(shop.id); setEditName(shop.name); setEditLocation(shop.location); };
@@ -129,14 +138,14 @@ export const Shops = () => {
     if (error) { toast.error('Update failed', error.message); return; }
     toast.success('Shop updated!');
     setEditingId(null);
-    fetchShops();
+    refetch();
   };
 
   const handleDelete = async (id: string, shopName: string) => {
     const { error } = await supabase.from('shops').delete().eq('id', id);
     if (error) { toast.error('Delete failed', error.message); return; }
     toast.success('Shop removed', `"${shopName}" has been deleted.`);
-    fetchShops();
+    refetch();
   };
 
   const handleExcelUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -171,7 +180,7 @@ export const Shops = () => {
         if (newShops.length > 0) { const { error } = await supabase.from('shops').insert(newShops); if (error) throw error; }
         setImportSummary({ added: newShops.length, skipped: skippedCount });
         toast.success('Import complete!', `Added: ${newShops.length}, Skipped: ${skippedCount}`);
-        fetchShops();
+        refetch();
       } catch (err: any) {
         toast.error('Import failed', err.message);
       } finally {
@@ -182,10 +191,6 @@ export const Shops = () => {
     reader.readAsBinaryString(file);
   };
 
-  const filteredShops = shops.filter(s => 
-    s.name.toLowerCase().includes(search.toLowerCase()) || 
-    (s.location || '').toLowerCase().includes(search.toLowerCase())
-  );
 
   const uniqueShopLocations = Array.from(new Set(
     shops.map(s => (s.location || '').trim())
@@ -223,7 +228,7 @@ export const Shops = () => {
           </button>
           <div className="px-4 py-2 sm:px-5 sm:py-3 bg-white/80 backdrop-blur-md rounded-2xl border border-white shadow-sm flex flex-col items-center min-w-[80px] sm:min-w-[100px]">
             <span className="text-[8px] sm:text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Total Shops</span>
-            <span className="text-lg sm:text-xl font-black text-slate-900">{shops.length}</span>
+            <span className="text-lg sm:text-xl font-black text-slate-900">{totalCount}</span>
           </div>
         </div>
       </motion.div>
@@ -395,12 +400,12 @@ export const Shops = () => {
 
               <motion.button 
                 type="submit" 
-                disabled={loading || !name.trim()}
+                disabled={submitting || !name.trim()}
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 className="w-full py-4 bg-slate-900 text-white font-black rounded-2xl hover:bg-indigo-600 transition-all disabled:opacity-50 flex items-center justify-center gap-3 shadow-xl shadow-slate-100"
               >
-                {loading ? (
+                {submitting ? (
                    <motion.div
                      animate={{ rotate: 360 }}
                      transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
@@ -505,7 +510,22 @@ export const Shops = () => {
 
           <div className="space-y-3 max-h-[700px] overflow-y-auto pr-2 custom-scrollbar">
             <AnimatePresence mode="popLayout">
-              {filteredShops.length === 0 ? (
+              {loading && shops.length === 0 ? (
+                <motion.div
+                  key="loader"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="flex flex-col items-center justify-center py-16 gap-3"
+                >
+                  <motion.div
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 1.2, repeat: Infinity, ease: 'linear' }}
+                    className="w-10 h-10 border-slate-300 border-t-indigo-500 rounded-full"
+                    style={{ border: '3px solid', borderTopColor: '#6366f1' }}
+                  />
+                  <p className="text-slate-400 font-medium text-sm">Searching directory...</p>
+                </motion.div>
+              ) : shops.length === 0 ? (
                 <motion.div
                   key="empty"
                   initial={{ opacity: 0 }}
@@ -517,7 +537,7 @@ export const Shops = () => {
                   <p className="text-slate-400 text-sm font-medium">Refine your search or add a new shop</p>
                 </motion.div>
               ) : (
-                filteredShops.map((shop, index) => (
+                shops.map((shop: any, index: number) => (
                   <motion.div
                     key={shop.id}
                     layout
@@ -599,6 +619,29 @@ export const Shops = () => {
                 ))
               )}
             </AnimatePresence>
+            
+            {hasMore && (
+              <div className="pt-4 pb-8 flex justify-center">
+                <button
+                  onClick={loadMore}
+                  disabled={loadingMore}
+                  className="px-6 py-3 bg-white/80 backdrop-blur-md border border-slate-200 text-slate-600 rounded-2xl font-bold hover:bg-indigo-50 hover:text-indigo-600 transition-all shadow-sm flex items-center gap-2"
+                >
+                  {loadingMore ? (
+                    <>
+                      <motion.div
+                        animate={{ rotate: 360 }}
+                        transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                        className="w-4 h-4 border-2 border-indigo-600/30 border-t-indigo-600 rounded-full"
+                      />
+                      Loading more...
+                    </>
+                  ) : (
+                    'Load More Outlets'
+                  )}
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>

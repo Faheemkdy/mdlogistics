@@ -18,7 +18,6 @@ export const Reconciliation = () => {
   const [data, setData] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
-  const [showAll, setShowAll] = useState(false);
 
   // Search Debounce
   useEffect(() => {
@@ -33,9 +32,6 @@ export const Reconciliation = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      // Fetch shops
-      const { data: shops } = await supabase.from('shops').select('id, name, location').eq('is_active', true);
-
       // Fetch dispatches for the date
       const { data: dispatches } = await supabase
         .from('dispatches')
@@ -47,6 +43,17 @@ export const Reconciliation = () => {
         .from('deliveries')
         .select('*, profiles(username)')
         .eq('date', date);
+
+      const shopIds = new Set([
+        ...(dispatches || []).map(d => d.shop_id),
+        ...(deliveries || []).map(d => d.shop_id)
+      ]);
+
+      let shops: any[] = [];
+      if (shopIds.size > 0) {
+        const { data } = await supabase.from('shops').select('id, name, location').in('id', Array.from(shopIds));
+        shops = data || [];
+      }
 
       const reconciliationData = (shops || []).map(shop => {
         const shopDispatches = (dispatches || []).filter(d => d.shop_id === shop.id);
@@ -80,9 +87,8 @@ export const Reconciliation = () => {
     const q = debouncedSearch.toLowerCase();
     return data
       .filter(d =>
-        (showAll ? true : (d.totalDispatched > 0 || d.totalDelivered > 0)) &&
-        (d.name.toLowerCase().includes(q) ||
-          (d.location && d.location.toLowerCase().includes(q)))
+        d.name.toLowerCase().includes(q) ||
+        (d.location && d.location.toLowerCase().includes(q))
       )
       .sort((a, b) => {
         // Sort by mismatch first, then by activity
@@ -90,7 +96,7 @@ export const Reconciliation = () => {
         if (b.status === 'mismatch' && a.status !== 'mismatch') return 1;
         return b.totalDispatched - a.totalDispatched;
       });
-  }, [data, debouncedSearch, showAll]);
+  }, [data, debouncedSearch]);
 
   const totals = data.reduce((acc, curr) => ({
     dispatched: acc.dispatched + curr.totalDispatched,
@@ -157,9 +163,19 @@ export const Reconciliation = () => {
     toast.info("Generating Report", `Fetching reconciliation data from ${start} to ${end}...`);
 
     try {
-      const { data: shops } = await supabase.from('shops').select('id, name, location').eq('is_active', true);
       const { data: dispatches } = await supabase.from('dispatches').select('*').gte('date', start).lte('date', end);
       const { data: deliveries } = await supabase.from('deliveries').select('*').gte('date', start).lte('date', end);
+
+      const shopIds = new Set([
+        ...(dispatches || []).map(d => d.shop_id),
+        ...(deliveries || []).map(d => d.shop_id)
+      ]);
+
+      let shops: any[] = [];
+      if (shopIds.size > 0) {
+        const { data } = await supabase.from('shops').select('id, name, location').in('id', Array.from(shopIds));
+        shops = data || [];
+      }
 
       const rangeReconciliation = (shops || []).map(shop => {
         const shopDispatches = (dispatches || []).filter(d => d.shop_id === shop.id);
@@ -304,19 +320,7 @@ export const Reconciliation = () => {
               className="w-full h-12 pl-11 pr-4 bg-white border border-slate-200 rounded-2xl text-sm focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all shadow-inner"
             />
           </div>
-          <Button
-            variant={showAll ? "primary" : "ghost"}
-            onClick={() => setShowAll(!showAll)}
-            className={clsx(
-              "h-12 border text-xs sm:text-sm font-black uppercase tracking-widest px-6 rounded-2xl transition-all",
-              showAll
-                ? "bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-200"
-                : "bg-white border-slate-200 text-slate-600 shadow-sm hover:border-blue-300"
-            )}
-          >
-            <Filter size={16} className="mr-2" />
-            {showAll ? 'Showing All' : 'Show All'}
-          </Button>
+
         </div>
 
         {/* Desktop View Table */}

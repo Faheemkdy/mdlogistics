@@ -6,39 +6,47 @@ import { useToast } from '../../components/ui/Toast';
 import { Trash2, Plus, Edit2, Check, X, Building2, Search, Briefcase, Hash, CheckCircle2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { clsx } from 'clsx';
+import { useSupabasePagination } from '../../hooks/useSupabasePagination';
 
 export const Companies = () => {
   const toast = useToast();
-  const [companies, setCompanies] = useState<any[]>([]);
-  const [searchQuery, setSearchQuery] = useState('');
   const [newCompany, setNewCompany] = useState(() => localStorage.getItem('companies_draft_name') || '');
-  const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
+
+  const {
+    data: companies,
+    loading,
+    loadingMore,
+    searchQuery,
+    setSearchQuery,
+    loadMore,
+    hasMore,
+    totalCount,
+    refetch
+  } = useSupabasePagination({
+    table: 'companies',
+    searchFields: ['name'],
+    limit: 20
+  });
 
   // Persistence
   useEffect(() => { localStorage.setItem('companies_draft_name', newCompany); }, [newCompany]);
 
-  useEffect(() => { fetchCompanies(); }, []);
-
-  const fetchCompanies = async () => {
-    const { data } = await supabase.from('companies').select('*').order('created_at', { ascending: false });
-    setCompanies(data || []);
-  };
-
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newCompany.trim()) return;
-    setLoading(true);
+    setSubmitting(true);
     const { error } = await supabase.from('companies').insert([{ name: newCompany }]);
     if (error) { toast.error('Failed to add company', error.message); }
     else { 
       toast.success('Company added!', `"${newCompany}" has been registered.`); 
       setNewCompany('');
       localStorage.removeItem('companies_draft_name');
+      refetch();
     }
-    fetchCompanies();
-    setLoading(false);
+    setSubmitting(false);
   };
 
   const startEdit = (company: any) => { setEditingId(company.id); setEditName(company.name); };
@@ -48,19 +56,15 @@ export const Companies = () => {
     if (error) { toast.error('Update failed', error.message); return; }
     toast.success('Company updated!');
     setEditingId(null);
-    fetchCompanies();
+    refetch();
   };
 
   const handleDelete = async (id: string, companyName: string) => {
     const { error } = await supabase.from('companies').delete().eq('id', id);
     if (error) { toast.error('Delete failed', error.message); return; }
     toast.success('Company removed', `"${companyName}" has been deleted.`);
-    fetchCompanies();
+    refetch();
   };
-
-  const filteredCompanies = companies.filter(c => 
-    c.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
 
 
 
@@ -83,8 +87,8 @@ export const Companies = () => {
         
         <div className="flex gap-2 sm:gap-3">
           <div className="px-4 py-2 sm:px-5 sm:py-3 bg-white/80 backdrop-blur-md rounded-2xl border border-white shadow-sm flex flex-col items-center min-w-[80px] sm:min-w-[100px]">
-            <span className="text-[8px] sm:text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Active</span>
-            <span className="text-lg sm:text-xl font-black text-slate-900">{companies.length}</span>
+            <span className="text-[8px] sm:text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Total</span>
+            <span className="text-lg sm:text-xl font-black text-slate-900">{totalCount}</span>
           </div>
           <div className="px-4 py-2 sm:px-5 sm:py-3 bg-blue-500 rounded-2xl shadow-lg shadow-blue-200 flex flex-col items-center min-w-[80px] sm:min-w-[100px] text-white">
             <span className="text-[8px] sm:text-[10px] font-black text-blue-100 uppercase tracking-widest mb-0.5">Premium</span>
@@ -127,12 +131,12 @@ export const Companies = () => {
 
               <motion.button 
                 type="submit" 
-                disabled={loading || !newCompany.trim()}
+                disabled={submitting || !newCompany.trim()}
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 className="w-full py-4 bg-slate-900 text-white font-black rounded-2xl hover:bg-blue-600 transition-all disabled:opacity-50 flex items-center justify-center gap-3 shadow-xl shadow-slate-100"
               >
-                {loading ? (
+                {submitting ? (
                    <motion.div
                      animate={{ rotate: 360 }}
                      transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
@@ -171,7 +175,22 @@ export const Companies = () => {
 
           <div className="space-y-3 max-h-[600px] overflow-y-auto pr-1 sm:pr-2 custom-scrollbar">
             <AnimatePresence mode="popLayout">
-              {filteredCompanies.length === 0 ? (
+              {loading && companies.length === 0 ? (
+                <motion.div
+                  key="loader"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="flex flex-col items-center justify-center py-16 gap-3"
+                >
+                  <motion.div
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 1.2, repeat: Infinity, ease: 'linear' }}
+                    className="w-10 h-10 border-slate-300 border-t-blue-500 rounded-full"
+                    style={{ border: '3px solid', borderTopColor: '#3b82f6' }}
+                  />
+                  <p className="text-slate-400 font-medium text-sm">Searching...</p>
+                </motion.div>
+              ) : companies.length === 0 ? (
                 <motion.div
                   key="empty"
                   initial={{ opacity: 0 }}
@@ -183,7 +202,7 @@ export const Companies = () => {
                   <p className="text-slate-400 text-sm font-medium">Try a different search term</p>
                 </motion.div>
               ) : (
-                filteredCompanies.map((company, index) => (
+                companies.map((company: any, index: number) => (
                   <motion.div
                     key={company.id}
                     layout
@@ -253,6 +272,29 @@ export const Companies = () => {
                 ))
               )}
             </AnimatePresence>
+
+            {hasMore && (
+              <div className="pt-4 pb-8 flex justify-center">
+                <button
+                  onClick={loadMore}
+                  disabled={loadingMore}
+                  className="px-6 py-3 bg-white/80 backdrop-blur-md border border-slate-200 text-slate-600 rounded-2xl font-bold hover:bg-blue-50 hover:text-blue-600 transition-all shadow-sm flex items-center gap-2"
+                >
+                  {loadingMore ? (
+                    <>
+                      <motion.div
+                        animate={{ rotate: 360 }}
+                        transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                        className="w-4 h-4 border-2 border-blue-600/30 border-t-blue-600 rounded-full"
+                      />
+                      Loading more...
+                    </>
+                  ) : (
+                    'Load More'
+                  )}
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>

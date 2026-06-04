@@ -5,11 +5,11 @@ import { Button } from '../../components/ui/Button';
 import { Search, Check, MapPin, Send, Package, X, Hash, ClipboardList } from 'lucide-react';
 import { clsx } from 'clsx';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useSupabasePagination } from '../../hooks/useSupabasePagination';
 
 export const Dispatch = () => {
   const toast = useToast();
-  const [shops, setShops] = useState<any[]>([]);
-  const [search, setSearch] = useState(() => {
+  const [initialSearch] = useState(() => {
     const saved = localStorage.getItem('dispatch_draft_search');
     const timestamp = localStorage.getItem('dispatch_draft_timestamp');
     const now = Date.now();
@@ -21,6 +21,27 @@ export const Dispatch = () => {
     }
     return saved || '';
   });
+  
+  const {
+    data: shops,
+    loadingMore,
+    searchQuery: search,
+    setSearchQuery: setSearch,
+    loadMore,
+    hasMore,
+    totalCount
+  } = useSupabasePagination({
+    table: 'shops',
+    searchFields: ['name', 'location'],
+    limit: 20
+  });
+
+  useEffect(() => {
+    if (initialSearch) {
+      setSearch(initialSearch);
+    }
+  }, []);
+
   const [loading, setLoading] = useState(false);
   const [selections, setSelections] = useState<Record<string, string>>(() => {
     const saved = localStorage.getItem('dispatch_draft_selections');
@@ -29,15 +50,8 @@ export const Dispatch = () => {
     if (timestamp && now - parseInt(timestamp) > 5 * 60 * 60 * 1000) return {};
     return saved ? JSON.parse(saved) : {};
   });
-  const [debouncedSearch, setDebouncedSearch] = useState(search);
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [isScrolled, setIsScrolled] = useState(false);
-
-  // Search Debounce
-  useEffect(() => {
-    const timer = setTimeout(() => setDebouncedSearch(search), 150);
-    return () => clearTimeout(timer);
-  }, [search]);
 
   // Persistence Effects
   useEffect(() => { 
@@ -61,16 +75,10 @@ export const Dispatch = () => {
   }, [selections]);
 
   useEffect(() => {
-    fetchShops();
     const handleScroll = () => setIsScrolled(window.scrollY > 10);
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
-
-  const fetchShops = async () => {
-    const { data } = await supabase.from('shops').select('*').eq('is_active', true).order('name');
-    setShops(data || []);
-  };
 
   const handleDispatch = async () => {
     const shopIds = Object.keys(selections).filter(id => selections[id].trim() !== '');
@@ -98,13 +106,6 @@ export const Dispatch = () => {
   const toggleShop = (id: string) =>
     setSelections(prev => { const n = { ...prev }; if (n[id] !== undefined) delete n[id]; else n[id] = ''; return n; });
 
-  const filteredShops = React.useMemo(() => {
-    const q = debouncedSearch.toLowerCase();
-    return shops.filter(s =>
-      s.name.toLowerCase().includes(q) ||
-      (s.location || '').toLowerCase().includes(q)
-    );
-  }, [shops, debouncedSearch]);
 
   const selectedCount = Object.keys(selections).length;
   const filledCount = Object.keys(selections).filter(id => selections[id].trim() !== '').length;
@@ -180,12 +181,12 @@ export const Dispatch = () => {
         )}
 
         <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest px-1 mb-3">
-          {filteredShops.length} Active Shop{filteredShops.length !== 1 ? 's' : ''}
+          {totalCount} Active Shop{totalCount !== 1 ? 's' : ''}
         </p>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
           <AnimatePresence>
-            {filteredShops.map((shop, index) => {
+            {shops.map((shop, index) => {
               const isSelected = selections[shop.id] !== undefined;
               const hasCount = isSelected && selections[shop.id].trim() !== '';
               return (
@@ -273,7 +274,7 @@ export const Dispatch = () => {
           </AnimatePresence>
         </div>
 
-        {filteredShops.length === 0 && (
+        {shops.length === 0 && (
           <motion.div
             initial={{ opacity: 0 }} animate={{ opacity: 1 }}
             className="text-center py-14 px-6"
@@ -284,6 +285,14 @@ export const Dispatch = () => {
             <p className="text-slate-600 font-bold text-base">No shops found</p>
             <p className="text-slate-400 text-sm mt-1">Try a different search term.</p>
           </motion.div>
+        )}
+        
+        {hasMore && (
+          <div className="flex justify-center pt-6">
+            <button onClick={loadMore} disabled={loadingMore} className="px-6 py-3 bg-blue-50 text-blue-600 rounded-xl font-bold text-sm hover:bg-blue-100 transition-colors shadow-sm">
+              {loadingMore ? 'Loading...' : 'Load More Shops'}
+            </button>
+          </div>
         )}
       </div>
 

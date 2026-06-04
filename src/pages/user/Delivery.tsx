@@ -8,13 +8,13 @@ import { Modal } from '../../components/ui/Modal';
 import { Search, Check, MapPin, Truck, Plus, X, Hash } from 'lucide-react';
 import { clsx } from 'clsx';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useSupabasePagination } from '../../hooks/useSupabasePagination';
 
 export const Delivery = () => {
   const { user, profile } = useAuth();
   const toast = useToast();
-  const [shops, setShops] = useState<any[]>([]);
   // Load initial state with 5-hour expiration check
-  const [search, setSearch] = useState(() => {
+  const [initialSearch] = useState(() => {
     const saved = localStorage.getItem('delivery_draft_search');
     const timestamp = localStorage.getItem('delivery_draft_timestamp');
     const now = Date.now();
@@ -28,7 +28,27 @@ export const Delivery = () => {
     }
     return saved || '';
   });
-  const [debouncedSearch, setDebouncedSearch] = useState(search);
+
+  useEffect(() => {
+    if (initialSearch) {
+      setSearch(initialSearch);
+    }
+  }, []);
+  
+  const {
+    data: shops,
+    loadingMore,
+    searchQuery: search,
+    setSearchQuery: setSearch,
+    loadMore,
+    hasMore,
+    totalCount
+  } = useSupabasePagination({
+    table: 'shops',
+    searchFields: ['name', 'location'],
+    limit: 20
+  });
+
   const [loading, setLoading] = useState(false);
   const [selections, setSelections] = useState<Record<string, string>>(() => {
     const saved = localStorage.getItem('delivery_draft_selections');
@@ -44,11 +64,6 @@ export const Delivery = () => {
   const [newShopLocation, setNewShopLocation] = useState('');
   const [addingShop, setAddingShop] = useState(false);
 
-  // Search Debounce
-  useEffect(() => {
-    const timer = setTimeout(() => setDebouncedSearch(search), 150);
-    return () => clearTimeout(timer);
-  }, [search]);
 
   // Persist state to localStorage with timestamp
   useEffect(() => {
@@ -72,12 +87,6 @@ export const Delivery = () => {
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [selections]);
 
-  useEffect(() => { fetchShops(); }, []);
-
-  const fetchShops = async () => {
-    const { data } = await supabase.from('shops').select('*').order('name');
-    setShops(data || []);
-  };
 
   const handleQuickAddShop = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -148,13 +157,6 @@ export const Delivery = () => {
   const updateItemNumber = (id: string, val: string) =>
     setSelections(prev => ({ ...prev, [id]: val }));
 
-  const filteredShops = React.useMemo(() => {
-    const q = debouncedSearch.toLowerCase();
-    return shops.filter(s => 
-      s.name.toLowerCase().includes(q) || 
-      (s.location || '').toLowerCase().includes(q)
-    );
-  }, [shops, debouncedSearch]);
 
   const selectedCount = Object.keys(selections).length;
 
@@ -223,12 +225,12 @@ export const Delivery = () => {
         </AnimatePresence>
 
         <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-widest">
-          {filteredShops.length} Shops
+          {totalCount} Shops
         </p>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <AnimatePresence>
-            {filteredShops.map((shop, index) => {
+            {shops.map((shop, index) => {
               const isSelected = selections[shop.id] !== undefined;
               return (
                 <motion.div
@@ -304,7 +306,7 @@ export const Delivery = () => {
           </AnimatePresence>
         </div>
 
-        {filteredShops.length === 0 && (
+        {shops.length === 0 && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-14">
             <div className="w-14 h-14 rounded-2xl bg-gray-100 flex items-center justify-center mx-auto mb-3">
               <Search size={22} className="text-gray-300" />
@@ -318,6 +320,14 @@ export const Delivery = () => {
               <Plus size={15} /> Add New Shop
             </button>
           </motion.div>
+        )}
+        
+        {hasMore && (
+          <div className="flex justify-center pt-4">
+            <button onClick={loadMore} disabled={loadingMore} className="px-5 py-2.5 bg-green-50 text-green-600 rounded-xl font-bold text-sm hover:bg-green-100 transition-colors">
+              {loadingMore ? 'Loading...' : 'Load More Shops'}
+            </button>
+          </div>
         )}
       </div>
 
