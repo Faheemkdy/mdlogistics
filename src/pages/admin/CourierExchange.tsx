@@ -136,7 +136,7 @@ export const CourierExchange = () => {
     setEditingLog(log);
     setLogPartnerId(log.partner_id);
     setLogType(log.type);
-    setLogCount(log.count.toString());
+    setLogCount(log.count != null ? log.count.toString() : '');
     setLogShopName(log.shop_name || '');
     setLogDate(log.date);
     setIsLogModalOpen(true);

@@ -7,6 +7,7 @@ interface PaginationOptions {
   limit?: number;
   orderBy?: { column: string; ascending?: boolean };
   filters?: Record<string, any>;
+  mode?: 'accumulate' | 'page';
 }
 
 export function useSupabasePagination<T = any>(options: PaginationOptions) {
@@ -70,7 +71,7 @@ export function useSupabasePagination<T = any>(options: PaginationOptions) {
 
       if (error) throw error;
 
-      if (isLoadMore) {
+      if (isLoadMore && options.mode !== 'page') {
         setData(prev => {
           // Prevent duplicates by checking IDs if they exist
           const existingIds = new Set(prev.map((item: any) => item.id));
@@ -128,6 +129,8 @@ export function useSupabasePagination<T = any>(options: PaginationOptions) {
     loadMore,
     hasMore,
     totalCount,
+    currentPage: page,
+    goToPage: (p: number) => setPage(p),
     refetch: () => fetchData(false) // Function to manually refresh data (e.g. after add/edit/delete)
   };
 }

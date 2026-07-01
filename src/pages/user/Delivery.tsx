@@ -50,6 +50,7 @@ export const Delivery = () => {
   });
 
   const [loading, setLoading] = useState(false);
+  const [isDirectDelivery, setIsDirectDelivery] = useState(false);
   const [selections, setSelections] = useState<Record<string, string>>(() => {
     const saved = localStorage.getItem('delivery_draft_selections');
     const timestamp = localStorage.getItem('delivery_draft_timestamp');
@@ -57,7 +58,12 @@ export const Delivery = () => {
     const fiveHours = 5 * 60 * 60 * 1000;
     
     if (timestamp && now - parseInt(timestamp) > fiveHours) return {};
-    return saved ? JSON.parse(saved) : {};
+    if (!saved) return {};
+    try {
+      return JSON.parse(saved);
+    } catch {
+      return {};
+    }
   });
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [newShopName, setNewShopName] = useState('');
@@ -93,14 +99,28 @@ export const Delivery = () => {
     if (!newShopName.trim()) return;
     setAddingShop(true);
     try {
+      // Check for duplicates
+      const { data: existingShops } = await supabase
+        .from('shops')
+        .select('id, location')
+        .ilike('name', newShopName.trim());
+        
+      const duplicate = existingShops?.find(s => (s.location || '').toLowerCase() === newShopLocation.trim().toLowerCase());
+      
+      if (duplicate) {
+        toast.error('Shop already exists', 'This shop is already in the system.');
+        return;
+      }
+
       const { data, error } = await supabase
-        .from('shops').insert([{ name: newShopName, location: newShopLocation }])
+        .from('shops').insert([{ name: newShopName.trim(), location: newShopLocation.trim() }])
         .select().single();
       if (error) throw error;
-      setShops(prev => [data, ...prev]);
+      
       toggleShop(data.id);
+      setSearch(newShopName.trim());
       setNewShopName(''); setNewShopLocation('');
-      setIsAddModalOpen(false); setSearch('');
+      setIsAddModalOpen(false);
       toast.success('Shop added!', `"${data.name}" selected for delivery.`);
     } catch (err: any) { toast.error('Failed to add shop', err.message); }
     finally { setAddingShop(false); }
@@ -122,11 +142,18 @@ export const Delivery = () => {
       if (navigator.onLine) {
         const { error } = await supabase.from('deliveries').insert(deliveryData);
         if (error) throw error;
+        
+        if (isDirectDelivery) {
+          const { error: dispatchError } = await supabase.from('dispatches').insert(deliveryData);
+          if (dispatchError) console.error("Failed auto-dispatch:", dispatchError);
+        }
+        
         toast.success('Deliveries recorded!', `${shopIds.length} shop(s) delivered.`);
       } else {
         // Queue for later if offline
         const { offlineSync } = await import('../../lib/offlineSync');
         await offlineSync.addItem('delivery', deliveryData);
+        if (isDirectDelivery) await offlineSync.addItem('dispatch', deliveryData);
         toast.success('Saved to offline queue', 'Will sync when connection is restored.');
       }
 
@@ -139,6 +166,7 @@ export const Delivery = () => {
       if (!navigator.onLine || err.message === 'Failed to fetch' || err.name === 'TypeError') {
         const { offlineSync } = await import('../../lib/offlineSync');
         await offlineSync.addItem('delivery', deliveryData);
+        if (isDirectDelivery) await offlineSync.addItem('dispatch', deliveryData);
         toast.success('Saved to offline queue', 'Network error detected. Data will sync later.');
         
         setSelections({});
@@ -293,7 +321,6 @@ export const Delivery = () => {
                           placeholder="Enter quantity..."
                           value={selections[shop.id]}
                           onChange={e => updateItemNumber(shop.id, e.target.value)}
-                          autoFocus
                           className="w-full h-10 px-3 bg-white border border-green-200 rounded-lg text-sm font-semibold text-green-700 placeholder-green-300 focus:outline-none focus:ring-2 focus:ring-green-200 focus:border-green-400 transition-all"
                         />
                       </div>
@@ -353,6 +380,17 @@ export const Delivery = () => {
               </p>
             </div>
           </div>
+
+          {/* Direct Delivery Checkbox */}
+          <label className="flex items-center gap-2 cursor-pointer bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200">
+            <input 
+              type="checkbox" 
+              checked={isDirectDelivery} 
+              onChange={(e) => setIsDirectDelivery(e.target.checked)}
+              className="w-4 h-4 text-green-500 rounded border-slate-300 focus:ring-green-500 cursor-pointer"
+            />
+            <span className="text-[10px] font-bold text-slate-600 uppercase tracking-wide">Direct Delivery</span>
+          </label>
 
           {/* Confirm button */}
           <motion.button

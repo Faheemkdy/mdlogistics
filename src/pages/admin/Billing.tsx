@@ -240,9 +240,10 @@ export const Billing = () => {
     setCustomerName(voucher.customer_name);
     setMode(voucher.type);
     
+    const items = voucher.voucher_items || [];
     if (voucher.type === 'delivery') {
       const itemsByDate: Record<string, any> = {};
-      voucher.voucher_items.forEach((item: any) => {
+      items.forEach((item: any) => {
         const dateStr = item.date;
         if (!itemsByDate[dateStr]) {
           itemsByDate[dateStr] = { 
@@ -281,7 +282,7 @@ export const Billing = () => {
       setDeliveryItems(newRows.length > 0 ? newRows : [{ id: 1, description: '', q20: '', q25: '', q30: '', q35: '', q40: '', q50: '', total: 0, amount: '' }]);
     } else {
       // Product Mode
-      const newProdRows = voucher.voucher_items.map((item: any) => ({
+      const newProdRows = items.map((item: any) => ({
         id: item.id,
         name: item.product_name,
         qty: item.quantity,
@@ -388,75 +389,81 @@ export const Billing = () => {
       </motion.div>
 
       {mode !== 'history' ? (
-        <div className="grid grid-cols-1 lg:grid-cols-3 landscape:grid-cols-3 gap-4 lg:gap-6">
-
-          {/* ── Left Panel ── */}
+        <div className="flex flex-col gap-6 lg:gap-8 max-w-[1400px] mx-auto w-full mt-6">
+          {/* ── Top Panel: Form & Actions ── */}
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.1 }}
-            className="lg:col-span-1 landscape:col-span-1 space-y-3 lg:space-y-5"
+            className="flex flex-col lg:flex-row gap-4 items-stretch w-full"
           >
             {/* Customer Details Card */}
-            <div className="bg-gradient-to-br from-[#eef2f7] to-[#d3d8df] rounded-3xl p-6 shadow-[8px_8px_20px_rgba(163,177,198,0.5),-8px_-8px_20px_rgba(255,255,255,0.8)] border border-white/50">
-              <div className="flex items-center gap-3 mb-3 lg:mb-5">
-                <div className="w-8 h-8 lg:w-10 lg:h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-blue-600 flex items-center justify-center shadow-lg">
+            <div className="flex-1 bg-gradient-to-br from-[#eef2f7] to-[#d3d8df] rounded-3xl p-6 shadow-[8px_8px_20px_rgba(163,177,198,0.5),-8px_-8px_20px_rgba(255,255,255,0.8)] border border-white/50">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-indigo-500 to-blue-600 flex items-center justify-center shadow-lg">
                   <FileText size={16} className="text-white" />
                 </div>
                 <h3 className="font-black text-base lg:text-lg text-slate-800">Invoice Details</h3>
               </div>
-              <div className="space-y-4">
-                <Input
-                  label="Customer Name"
-                  value={customerName}
-                  onChange={(e) => setCustomerName(e.target.value)}
-                  placeholder="Enter customer name"
-                />
+              <div className="flex flex-col sm:flex-row gap-4 items-end">
+                <div className="flex-1 w-full space-y-4">
+                  <Input
+                    label="Customer Name"
+                    value={customerName}
+                    onChange={(e) => setCustomerName(e.target.value)}
+                    placeholder="Enter customer name"
+                  />
+                </div>
+                <div className="flex-1 w-full space-y-4">
+                  <Input
+                    type="date"
+                    label="Date"
+                    value={date}
+                    onChange={(e) => setDate(e.target.value)}
+                  />
+                </div>
                 {mode !== 'history' && (
-                  <Button 
-                    type="button" 
-                    variant="secondary" 
-                    className="w-full text-xs py-2 bg-indigo-50 text-indigo-600 border-indigo-100"
-                    onClick={() => {
-                      fetchPendingVouchers();
-                      setVouchersImportOpen(true);
-                    }}
-                  >
-                    <Package size={14} className="mr-2" /> Import from Vouchers
-                  </Button>
+                  <div className="w-full sm:w-auto pb-1">
+                    <Button 
+                      type="button" 
+                      variant="secondary" 
+                      className="w-full text-xs py-3.5 bg-indigo-50 text-indigo-600 border-indigo-100 px-6 whitespace-nowrap"
+                      onClick={() => {
+                        fetchPendingVouchers();
+                        setVouchersImportOpen(true);
+                      }}
+                    >
+                      <Package size={14} className="mr-2" /> Import
+                    </Button>
+                  </div>
                 )}
-                <Input
-                  type="date"
-                  label="Date"
-                  value={date}
-                  onChange={(e) => setDate(e.target.value)}
-                />
               </div>
             </div>
 
             {/* Total Summary Card */}
-            <div className={clsx(
-              'rounded-3xl p-6 text-white shadow-xl',
-              mode === 'delivery'
-                ? 'bg-gradient-to-br from-blue-500 to-blue-700 shadow-blue-500/30'
-                : 'bg-gradient-to-br from-emerald-500 to-emerald-700 shadow-emerald-500/30'
-            )}>
-              <p className="text-white/70 text-[10px] lg:text-sm font-bold uppercase tracking-widest">Total Amount</p>
-              <p className="text-2xl lg:text-4xl font-black mt-1 lg:mt-2 tracking-tight">Rs. {currentTotal.toFixed(2)}</p>
-              {mode === 'delivery' && (
-                <p className="text-white/60 text-[10px] lg:text-sm mt-1 font-medium">
-                  {deliveryTotalQty} pkgs
-                </p>
-              )}
+            <div className="w-full lg:w-[320px] flex flex-col gap-4">
+              <div className={clsx(
+                'rounded-3xl p-6 text-white shadow-xl flex-1 flex flex-col justify-center items-center text-center',
+                mode === 'delivery'
+                  ? 'bg-gradient-to-br from-blue-500 to-blue-700 shadow-blue-500/30'
+                  : 'bg-gradient-to-br from-emerald-500 to-emerald-700 shadow-emerald-500/30'
+              )}>
+                <p className="text-white/70 text-[10px] lg:text-sm font-bold uppercase tracking-widest">Total Amount</p>
+                <p className="text-3xl lg:text-4xl font-black mt-1 lg:mt-2 tracking-tight">Rs. {currentTotal.toFixed(2)}</p>
+                {mode === 'delivery' && (
+                  <p className="text-white/60 text-[10px] lg:text-sm mt-1 font-medium">
+                    {deliveryTotalQty} pkgs
+                  </p>
+                )}
+              </div>
             </div>
-
-            {/* Desktop Actions */}
-            <div className="hidden lg:flex flex-col gap-3">
+            
+            <div className="w-full lg:w-[240px] flex flex-col gap-3 justify-center">
               <Button onClick={handleNativeShare} className="w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white hover:text-white font-bold shadow-lg shadow-green-500/30 border-none py-3.5">
-                <Share2 size={18} /> Share via WhatsApp
+                <Share2 size={18} /> WhatsApp Share
               </Button>
               <Button onClick={saveBill} disabled={loading} className="w-full py-3.5 bg-slate-800 text-white hover:bg-slate-700">
-                <Download size={18} /> {loading ? 'Saving...' : editingBillId ? 'Update & Download' : 'Save & Download'}
+                <Download size={18} /> {loading ? 'Saving...' : editingBillId ? 'Update' : 'Save & Download'}
               </Button>
               {editingBillId && (
                 <Button variant="secondary" onClick={() => {
@@ -469,12 +476,12 @@ export const Billing = () => {
             </div>
           </motion.div>
 
-          {/* ── Right Panel: Table ── */}
+          {/* ── Bottom Panel: Table ── */}
           <motion.div
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.15 }}
-            className="lg:col-span-2 landscape:col-span-2"
+            className="w-full"
           >
             <div className="bg-gradient-to-br from-[#eef2f7] to-[#d3d8df] rounded-3xl shadow-[8px_8px_20px_rgba(163,177,198,0.5),-8px_-8px_20px_rgba(255,255,255,0.8)] border border-white/50 overflow-hidden">
               

@@ -29,7 +29,10 @@ export const DaySheet = () => {
   const [description, setDescription] = useState('');
   const [date, setDate] = useState(getStandardDate());
   const [filterDate, setFilterDate] = useState(getStandardDate());
+  const [viewMode, setViewMode] = useState<'monthly' | 'daily'>('monthly');
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 30;
   const [showRangeModal, setShowRangeModal] = useState(false);
   const [editAmount, setEditAmount] = useState('');
   const [editDescription, setEditDescription] = useState('');
@@ -37,15 +40,27 @@ export const DaySheet = () => {
 
   useEffect(() => { 
     fetchEntries(); 
-  }, [filterDate]);
+    setCurrentPage(1);
+  }, [filterDate, viewMode]);
 
   const fetchEntries = async () => {
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('day_sheets')
         .select('*, profiles(username)')
-        .eq('date', filterDate)
         .order('created_at', { ascending: false });
+        
+      if (viewMode === 'monthly') {
+        const [year, month] = filterDate.split('-');
+        const start = `${year}-${month}-01`;
+        const lastDay = new Date(Number(year), Number(month), 0).getDate();
+        const end = `${year}-${month}-${lastDay}`;
+        query = query.gte('date', start).lte('date', end);
+      } else {
+        query = query.eq('date', filterDate);
+      }
+      
+      const { data, error } = await query;
       
       if (error) throw error;
       setEntries(data || []);
@@ -77,8 +92,8 @@ export const DaySheet = () => {
 
   const startEdit = (entry: any) => { 
     setEditingId(entry.id); 
-    setEditAmount(entry.amount.toString()); 
-    setEditDescription(entry.description); 
+    setEditAmount(entry.amount != null ? entry.amount.toString() : ''); 
+    setEditDescription(entry.description || ''); 
     setEditType(entry.type); 
   };
   
@@ -129,7 +144,7 @@ export const DaySheet = () => {
     const pageWidth = doc.internal.pageSize.width;
 
     drawPDFHeader(doc);
-    drawCustomerInfo(doc, "Report Type:", "Daily Day Sheet Statement", filterDate);
+    drawCustomerInfo(doc, "Report Type:", viewMode === 'monthly' ? "Monthly Financial Statement" : "Daily Financial Statement", viewMode === 'monthly' ? format(new Date(filterDate), 'MMMM yyyy') : filterDate);
 
     // Summary Cards in PDF
     const cardY = 70;
@@ -171,7 +186,7 @@ export const DaySheet = () => {
   };
 
   const downloadRangePDF = async (days: number) => {
-    const { start, end } = getDateRange(days);
+    const { start, end } = getDateRange(days, filterDate);
     try {
       const { data, error } = await supabase.from('day_sheets').select('*').gte('date', start).lte('date', end).order('date', { ascending: false });
       if (error) throw error;
@@ -191,6 +206,39 @@ export const DaySheet = () => {
       });
       drawGreenFooter(doc, 'NET BALANCE', `Rs. ${(rangeIncome - rangeExpense).toFixed(2)}`);
       savePDF(doc, `DaySheet_${days}days_${end}.pdf`);
+    } catch (err: any) {
+      toast.error("Report failed", err.message);
+    }
+  };
+
+  const downloadMonthlyPDF = async (monthStr: string) => {
+    if (!monthStr) return;
+    toast.info('Generating...', `Fetching Day Sheet report for ${monthStr}`);
+    
+    const [year, month] = monthStr.split('-');
+    const start = `${monthStr}-01`;
+    const lastDay = new Date(Number(year), Number(month), 0).getDate();
+    const end = `${monthStr}-${lastDay}`;
+    
+    try {
+      const { data, error } = await supabase.from('day_sheets').select('*').gte('date', start).lte('date', end).order('date', { ascending: false });
+      if (error) throw error;
+      if (!data || data.length === 0) { 
+        toast.error("No data", "No entries found in this month."); 
+        return; 
+      }
+      const doc = new jsPDF();
+      drawPDFHeader(doc);
+      drawCustomerInfo(doc, "Report Type:", `Monthly Financial Statement`, format(new Date(start), 'MMMM yyyy'));
+      const rangeIncome = data.filter(e => e.type === 'income').reduce((a, b) => a + Number(b.amount || 0), 0);
+      const rangeExpense = data.filter(e => e.type === 'expense').reduce((a, b) => a + Number(b.amount || 0), 0);
+      autoTable(doc, {
+        startY: 100,
+        head: [['Date', 'Type', 'Description', 'Amount']],
+        body: data.map(e => [format(new Date(e.date), 'dd/MM/yy'), e.type.toUpperCase(), e.description || 'No description', `Rs. ${Number(e.amount).toFixed(2)}`]),
+      });
+      drawGreenFooter(doc, 'NET BALANCE', `Rs. ${(rangeIncome - rangeExpense).toFixed(2)}`);
+      savePDF(doc, `DaySheet_${monthStr}.pdf`);
     } catch (err: any) {
       toast.error("Report failed", err.message);
     }
@@ -235,12 +283,32 @@ export const DaySheet = () => {
           initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}
           className="flex flex-wrap items-center gap-3 p-2 bg-glass rounded-[2rem] shadow-glass border border-white/40"
         >
+          <div className="flex items-center gap-1 bg-white/30 p-1 rounded-2xl">
+            <button
+              onClick={() => { setViewMode('monthly'); setFilterDate(getStandardDate()); }}
+              className={clsx("px-4 py-1.5 rounded-xl text-xs font-black transition-all", viewMode === 'monthly' ? "bg-white text-indigo-600 shadow-sm" : "text-slate-500 hover:text-slate-700")}
+            >
+              Month
+            </button>
+            <button
+              onClick={() => { setViewMode('daily'); setFilterDate(getStandardDate()); }}
+              className={clsx("px-4 py-1.5 rounded-xl text-xs font-black transition-all", viewMode === 'daily' ? "bg-white text-indigo-600 shadow-sm" : "text-slate-500 hover:text-slate-700")}
+            >
+              Day
+            </button>
+          </div>
           <div className="relative flex-1 lg:w-48 min-w-[160px]">
             <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={18} />
             <input 
-              type="date" 
-              value={filterDate} 
-              onChange={(e) => setFilterDate(e.target.value)}
+              type={viewMode === 'monthly' ? 'month' : 'date'} 
+              value={viewMode === 'monthly' ? filterDate.substring(0, 7) : filterDate} 
+              onChange={(e) => {
+                if (viewMode === 'monthly') {
+                  setFilterDate(`${e.target.value}-01`);
+                } else {
+                  setFilterDate(e.target.value);
+                }
+              }}
               className="w-full pl-12 pr-4 py-2.5 bg-white/50 rounded-2xl border-none focus:ring-2 focus:ring-indigo-500 font-bold text-slate-700 text-sm shadow-inner"
             />
           </div>
@@ -249,7 +317,19 @@ export const DaySheet = () => {
             <div className="hidden lg:flex items-center gap-1.5 px-2">
               <Button variant="secondary" onClick={() => downloadRangePDF(7)} className="!px-4 !py-2 text-[10px] h-10 border-none bg-white/60 hover:bg-white shadow-sm font-black text-slate-600 whitespace-nowrap">7D</Button>
               <Button variant="secondary" onClick={() => downloadRangePDF(15)} className="!px-4 !py-2 text-[10px] h-10 border-none bg-white/60 hover:bg-white shadow-sm font-black text-slate-600 whitespace-nowrap">15D</Button>
-              <Button variant="secondary" onClick={() => downloadRangePDF(30)} className="!px-4 !py-2 text-[10px] h-10 border-none bg-white/60 hover:bg-white shadow-sm font-black text-slate-600 whitespace-nowrap">1M</Button>
+              <div className="flex items-center gap-1.5 px-3 h-10 rounded-xl bg-white/60 hover:bg-white shadow-sm transition-colors border-none">
+                <span className="text-[10px] font-black text-slate-600 uppercase">1M:</span>
+                <input 
+                  type="month"
+                  className="text-[10px] font-black text-slate-600 outline-none cursor-pointer bg-transparent"
+                  onChange={e => {
+                    if (e.target.value) {
+                      downloadMonthlyPDF(e.target.value);
+                      e.target.value = '';
+                    }
+                  }}
+                />
+              </div>
               <Button variant="danger" onClick={downloadPDF} className="h-10 w-10 !p-0 flex items-center justify-center rounded-xl shadow-lg shadow-indigo-500/20 bg-indigo-600 hover:bg-indigo-700 text-white border-none">
                 <Download size={18} />
               </Button>
@@ -267,7 +347,7 @@ export const DaySheet = () => {
           <div className="absolute top-0 right-0 p-6 opacity-20 group-hover:scale-110 transition-transform duration-500">
             <ArrowUpRight size={80} />
           </div>
-          <p className="text-emerald-100 font-bold text-xs uppercase tracking-widest mb-1">Daily Income</p>
+          <p className="text-emerald-100 font-bold text-xs uppercase tracking-widest mb-1">{viewMode === 'monthly' ? 'Monthly Income' : 'Daily Income'}</p>
           <h3 className="text-4xl font-black">₹{totalIncome.toLocaleString()}</h3>
         </motion.div>
 
@@ -278,7 +358,7 @@ export const DaySheet = () => {
           <div className="absolute top-0 right-0 p-6 opacity-20 group-hover:scale-110 transition-transform duration-500">
             <ArrowDownRight size={80} />
           </div>
-          <p className="text-rose-100 font-bold text-xs uppercase tracking-widest mb-1">Daily Expense</p>
+          <p className="text-rose-100 font-bold text-xs uppercase tracking-widest mb-1">{viewMode === 'monthly' ? 'Monthly Expense' : 'Daily Expense'}</p>
           <h3 className="text-4xl font-black">₹{totalExpense.toLocaleString()}</h3>
         </motion.div>
 
@@ -297,22 +377,22 @@ export const DaySheet = () => {
         </motion.div>
       </div>
 
-      <div className="relative z-10 grid grid-cols-1 xl:grid-cols-12 gap-8 items-start">
-        {/* ── Entry Form (Sticky on Desktop) ── */}
+      <div className="relative z-10 flex flex-col gap-8">
+        {/* ── Entry Form ── */}
         <motion.div 
-          initial={{ opacity: 0, x: -30 }} animate={{ opacity: 1, x: 0 }}
-          className="xl:col-span-4 lg:sticky lg:top-8"
+          initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}
+          className="w-full"
         >
-          <div className="bg-white/40 backdrop-blur-xl border border-white/60 p-8 rounded-[3rem] shadow-glass space-y-6">
-            <div className="flex items-center gap-3">
+          <div className="bg-white/40 backdrop-blur-xl border border-white/60 p-6 rounded-[2.5rem] shadow-glass space-y-5">
+            <div className="flex items-center gap-3 mb-2">
               <div className="w-10 h-10 rounded-2xl bg-slate-800 flex items-center justify-center text-white shadow-lg">
                 <FileText size={20} />
               </div>
               <h3 className="text-xl font-black text-slate-800">Add Transaction</h3>
             </div>
 
-            <form onSubmit={handleAdd} className="space-y-5">
-              <div className="flex p-1.5 bg-slate-200/50 rounded-2xl gap-2 shadow-inner">
+            <form onSubmit={handleAdd} className="flex flex-col xl:flex-row gap-5 items-end">
+              <div className="flex p-1.5 bg-slate-200/50 rounded-2xl gap-2 shadow-inner w-full xl:w-64 flex-shrink-0">
                 {(['income', 'expense'] as const).map(t => (
                   <button
                     key={t} type="button" onClick={() => setType(t)}
@@ -329,13 +409,13 @@ export const DaySheet = () => {
                 ))}
               </div>
 
-              <div className="space-y-4">
-                <Input type="number" label="Amount (₹)" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0.00" required className="!py-4 font-black text-2xl !bg-white/60 !rounded-2xl" />
-                <Input label="Description" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="What is this for?" className="!py-4 !bg-white/60 !rounded-2xl" />
-                <Input type="date" label="Date" value={date} onChange={(e) => setDate(e.target.value)} className="!py-4 !bg-white/60 !rounded-2xl" />
+              <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-4 w-full">
+                <Input type="number" label="Amount (₹)" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0.00" required className="!py-3 font-black text-xl !bg-white/60 !rounded-2xl" />
+                <Input label="Description" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="What is this for?" className="!py-3 !bg-white/60 !rounded-2xl" />
+                <Input type="date" label="Date" value={date} onChange={(e) => setDate(e.target.value)} className="!py-3 !bg-white/60 !rounded-2xl" />
               </div>
 
-              <Button type="submit" className="w-full py-5 rounded-[1.5rem] font-black text-lg bg-indigo-600 hover:bg-indigo-700 text-white shadow-xl shadow-indigo-500/20 border-none mt-4">
+              <Button type="submit" className="w-full xl:w-auto xl:px-8 py-4 rounded-[1.5rem] font-black text-base bg-indigo-600 hover:bg-indigo-700 text-white shadow-xl shadow-indigo-500/20 border-none">
                 Save Record
               </Button>
             </form>
@@ -344,101 +424,135 @@ export const DaySheet = () => {
 
         {/* ── Transaction List ── */}
         <motion.div 
-          initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }}
-          className="xl:col-span-8 space-y-4"
+          initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+          className="w-full space-y-4"
         >
           <div className="flex items-center justify-between px-4 mb-2">
             <h4 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em]">Transaction History</h4>
             <span className="px-3 py-1 bg-white/40 border border-white/60 rounded-full text-[10px] font-bold text-slate-500">{entries.length} Entries</span>
           </div>
 
-          <div className="space-y-4">
-            <AnimatePresence mode="popLayout">
-              {entries.map((entry, index) => {
-                const isEditing = editingId === entry.id;
-                const currentType = isEditing ? editType : entry.type;
-                
-                return (
-                  <motion.div
-                    key={entry.id || index}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.95 }}
-                    transition={{ delay: index * 0.05 }}
-                    className={clsx(
-                      "relative group bg-white/40 backdrop-blur-xl border border-white/60 p-4 sm:p-6 rounded-3xl sm:rounded-[2.5rem] shadow-glass flex items-center gap-4 sm:gap-6",
-                      isEditing && "ring-2 ring-indigo-500 ring-offset-2"
-                    )}
-                  >
-                    <div className={clsx(
-                      "w-10 h-10 sm:w-16 sm:h-16 rounded-2xl sm:rounded-[1.5rem] flex items-center justify-center shadow-lg transition-transform duration-500 group-hover:scale-110 group-hover:rotate-3",
-                      currentType === 'income' ? "bg-emerald-500 text-white" : "bg-rose-500 text-white"
-                    )}>
-                      {currentType === 'income' ? <TrendingUp size={20} /> : <TrendingDown size={24} />}
-                    </div>
-
-                    <div className="flex-1 min-w-0">
-                      {isEditing ? (
-                        <div className="space-y-3">
-                          <input 
-                            value={editDescription} onChange={(e) => setEditDescription(e.target.value)}
-                            className="w-full bg-white/60 border-none rounded-xl px-3 py-2 font-bold text-slate-800"
-                          />
-                          <input 
-                            type="number" value={editAmount} onChange={(e) => setEditAmount(e.target.value)}
-                            className="w-full bg-white/60 border-none rounded-xl px-3 py-2 font-black text-xl"
-                          />
-                        </div>
-                      ) : (
-                        <>
-                          <h4 className="text-base sm:text-xl font-black text-slate-800 truncate leading-tight mb-0.5 sm:mb-1">{entry.description}</h4>
-                          <div className="flex items-center gap-2">
-                            <span className="w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full bg-slate-300" />
-                            <p className="text-[9px] sm:text-xs font-bold text-slate-400 uppercase tracking-widest truncate">By {entry.profiles?.username || 'System'}</p>
-                          </div>
-                        </>
-                      )}
-                    </div>
-
-                    <div className="flex flex-col items-end gap-2 sm:gap-3">
-                      {!isEditing && (
-                        <div className={clsx(
-                          "text-base sm:text-2xl font-black whitespace-nowrap",
-                          entry.type === 'income' ? "text-emerald-600" : "text-rose-600"
-                        )}>
-                          {entry.type === 'income' ? '+' : '-'}Rs.{Number(entry.amount || 0).toLocaleString()}
-                        </div>
-                      )}
-                      
-                      <div className="flex gap-2">
-                        {isEditing ? (
-                          <>
-                            <button onClick={saveEdit} className="p-3 bg-emerald-500 text-white rounded-2xl shadow-lg hover:scale-105 transition-transform"><Check size={18} /></button>
-                            <button onClick={cancelEdit} className="p-3 bg-slate-200 text-slate-600 rounded-2xl shadow-lg hover:scale-105 transition-transform"><X size={18} /></button>
-                          </>
-                        ) : (
-                          <>
-                            <button onClick={() => startEdit(entry)} className="p-3 bg-white/80 text-blue-600 border border-slate-100 rounded-2xl shadow-sm hover:scale-110 transition-transform"><Edit2 size={16} /></button>
-                            <button onClick={() => handleDelete(entry.id)} className="p-3 bg-white/80 text-rose-500 border border-slate-100 rounded-2xl shadow-sm hover:scale-110 transition-transform"><Trash2 size={16} /></button>
-                          </>
+          <div className="overflow-x-auto rounded-3xl border border-white/60 bg-white/40 backdrop-blur-xl shadow-glass">
+            <table className="w-full text-left text-sm text-slate-600">
+              <thead className="bg-white/50 text-[11px] uppercase text-slate-500 font-bold border-b border-white/60">
+                <tr>
+                  <th className="px-4 py-4 w-12 text-center">Type</th>
+                  <th className="px-4 py-4">Description</th>
+                  <th className="px-4 py-4 text-center">Date</th>
+                  <th className="px-4 py-4 text-center">Added By</th>
+                  <th className="px-4 py-4 text-right">Amount</th>
+                  <th className="px-4 py-4 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-white/40">
+                <AnimatePresence mode="popLayout">
+                  {entries.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map((entry, index) => {
+                    const isEditing = editingId === entry.id;
+                    const currentType = isEditing ? editType : entry.type;
+                    
+                    return (
+                      <motion.tr
+                        key={entry.id || index}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0 }}
+                        className={clsx(
+                          "hover:bg-white/50 transition-colors group",
+                          isEditing && "bg-white/70"
                         )}
-                      </div>
-                    </div>
-                  </motion.div>
-                );
-              })}
-            </AnimatePresence>
+                      >
+                        <td className="px-4 py-3 text-center">
+                          <div className={clsx(
+                            "w-8 h-8 mx-auto rounded-xl flex items-center justify-center shadow-sm",
+                            currentType === 'income' ? "bg-emerald-100 text-emerald-600" : "bg-rose-100 text-rose-600"
+                          )}>
+                            {currentType === 'income' ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 font-bold text-slate-800">
+                          {isEditing ? (
+                            <input 
+                              value={editDescription} onChange={(e) => setEditDescription(e.target.value)}
+                              className="w-full bg-white/80 border-none rounded-lg px-2 py-1 font-bold text-slate-800 text-sm focus:ring-2 focus:ring-indigo-500/20 outline-none"
+                            />
+                          ) : (
+                            entry.description
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-xs text-center text-slate-500 whitespace-nowrap">
+                          {format(new Date(entry.date), 'dd MMM yyyy')}
+                        </td>
+                        <td className="px-4 py-3 text-xs text-center text-slate-500">
+                          {entry.profiles?.username || 'System'}
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          {isEditing ? (
+                            <input 
+                              type="number" value={editAmount} onChange={(e) => setEditAmount(e.target.value)}
+                              className="w-24 bg-white/80 border-none rounded-lg px-2 py-1 font-black text-slate-800 text-sm text-right focus:ring-2 focus:ring-indigo-500/20 outline-none inline-block"
+                            />
+                          ) : (
+                            <span className={clsx(
+                              "font-black whitespace-nowrap",
+                              entry.type === 'income' ? "text-emerald-600" : "text-rose-600"
+                            )}>
+                              {entry.type === 'income' ? '+' : '-'}₹{Number(entry.amount || 0).toLocaleString()}
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-right whitespace-nowrap opacity-100 lg:opacity-0 group-hover:opacity-100 transition-opacity">
+                          <div className="flex justify-end gap-1.5">
+                            {isEditing ? (
+                              <>
+                                <button onClick={saveEdit} className="p-2 rounded-lg bg-emerald-500 text-white hover:scale-105 transition-transform" title="Save"><Check size={14} /></button>
+                                <button onClick={cancelEdit} className="p-2 rounded-lg bg-slate-200 text-slate-600 hover:scale-105 transition-transform" title="Cancel"><X size={14} /></button>
+                              </>
+                            ) : (
+                              <>
+                                <button onClick={() => startEdit(entry)} className="p-2 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition-colors" title="Edit"><Edit2 size={14} /></button>
+                                <button onClick={() => handleDelete(entry.id)} className="p-2 rounded-lg bg-rose-50 text-rose-500 hover:bg-rose-100 transition-colors" title="Delete"><Trash2 size={14} /></button>
+                              </>
+                            )}
+                          </div>
+                        </td>
+                      </motion.tr>
+                    );
+                  })}
+                </AnimatePresence>
+              </tbody>
+            </table>
 
             {entries.length === 0 && (
-              <div className="text-center py-24 bg-white/20 rounded-[3rem] border-2 border-dashed border-white/40">
-                <div className="w-20 h-20 bg-white/40 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <FileText size={40} className="text-slate-300" />
+              <div className="text-center py-20">
+                <div className="w-16 h-16 bg-white/40 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <FileText size={32} className="text-slate-300" />
                 </div>
-                <p className="text-slate-400 font-bold text-lg">No entries found for this date.</p>
-                <p className="text-slate-300 text-sm mt-1">Start by adding a transaction on the left.</p>
+                <p className="text-slate-400 font-bold text-sm">No entries found.</p>
               </div>
             )}
           </div>
+
+          {Math.ceil(entries.length / itemsPerPage) > 1 && (
+            <div className="flex justify-between items-center bg-white/40 backdrop-blur-xl p-3 rounded-2xl border border-white/60 shadow-glass">
+              <button 
+                disabled={currentPage === 1} 
+                onClick={() => setCurrentPage(p => p - 1)}
+                className="px-4 py-2 text-xs font-bold bg-white text-slate-600 rounded-xl hover:bg-slate-50 disabled:opacity-50 transition-colors shadow-sm"
+              >
+                Previous
+              </button>
+              <span className="text-xs font-bold text-slate-500">
+                Page {currentPage} of {Math.ceil(entries.length / itemsPerPage)}
+              </span>
+              <button 
+                disabled={currentPage === Math.ceil(entries.length / itemsPerPage)} 
+                onClick={() => setCurrentPage(p => p + 1)}
+                className="px-4 py-2 text-xs font-bold bg-white text-slate-600 rounded-xl hover:bg-slate-50 disabled:opacity-50 transition-colors shadow-sm"
+              >
+                Next
+              </button>
+            </div>
+          )}
         </motion.div>
       </div>
 

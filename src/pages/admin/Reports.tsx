@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
-import { Download, ChevronDown, ChevronUp, Clock, User, FileText, Box, Trash2, Search, Package, Truck, CalendarDays, Check, Send } from 'lucide-react';
+import { Download, ChevronDown, ChevronUp, Clock, User, FileText, Box, Trash2, Search, Package, Truck, CalendarDays, Check, Send, Edit2 } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { format } from 'date-fns';
@@ -24,6 +24,10 @@ export const Reports = () => {
   const [deliveryData, setDeliveryData] = useState<any[]>([]);
   const [expandedCompany, setExpandedCompany] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [editingPickupItem, setEditingPickupItem] = useState<{ id: string, itemNumber: string } | null>(null);
+  const [editingDeliveryItem, setEditingDeliveryItem] = useState<{ id: string, itemNumber: string } | null>(null);
+  const [deliveryPage, setDeliveryPage] = useState(1);
+  const itemsPerPage = 30;
 
   // Multi-date selection
   const [selectedDates, setSelectedDates] = useState<string[]>([]);
@@ -34,6 +38,10 @@ export const Reports = () => {
     if (activeTab === 'pickups') fetchPickups();
     else fetchDeliveries();
   }, [date, activeTab]);
+
+  useEffect(() => {
+    setDeliveryPage(1);
+  }, [activeTab, searchQuery, date]);
 
   const fetchPickups = async () => {
     setLoading(true);
@@ -189,8 +197,8 @@ export const Reports = () => {
     drawPDFHeader(doc);
     drawCustomerInfo(doc, 'Customer:', companyName, date);
     autoTable(doc, {
-      head: [['#', 'Shop', 'Location', 'Item No.', 'Time']],
-      body: items.map((item, i) => [i + 1, item.name, item.location || '-', item.itemNumber || '-', item.pickupTime]),
+      head: [['#', 'Shop', 'Location', 'Item No.']],
+      body: items.map((item, i) => [i + 1, item.name, item.location || '-', item.itemNumber || '-']),
       startY: 105, theme: 'grid',
       headStyles: { fillColor: [79, 70, 229], textColor: 255, fontStyle: 'bold' },
       styles: { cellPadding: 3, fontSize: 10 },
@@ -215,8 +223,8 @@ export const Reports = () => {
         doc.setFontSize(12); doc.setTextColor(...BRAND.accent); doc.setFont('helvetica', 'bold');
         doc.text(c.name || 'Unknown', 14, y);
         autoTable(doc, {
-          head: [['#', 'Shop', 'Location', 'Item No.', 'Time']],
-          body: c.items.map((item: any, i: number) => [i + 1, item.name, item.location || '-', item.itemNumber || '-', item.pickupTime || '-']),
+          head: [['#', 'Shop', 'Location', 'Item No.']],
+          body: c.items.map((item: any, i: number) => [i + 1, item.name, item.location || '-', item.itemNumber || '-']),
           startY: y + 5, theme: 'grid',
           headStyles: { fillColor: BRAND.accent, textColor: 255, fontStyle: 'bold' },
           styles: { cellPadding: 3, fontSize: 10 }, margin: { left: 14, right: 14 },
@@ -241,11 +249,9 @@ export const Reports = () => {
       drawPDFHeader(doc);
       drawCustomerInfo(doc, 'Report:', 'Daily Delivery Log', date);
       autoTable(doc, {
-        head: [['#', 'Shop', 'Location', 'Item No.', 'Time']],
+        head: [['#', 'Shop', 'Location', 'Item No.']],
         body: filteredDeliveries.map((d, i) => {
-          let timeStr = '-';
-          try { timeStr = d.created_at ? format(new Date(d.created_at), 'hh:mm a') : '-'; } catch(e) {}
-          return [i + 1, d.shops?.name || '-', d.shops?.location || '-', d.item_number || '-', timeStr];
+          return [i + 1, d.shops?.name || '-', d.shops?.location || '-', d.item_number || '-'];
         }),
         startY: 105, theme: 'grid',
         headStyles: { fillColor: BRAND.success, textColor: 255, fontStyle: 'bold' },
@@ -260,7 +266,7 @@ export const Reports = () => {
   };
 
   const downloadPickupRangePDF = async (days: number) => {
-    const { start, end } = getDateRange(days);
+    const { start, end } = getDateRange(days, date);
     toast.info('Generating...', `Fetching ${days}-day pickup report`);
     const { data, error } = await supabase.from('pickups')
       .select(`date, created_at, companies (name), pickup_items ( item_number, shops (name, location) )`)
@@ -272,16 +278,16 @@ export const Reports = () => {
     const rows: any[] = [];
     data.forEach((p: any) => {
       p.pickup_items?.forEach((item: any) => {
-        rows.push([format(new Date(p.date), 'dd/MM/yy'), p.companies?.name || '-', item.shops?.name || '-', item.item_number || '-', format(new Date(p.created_at), 'hh:mm a')]);
+        rows.push([format(new Date(p.date), 'dd/MM/yy'), p.companies?.name || '-', item.shops?.name || '-', item.item_number || '-']);
       });
     });
-    autoTable(doc, { head: [['Date', 'Company', 'Shop', 'Item No.', 'Time']], body: rows, startY: 105, theme: 'grid', headStyles: { fillColor: [79, 70, 229], textColor: 255, fontStyle: 'bold' }, styles: { cellPadding: 3, fontSize: 9 } });
+    autoTable(doc, { head: [['Date', 'Company', 'Shop', 'Item No.']], body: rows, startY: 105, theme: 'grid', headStyles: { fillColor: [79, 70, 229], textColor: 255, fontStyle: 'bold' }, styles: { cellPadding: 3, fontSize: 9 } });
     drawGreenFooter(doc, 'TOTAL ITEMS:', rows.length);
     savePDF(doc, `Pickups_${days}days_${end}.pdf`);
   };
 
   const downloadDeliveryRangePDF = async (days: number) => {
-    const { start, end } = getDateRange(days);
+    const { start, end } = getDateRange(days, date);
     toast.info('Generating...', `Fetching ${days}-day delivery report`);
     const { data, error } = await supabase.from('deliveries')
       .select(`date, created_at, item_number, shops (name, location)`)
@@ -290,8 +296,9 @@ export const Reports = () => {
     const doc = new jsPDF();
     drawPDFHeader(doc);
     drawCustomerInfo(doc, 'Report:', `${days}-Day Delivery Report`, `${format(new Date(start), 'dd MMM')} to ${format(new Date(end), 'dd MMM yyyy')}`);
-    const rows = data.map((d: any) => [format(new Date(d.date), 'dd/MM/yy'), d.shops?.name || '-', d.shops?.location || '-', d.item_number || '-', format(new Date(d.created_at), 'hh:mm a')]);
-    autoTable(doc, { head: [['Date', 'Shop', 'Location', 'Item No.', 'Time']], body: rows, startY: 105, theme: 'grid', headStyles: { fillColor: [16, 185, 129], textColor: 255, fontStyle: 'bold' }, styles: { cellPadding: 3, fontSize: 10 } });
+    const sortedData = [...data].sort((a: any, b: any) => (a.shops?.location || '').localeCompare(b.shops?.location || ''));
+    const rows = sortedData.map((d: any) => [format(new Date(d.date), 'dd/MM/yy'), d.shops?.name || '-', d.shops?.location || '-', d.item_number || '-']);
+    autoTable(doc, { head: [['Date', 'Shop', 'Location', 'Item No.']], body: rows, startY: 105, theme: 'grid', headStyles: { fillColor: [16, 185, 129], textColor: 255, fontStyle: 'bold' }, styles: { cellPadding: 3, fontSize: 10 } });
     drawGreenFooter(doc, 'TOTAL DELIVERIES:', data.length);
     savePDF(doc, `Deliveries_${days}days_${end}.pdf`);
   };
@@ -336,19 +343,102 @@ export const Reports = () => {
     else { toast.success('Deleted', 'Delivery removed.'); fetchDeliveries(); }
   };
 
+  const handleSavePickupItem = async (itemId: string) => {
+    if (!editingPickupItem || editingPickupItem.id !== itemId) return;
+    const { error } = await supabase.from('pickup_items').update({ item_number: editingPickupItem.itemNumber }).eq('id', itemId);
+    if (error) toast.error('Error', error.message);
+    else { toast.success('Saved', 'Item number updated.'); fetchPickups(); }
+    setEditingPickupItem(null);
+  };
+
+  const handleSaveDeliveryItem = async (itemId: string) => {
+    if (!editingDeliveryItem || editingDeliveryItem.id !== itemId) return;
+    const { error } = await supabase.from('deliveries').update({ item_number: editingDeliveryItem.itemNumber }).eq('id', itemId);
+    if (error) toast.error('Error', error.message);
+    else { toast.success('Saved', 'Item number updated.'); fetchDeliveries(); }
+    setEditingDeliveryItem(null);
+  };
+
+  const downloadMonthlyPickupPDF = async (monthStr: string) => {
+    if (!monthStr) return;
+    toast.info('Generating...', `Fetching pickup report for ${monthStr}`);
+    const [year, month] = monthStr.split('-');
+    const start = `${monthStr}-01`;
+    const lastDay = new Date(Number(year), Number(month), 0).getDate();
+    const end = `${monthStr}-${lastDay}`;
+    
+    const { data, error } = await supabase.from('pickups')
+      .select(`date, created_at, companies (name), pickup_items ( item_number, shops (name, location) )`)
+      .gte('date', start).lte('date', end).order('date', { ascending: false });
+      
+    if (error || !data?.length) { toast.error('No data', 'No pickups in this month.'); return; }
+    const doc = new jsPDF();
+    drawPDFHeader(doc);
+    drawCustomerInfo(doc, 'Report:', `Monthly Pickup Report`, format(new Date(start), 'MMMM yyyy'));
+    const rows: any[] = [];
+    data.forEach((p: any) => {
+      p.pickup_items?.forEach((item: any) => {
+        rows.push([format(new Date(p.date), 'dd/MM/yy'), p.companies?.name || '-', item.shops?.name || '-', item.item_number || '-']);
+      });
+    });
+    autoTable(doc, { head: [['Date', 'Company', 'Shop', 'Item No.']], body: rows, startY: 105, theme: 'grid', headStyles: { fillColor: [79, 70, 229], textColor: 255, fontStyle: 'bold' }, styles: { cellPadding: 3, fontSize: 9 } });
+    drawGreenFooter(doc, 'TOTAL ITEMS:', rows.length);
+    savePDF(doc, `Pickups_${monthStr}.pdf`);
+  };
+
+  const downloadMonthlyDeliveryPDF = async (monthStr: string) => {
+    if (!monthStr) return;
+    toast.info('Generating...', `Fetching delivery report for ${monthStr}`);
+    const [year, month] = monthStr.split('-');
+    const start = `${monthStr}-01`;
+    const lastDay = new Date(Number(year), Number(month), 0).getDate();
+    const end = `${monthStr}-${lastDay}`;
+    
+    const { data, error } = await supabase.from('deliveries')
+      .select(`date, created_at, item_number, shops (name, location)`)
+      .gte('date', start).lte('date', end).order('date', { ascending: false });
+      
+    if (error || !data?.length) { toast.error('No data', 'No deliveries in this month.'); return; }
+    const doc = new jsPDF();
+    drawPDFHeader(doc);
+    drawCustomerInfo(doc, 'Report:', `Monthly Delivery Report`, format(new Date(start), 'MMMM yyyy'));
+    const sortedData = [...data].sort((a: any, b: any) => (a.shops?.location || '').localeCompare(b.shops?.location || ''));
+    const rows = sortedData.map((d: any) => [format(new Date(d.date), 'dd/MM/yy'), d.shops?.name || '-', d.shops?.location || '-', d.item_number || '-']);
+    autoTable(doc, { head: [['Date', 'Shop', 'Location', 'Item No.']], body: rows, startY: 105, theme: 'grid', headStyles: { fillColor: [16, 185, 129], textColor: 255, fontStyle: 'bold' }, styles: { cellPadding: 3, fontSize: 10 } });
+    drawGreenFooter(doc, 'TOTAL DELIVERIES:', data.length);
+    savePDF(doc, `Deliveries_${monthStr}.pdf`);
+  };
+
   const lq = searchQuery.toLowerCase();
   const filteredPickups = pickupData.map(c => ({ ...c, items: c.items.filter((item: any) => item.name.toLowerCase().includes(lq) || c.name.toLowerCase().includes(lq)) })).filter(c => c.items.length > 0);
-  const filteredDeliveries = deliveryData.filter(d => (d.shops?.name || '').toLowerCase().includes(lq) || (d.shops?.location || '').toLowerCase().includes(lq));
+  const filteredDeliveries = deliveryData
+    .filter(d => (d.shops?.name || '').toLowerCase().includes(lq) || (d.shops?.location || '').toLowerCase().includes(lq))
+    .sort((a, b) => (a.shops?.location || '').localeCompare(b.shops?.location || ''));
 
-  const RangeBtns = ({ onDownload }: { onDownload: (d: number) => void }) => (
-    <div className="flex gap-1.5">
-      {[7, 15, 30].map(d => (
-        <button key={d} onClick={() => onDownload(d)}
-          className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 text-[11px] font-bold text-slate-600 hover:bg-indigo-50 hover:border-indigo-200 hover:text-indigo-700 transition-all shadow-sm whitespace-nowrap">
-          <CalendarDays size={11} />
-          {d === 30 ? '1 Month' : `${d} Days`}
+  const RangeBtns = ({ onDownloadRange, onDownloadMonth }: { onDownloadRange: (d: number) => void, onDownloadMonth: (m: string) => void }) => (
+    <div className="flex gap-2 items-center">
+      {[7, 15].map(d => (
+        <button key={d} onClick={() => onDownloadRange(d)}
+          className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-xs font-bold text-slate-600 hover:bg-indigo-50 hover:border-indigo-200 hover:text-indigo-700 transition-all shadow-sm whitespace-nowrap">
+          <CalendarDays size={12} />
+          {d} Days
         </button>
       ))}
+      <div className="w-px h-6 bg-slate-200 mx-1"></div>
+      <div className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-white border border-slate-200 shadow-sm hover:border-indigo-200 transition-colors">
+        <span className="text-[10px] font-bold text-slate-500 uppercase">1 Month:</span>
+        <CalendarDays size={12} className="text-slate-400" />
+        <input 
+          type="month"
+          className="text-xs font-bold text-slate-600 outline-none cursor-pointer bg-transparent"
+          onChange={e => {
+            if (e.target.value) {
+              onDownloadMonth(e.target.value);
+              e.target.value = '';
+            }
+          }}
+        />
+      </div>
     </div>
   );
 
@@ -482,7 +572,7 @@ export const Reports = () => {
                 </button>
               </div>
               <div className="overflow-x-auto no-scrollbar pb-1 -mx-1 px-1">
-                <RangeBtns onDownload={downloadPickupRangePDF} />
+                <RangeBtns onDownloadRange={downloadPickupRangePDF} onDownloadMonth={downloadMonthlyPickupPDF} />
               </div>
               <p className="text-[11px] text-slate-400 font-medium">
                 {filteredPickups.length} compan{filteredPickups.length !== 1 ? 'ies' : 'y'} · {filteredPickups.reduce((a, c) => a + c.items.length, 0)} shops
@@ -530,34 +620,64 @@ export const Reports = () => {
                       initial={{ height: 0, opacity: 0 }}
                       animate={{ height: 'auto', opacity: 1 }}
                       exit={{ height: 0, opacity: 0 }}
-                      className="border-t border-slate-100 bg-slate-50/50 p-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2"
+                      className="border-t border-slate-100 bg-slate-50/50 p-4"
                     >
-                      {company.items.map((item: any, idx: number) => (
-                        <div key={idx} className="bg-white rounded-xl p-3 border border-slate-100 shadow-sm">
-                          <div className="flex justify-between items-start gap-2 mb-2">
-                            <span className="font-bold text-slate-800 text-sm leading-tight">{item.name}</span>
-                            <button
-                              onClick={e => handleDeletePickupItem(item.itemId, item.pickupId, e)}
-                              className="text-red-400 hover:text-red-600 bg-red-50 p-1.5 rounded-lg border border-red-100 flex-shrink-0 transition-colors">
-                              <Trash2 size={12} />
-                            </button>
-                          </div>
-                          <div className="flex flex-wrap gap-1.5 mb-2">
-                            {item.location && (
-                              <span className="text-[10px] text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">{item.location}</span>
-                            )}
-                            {item.itemNumber && (
-                              <span className="inline-flex items-center gap-1 text-[10px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-bold">
-                                <Box size={9} />{item.itemNumber}
-                              </span>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-3 text-[10px] text-slate-400 border-t border-slate-100 pt-2">
-                            <span className="flex items-center gap-1"><Clock size={9} />{item.pickupTime}</span>
-                            <span className="flex items-center gap-1"><User size={9} />{item.pickupUser}</span>
-                          </div>
-                        </div>
-                      ))}
+                      <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-inner">
+                        <table className="w-full text-left text-sm text-slate-600">
+                          <thead className="bg-slate-50 text-[11px] uppercase text-slate-400 font-bold border-b border-slate-200">
+                            <tr>
+                              <th className="px-4 py-3">Shop Name</th>
+                              <th className="px-4 py-3">Location</th>
+                              <th className="px-4 py-3 text-center">Item No.</th>
+                              <th className="px-4 py-3 text-center">Time</th>
+                              <th className="px-4 py-3 text-center">User</th>
+                              <th className="px-4 py-3 text-right">Actions</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-100">
+                            {company.items.map((item: any, idx: number) => (
+                              <tr key={idx} className="hover:bg-slate-50 transition-colors group">
+                                <td className="px-4 py-3 font-bold text-slate-800">{item.name}</td>
+                                <td className="px-4 py-3 text-xs text-slate-500">{item.location || '-'}</td>
+                                <td className="px-4 py-3 text-center">
+                                  {editingPickupItem?.id === item.itemId ? (
+                                    <input 
+                                      type="text" 
+                                      className="border border-indigo-300 rounded px-2 py-1 w-20 text-xs font-bold text-indigo-700 outline-none focus:ring-2 focus:ring-indigo-500/20 text-center"
+                                      value={editingPickupItem.itemNumber}
+                                      autoFocus
+                                      onChange={e => setEditingPickupItem({ ...editingPickupItem, itemNumber: e.target.value })}
+                                      onKeyDown={e => e.key === 'Enter' && handleSavePickupItem(item.itemId)}
+                                    />
+                                  ) : (
+                                    <span className="inline-flex items-center gap-1 bg-blue-100 text-blue-700 px-2 py-0.5 rounded-md font-bold text-xs">
+                                      <Box size={10} />{item.itemNumber || '-'}
+                                    </span>
+                                  )}
+                                </td>
+                                <td className="px-4 py-3 text-xs text-center whitespace-nowrap"><span className="flex items-center justify-center gap-1"><Clock size={11} className="text-slate-400" />{item.pickupTime}</span></td>
+                                <td className="px-4 py-3 text-xs text-center"><span className="flex items-center justify-center gap-1"><User size={11} className="text-slate-400" />{item.pickupUser}</span></td>
+                                <td className="px-4 py-3 text-right whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity">
+                                  <div className="flex justify-end gap-1.5">
+                                    {editingPickupItem?.id === item.itemId ? (
+                                      <button onClick={() => handleSavePickupItem(item.itemId)} className="p-1.5 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition-colors" title="Save">
+                                        <Check size={14} />
+                                      </button>
+                                    ) : (
+                                      <button onClick={() => setEditingPickupItem({ id: item.itemId, itemNumber: item.itemNumber || '' })} className="p-1.5 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition-colors" title="Edit">
+                                        <Edit2 size={14} />
+                                      </button>
+                                    )}
+                                    <button onClick={e => handleDeletePickupItem(item.itemId, item.pickupId, e)} className="p-1.5 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 transition-colors" title="Delete">
+                                      <Trash2 size={14} />
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
                     </motion.div>
                   )}
                 </AnimatePresence>
@@ -589,53 +709,97 @@ export const Reports = () => {
                   <Download size={12} /> Today's PDF
                 </button>
               </div>
-              <RangeBtns onDownload={downloadDeliveryRangePDF} />
+              <RangeBtns onDownloadRange={downloadDeliveryRangePDF} onDownloadMonth={downloadMonthlyDeliveryPDF} />
               <p className="text-[11px] text-slate-400 font-medium">
                 {filteredDeliveries.length} deliveries recorded
               </p>
             </div>
 
-            {/* Delivery cards */}
-            <div className="space-y-2">
-              {filteredDeliveries.map((delivery, idx) => (
-                <motion.div
-                  key={delivery.id}
-                  initial={{ opacity: 0, y: 6 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: idx * 0.03 }}
-                  className="flex items-center gap-3 p-3.5 bg-white rounded-2xl border border-slate-100 shadow-sm border-l-4"
-                  style={{ borderLeftColor: '#10b981' }}
-                >
-                  <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-400 to-green-600 flex items-center justify-center flex-shrink-0 shadow-md">
-                    <span className="text-white font-black text-sm">{(delivery.shops?.name || '?').charAt(0)}</span>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h4 className="font-bold text-slate-800 text-sm truncate">{delivery.shops?.name}</h4>
-                    <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                      <span className="text-[10px] text-slate-400">{delivery.shops?.location}</span>
-                      {delivery.item_number && (
-                        <span className="inline-flex items-center gap-1 text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full font-bold">
-                          <Box size={8} />{delivery.item_number}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  <div className="text-right flex-shrink-0">
-                    <p className="text-xs font-bold text-slate-600 flex items-center gap-1 justify-end">
-                      <Clock size={11} />{format(new Date(delivery.created_at), 'hh:mm a')}
-                    </p>
-                    <p className="text-[10px] text-slate-400 flex items-center justify-end gap-1 mt-0.5">
-                      <User size={9} />{delivery.profiles?.username}
-                    </p>
-                  </div>
-                  <button
-                    onClick={e => handleDeleteDelivery(delivery.id, e)}
-                    className="text-red-400 hover:text-red-600 bg-red-50 p-1.5 rounded-lg border border-red-100 flex-shrink-0 transition-colors ml-1">
-                    <Trash2 size={13} />
-                  </button>
-                </motion.div>
-              ))}
+            {/* Delivery Table */}
+            <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm">
+              <table className="w-full text-left text-sm text-slate-600">
+                <thead className="bg-slate-50 text-[11px] uppercase text-slate-400 font-bold border-b border-slate-200">
+                  <tr>
+                    <th className="px-4 py-3 w-12 text-center">#</th>
+                    <th className="px-4 py-3">Shop Name</th>
+                    <th className="px-4 py-3">Location</th>
+                    <th className="px-4 py-3 text-center">Item No.</th>
+                    <th className="px-4 py-3 text-center">Time</th>
+                    <th className="px-4 py-3 text-center">User</th>
+                    <th className="px-4 py-3 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {filteredDeliveries.slice((deliveryPage - 1) * itemsPerPage, deliveryPage * itemsPerPage).map((delivery, idx) => (
+                    <tr key={delivery.id} className="hover:bg-slate-50 transition-colors group">
+                      <td className="px-4 py-3 text-center">
+                        <div className="w-6 h-6 mx-auto rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center text-xs font-black">
+                          {(deliveryPage - 1) * itemsPerPage + idx + 1}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 font-bold text-slate-800">{delivery.shops?.name || '-'}</td>
+                      <td className="px-4 py-3 text-slate-500 text-xs">{delivery.shops?.location || '-'}</td>
+                      <td className="px-4 py-3 text-center">
+                        {editingDeliveryItem?.id === delivery.id ? (
+                          <input 
+                            type="text" 
+                            className="border border-indigo-300 rounded px-2 py-1 w-20 text-xs font-bold text-indigo-700 outline-none focus:ring-2 focus:ring-indigo-500/20 text-center"
+                            value={editingDeliveryItem.itemNumber}
+                            autoFocus
+                            onChange={e => setEditingDeliveryItem({ ...editingDeliveryItem, itemNumber: e.target.value })}
+                            onKeyDown={e => e.key === 'Enter' && handleSaveDeliveryItem(delivery.id)}
+                          />
+                        ) : (
+                          <span className="inline-flex items-center gap-1 bg-blue-100 text-blue-700 px-2 py-0.5 rounded-md font-bold text-xs">
+                            <Box size={10} />{delivery.item_number || '-'}
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-xs text-center whitespace-nowrap"><span className="flex items-center justify-center gap-1"><Clock size={11} className="text-slate-400" />{format(new Date(delivery.created_at), 'hh:mm a')}</span></td>
+                      <td className="px-4 py-3 text-xs text-center"><span className="flex items-center justify-center gap-1"><User size={11} className="text-slate-400" />{delivery.profiles?.username || '-'}</span></td>
+                      <td className="px-4 py-3 text-right whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="flex justify-end gap-1.5">
+                          {editingDeliveryItem?.id === delivery.id ? (
+                            <button onClick={() => handleSaveDeliveryItem(delivery.id)} className="p-1.5 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition-colors" title="Save">
+                              <Check size={14} />
+                            </button>
+                          ) : (
+                            <button onClick={() => setEditingDeliveryItem({ id: delivery.id, itemNumber: delivery.item_number || '' })} className="p-1.5 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition-colors" title="Edit">
+                              <Edit2 size={14} />
+                            </button>
+                          )}
+                          <button onClick={e => handleDeleteDelivery(delivery.id, e)} className="p-1.5 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 transition-colors" title="Delete">
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
+
+            {Math.ceil(filteredDeliveries.length / itemsPerPage) > 1 && (
+              <div className="flex justify-between items-center bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
+                <button 
+                  disabled={deliveryPage === 1} 
+                  onClick={() => setDeliveryPage(p => p - 1)}
+                  className="px-3 py-1.5 text-xs font-bold bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200 disabled:opacity-50"
+                >
+                  Previous
+                </button>
+                <span className="text-xs font-bold text-slate-500">
+                  Page {deliveryPage} of {Math.ceil(filteredDeliveries.length / itemsPerPage)}
+                </span>
+                <button 
+                  disabled={deliveryPage === Math.ceil(filteredDeliveries.length / itemsPerPage)} 
+                  onClick={() => setDeliveryPage(p => p + 1)}
+                  className="px-3 py-1.5 text-xs font-bold bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200 disabled:opacity-50"
+                >
+                  Next
+                </button>
+              </div>
+            )}
 
             {filteredDeliveries.length === 0 && (
               <div className="text-center py-16 text-slate-400">

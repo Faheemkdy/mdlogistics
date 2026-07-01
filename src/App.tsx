@@ -3,26 +3,27 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ToastProvider } from './components/ui/Toast';
 import { Layout } from './components/Layout';
-import { Login } from './pages/Login';
-import { AdminDashboard } from './pages/admin/AdminDashboard';
-import { Companies } from './pages/admin/Companies';
-import { Shops } from './pages/admin/Shops';
-import { DaySheet } from './pages/admin/DaySheet';
-import { UserManagement } from './pages/admin/UserManagement';
-import { Reports } from './pages/admin/Reports';
-import { Billing } from './pages/admin/Billing';
-import { UserDashboard } from './pages/user/UserDashboard';
-import { Pickup } from './pages/user/Pickup';
-import { Delivery } from './pages/user/Delivery';
-import { TodayActivity } from './pages/user/TodayActivity';
-import { Profile } from './pages/Profile';
-import { VoucherEntry } from './pages/VoucherEntry';
-import { VoucherAdmin } from './pages/admin/VoucherAdmin';
-import { Dispatch } from './pages/admin/Dispatch';
-import { Reconciliation } from './pages/admin/Reconciliation';
-import { CourierExchange } from './pages/admin/CourierExchange';
+import { Suspense, lazy } from 'react';
 
-
+// Lazy loaded pages for better performance
+const Login = lazy(() => import('./pages/Login').then(module => ({ default: module.Login })));
+const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard').then(module => ({ default: module.AdminDashboard })));
+const Companies = lazy(() => import('./pages/admin/Companies').then(module => ({ default: module.Companies })));
+const Shops = lazy(() => import('./pages/admin/Shops').then(module => ({ default: module.Shops })));
+const DaySheet = lazy(() => import('./pages/admin/DaySheet').then(module => ({ default: module.DaySheet })));
+const UserManagement = lazy(() => import('./pages/admin/UserManagement').then(module => ({ default: module.UserManagement })));
+const Reports = lazy(() => import('./pages/admin/Reports').then(module => ({ default: module.Reports })));
+const Billing = lazy(() => import('./pages/admin/Billing').then(module => ({ default: module.Billing })));
+const UserDashboard = lazy(() => import('./pages/user/UserDashboard').then(module => ({ default: module.UserDashboard })));
+const Pickup = lazy(() => import('./pages/user/Pickup').then(module => ({ default: module.Pickup })));
+const Delivery = lazy(() => import('./pages/user/Delivery').then(module => ({ default: module.Delivery })));
+const TodayActivity = lazy(() => import('./pages/user/TodayActivity').then(module => ({ default: module.TodayActivity })));
+const Profile = lazy(() => import('./pages/Profile').then(module => ({ default: module.Profile })));
+const VoucherEntry = lazy(() => import('./pages/VoucherEntry').then(module => ({ default: module.VoucherEntry })));
+const VoucherAdmin = lazy(() => import('./pages/admin/VoucherAdmin').then(module => ({ default: module.VoucherAdmin })));
+const Dispatch = lazy(() => import('./pages/admin/Dispatch').then(module => ({ default: module.Dispatch })));
+const Reconciliation = lazy(() => import('./pages/admin/Reconciliation').then(module => ({ default: module.Reconciliation })));
+const CourierExchange = lazy(() => import('./pages/admin/CourierExchange').then(module => ({ default: module.CourierExchange })));
 
 const ProtectedRoute = ({ children, allowedRoles }: { children: React.ReactNode, allowedRoles?: string[] }) => {
   const { user, profile, loading } = useAuth();
@@ -58,62 +59,71 @@ const ProtectedRoute = ({ children, allowedRoles }: { children: React.ReactNode,
 function AppRoutes() {
   const { profile, isMasterAdmin, loading } = useAuth();
 
+  // Loading fallback for lazy loaded components
+  const SuspenseFallback = () => (
+    <div className="flex items-center justify-center min-h-[60vh]">
+      <div className="w-8 h-8 border-2 border-indigo-500/30 border-t-indigo-600 rounded-full animate-spin" />
+    </div>
+  );
+
   return (
-    <Routes>
-      <Route path="/login" element={<Login />} />
-      <Route path="/entry" element={<VoucherEntry />} />
-      
+    <Suspense fallback={<SuspenseFallback />}>
+      <Routes>
+        <Route path="/login" element={<Login />} />
+        <Route path="/entry" element={<VoucherEntry />} />
+        
 
+        <Route path="/" element={
+          <ProtectedRoute>
+            <Layout />
+          </ProtectedRoute>
+        }>
+          {/* Common Routes */}
+          <Route index element={
+            loading ? (
+              <SuspenseFallback />
+            ) : profile?.role === 'admin' ? <AdminDashboard /> : <UserDashboard />
+          } />
+          <Route path="profile" element={<Profile />} />
 
-      <Route path="/" element={
-        <ProtectedRoute>
-          <Layout />
-        </ProtectedRoute>
-      }>
-        {/* Common Routes */}
-        <Route index element={
-          loading ? (
-            <div className="flex items-center justify-center h-[60vh]">
-              <div className="w-8 h-8 border-2 border-indigo-500/30 border-t-indigo-600 rounded-full animate-spin" />
-            </div>
-          ) : profile?.role === 'admin' ? <AdminDashboard /> : <UserDashboard />
-        } />
-        <Route path="profile" element={<Profile />} />
+          {/* Admin Routes */}
+          <Route path="companies" element={<ProtectedRoute allowedRoles={['admin']}><Companies /></ProtectedRoute>} />
+          <Route path="shops" element={<ProtectedRoute allowedRoles={['admin']}><Shops /></ProtectedRoute>} />
+          <Route path="day-sheet" element={<ProtectedRoute allowedRoles={['admin']}><DaySheet /></ProtectedRoute>} />
+          <Route path="users" element={<ProtectedRoute allowedRoles={['admin']}><UserManagement /></ProtectedRoute>} />
+          <Route path="reports" element={<ProtectedRoute allowedRoles={['admin']}><Reports /></ProtectedRoute>} />
+          <Route path="billing" element={<ProtectedRoute allowedRoles={['admin']}>{isMasterAdmin ? <Billing /> : <Navigate to="/" />}</ProtectedRoute>} />
+          <Route path="vouchers" element={<ProtectedRoute allowedRoles={['admin']}><VoucherAdmin /></ProtectedRoute>} />
+          <Route path="dispatch" element={<ProtectedRoute allowedRoles={['admin']}><Dispatch /></ProtectedRoute>} />
+          <Route path="reconciliation" element={<ProtectedRoute allowedRoles={['admin']}>{isMasterAdmin ? <Reconciliation /> : <Navigate to="/" />}</ProtectedRoute>} />
+          <Route path="courier-exchange" element={<ProtectedRoute allowedRoles={['admin']}><CourierExchange /></ProtectedRoute>} />
 
-        {/* Admin Routes */}
-        <Route path="companies" element={<ProtectedRoute allowedRoles={['admin']}><Companies /></ProtectedRoute>} />
-        <Route path="shops" element={<ProtectedRoute allowedRoles={['admin']}><Shops /></ProtectedRoute>} />
-        <Route path="day-sheet" element={<ProtectedRoute allowedRoles={['admin']}><DaySheet /></ProtectedRoute>} />
-        <Route path="users" element={<ProtectedRoute allowedRoles={['admin']}><UserManagement /></ProtectedRoute>} />
-        <Route path="reports" element={<ProtectedRoute allowedRoles={['admin']}><Reports /></ProtectedRoute>} />
-        <Route path="billing" element={<ProtectedRoute allowedRoles={['admin']}>{isMasterAdmin ? <Billing /> : <Navigate to="/" />}</ProtectedRoute>} />
-        <Route path="vouchers" element={<ProtectedRoute allowedRoles={['admin']}><VoucherAdmin /></ProtectedRoute>} />
-        <Route path="dispatch" element={<ProtectedRoute allowedRoles={['admin']}><Dispatch /></ProtectedRoute>} />
-        <Route path="reconciliation" element={<ProtectedRoute allowedRoles={['admin']}>{isMasterAdmin ? <Reconciliation /> : <Navigate to="/" />}</ProtectedRoute>} />
-        <Route path="courier-exchange" element={<ProtectedRoute allowedRoles={['admin']}><CourierExchange /></ProtectedRoute>} />
-
-        {/* User Routes */}
-        <Route path="pickup" element={<ProtectedRoute allowedRoles={['admin', 'user']}><Pickup /></ProtectedRoute>} />
-        <Route path="delivery" element={<ProtectedRoute allowedRoles={['admin', 'user']}><Delivery /></ProtectedRoute>} />
-        <Route path="today-activity" element={<ProtectedRoute allowedRoles={['admin', 'user']}><TodayActivity /></ProtectedRoute>} />
-      </Route>
-    </Routes>
+          {/* User Routes */}
+          <Route path="pickup" element={<ProtectedRoute allowedRoles={['admin', 'user']}><Pickup /></ProtectedRoute>} />
+          <Route path="delivery" element={<ProtectedRoute allowedRoles={['admin', 'user']}><Delivery /></ProtectedRoute>} />
+          <Route path="today-activity" element={<ProtectedRoute allowedRoles={['admin', 'user']}><TodayActivity /></ProtectedRoute>} />
+        </Route>
+      </Routes>
+    </Suspense>
   );
 }
 
 import { ThemeProvider } from './context/ThemeContext';
+import { ErrorBoundary } from './components/ErrorBoundary';
 
 function App() {
   return (
-    <ThemeProvider>
-      <BrowserRouter>
-        <AuthProvider>
-          <ToastProvider>
-            <AppRoutes />
-          </ToastProvider>
-        </AuthProvider>
-      </BrowserRouter>
-    </ThemeProvider>
+    <ErrorBoundary>
+      <ThemeProvider>
+        <BrowserRouter>
+          <AuthProvider>
+            <ToastProvider>
+              <AppRoutes />
+            </ToastProvider>
+          </AuthProvider>
+        </BrowserRouter>
+      </ThemeProvider>
+    </ErrorBoundary>
   );
 }
 

@@ -16,6 +16,8 @@ export const Reconciliation = () => {
   const [loading, setLoading] = useState(true);
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [data, setData] = useState<any[]>([]);
+  const [currentPage, setCurrentPage] = useState(0);
+  const itemsPerPage = 30;
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
 
@@ -28,6 +30,10 @@ export const Reconciliation = () => {
   useEffect(() => {
     fetchData();
   }, [date]);
+
+  useEffect(() => {
+    setCurrentPage(0);
+  }, [debouncedSearch, date]);
 
   const fetchData = async () => {
     setLoading(true);
@@ -98,7 +104,10 @@ export const Reconciliation = () => {
       });
   }, [data, debouncedSearch]);
 
-  const totals = data.reduce((acc, curr) => ({
+  const totalPages = Math.ceil(filteredData.length / itemsPerPage);
+  const paginatedData = filteredData.slice(currentPage * itemsPerPage, (currentPage + 1) * itemsPerPage);
+
+  const totals = filteredData.reduce((acc, curr) => ({
     dispatched: acc.dispatched + curr.totalDispatched,
     delivered: acc.delivered + curr.totalDelivered,
     mismatches: acc.mismatches + (curr.status === 'mismatch' ? 1 : 0)
@@ -159,7 +168,7 @@ export const Reconciliation = () => {
   };
 
   const handleRangeExport = async (days: number) => {
-    const { start, end } = getDateRange(days);
+    const { start, end } = getDateRange(days, date);
     toast.info("Generating Report", `Fetching reconciliation data from ${start} to ${end}...`);
 
     try {
@@ -226,6 +235,78 @@ export const Reconciliation = () => {
     }
   };
 
+  const handleMonthlyExport = async (monthStr: string) => {
+    if (!monthStr) return;
+    const [year, month] = monthStr.split('-');
+    const start = `${monthStr}-01`;
+    const lastDay = new Date(Number(year), Number(month), 0).getDate();
+    const end = `${monthStr}-${lastDay}`;
+    toast.info("Generating Report", `Fetching reconciliation data for ${monthStr}...`);
+
+    try {
+      const { data: dispatches } = await supabase.from('dispatches').select('*').gte('date', start).lte('date', end);
+      const { data: deliveries } = await supabase.from('deliveries').select('*').gte('date', start).lte('date', end);
+
+      const shopIds = new Set([
+        ...(dispatches || []).map(d => d.shop_id),
+        ...(deliveries || []).map(d => d.shop_id)
+      ]);
+
+      let shops: any[] = [];
+      if (shopIds.size > 0) {
+        const { data } = await supabase.from('shops').select('id, name, location').in('id', Array.from(shopIds));
+        shops = data || [];
+      }
+
+      const rangeReconciliation = (shops || []).map(shop => {
+        const shopDispatches = (dispatches || []).filter(d => d.shop_id === shop.id);
+        const shopDeliveries = (deliveries || []).filter(d => d.shop_id === shop.id);
+
+        const totalDispatched = shopDispatches.reduce((acc, d) => acc + (parseFloat(d.item_number) || 0), 0);
+        const totalDelivered = shopDeliveries.reduce((acc, d) => acc + (parseFloat(d.item_number) || 0), 0);
+
+        return {
+          ...shop,
+          totalDispatched,
+          totalDelivered,
+          diff: totalDispatched - totalDelivered
+        };
+      }).filter(d => d.totalDispatched > 0 || d.totalDelivered > 0);
+
+      if (rangeReconciliation.length === 0) {
+        toast.error("No data", "No records found in this month.");
+        return;
+      }
+
+      const doc = new jsPDF();
+      drawPDFHeader(doc);
+      drawCustomerInfo(doc, "Report Type:", `Monthly Reconciliation`, format(new Date(start), 'MMMM yyyy'));
+
+      const tableData = rangeReconciliation.map(d => [
+        d.name,
+        d.location || '-',
+        d.totalDispatched.toString(),
+        d.totalDelivered.toString(),
+        d.diff === 0 ? 'Match' : (d.diff > 0 ? `+${d.diff} Short` : `${Math.abs(d.diff)} Extra`)
+      ]);
+
+      autoTable(doc, {
+        head: [['Shop Name', 'Location', 'Total Dispatched', 'Total Delivered', 'Status']],
+        body: tableData,
+        startY: 100,
+        theme: 'grid',
+        headStyles: { fillColor: [30, 41, 59], textColor: 255, fontStyle: 'bold' },
+        styles: { cellPadding: 4, fontSize: 10 },
+      });
+
+      const mismatches = rangeReconciliation.filter(d => d.diff !== 0).length;
+      drawGreenFooter(doc, "SHOPS WITH MISMATCH:", mismatches);
+      savePDF(doc, `Reconciliation_${monthStr}.pdf`);
+    } catch (error: any) {
+      toast.error("Export failed", error.message);
+    }
+  };
+
   return (
     <div className="max-w-6xl mx-auto pb-12 px-4 sm:px-6">
       <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6 mb-6">
@@ -245,14 +326,28 @@ export const Reconciliation = () => {
             />
           </div>
           <div className="flex flex-wrap gap-2 w-full sm:w-auto">
-            <div className="flex gap-1.5 p-1 bg-white rounded-xl shadow-sm border border-slate-200">
+            <div className="flex gap-1.5 p-1 bg-white rounded-xl shadow-sm border border-slate-200 items-center">
               <button onClick={() => handleRangeExport(7)} className="px-3 py-1.5 text-[10px] font-black uppercase hover:bg-slate-50 rounded-lg transition-colors">7 Days</button>
               <button onClick={() => handleRangeExport(15)} className="px-3 py-1.5 text-[10px] font-black uppercase hover:bg-slate-50 rounded-lg transition-colors">15 Days</button>
-              <button onClick={() => handleRangeExport(30)} className="px-3 py-1.5 text-[10px] font-black uppercase hover:bg-slate-50 rounded-lg transition-colors">1 Month</button>
+              <div className="w-px h-6 bg-slate-200 mx-1"></div>
+              <div className="flex items-center gap-1.5 px-2">
+                <span className="text-[10px] font-black text-slate-500 uppercase">1M:</span>
+                <input 
+                  type="month"
+                  className="text-[10px] font-black text-slate-600 outline-none cursor-pointer bg-transparent"
+                  onChange={e => {
+                    if (e.target.value) {
+                      handleMonthlyExport(e.target.value);
+                      e.target.value = '';
+                    }
+                  }}
+                />
+              </div>
             </div>
-            <Button variant="ghost" onClick={fetchData} className="flex-1 sm:flex-none bg-white shadow-sm border border-slate-200 text-sm h-11">
+            <button
+              onClick={fetchData} className="flex-1 sm:flex-none bg-white shadow-sm border border-slate-200 text-sm h-11 px-4 font-bold text-slate-600 hover:bg-slate-50">
               Refresh
-            </Button>
+            </button>
             <Button variant="primary" onClick={handleExport} className="flex-1 sm:flex-none bg-slate-800 text-white hover:bg-slate-900 border-none text-sm h-11 px-4">
               <Share2 size={16} className="mr-2" /> Share Today
             </Button>
@@ -337,7 +432,7 @@ export const Reconciliation = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
-              {filteredData.map((row, index) => (
+              {paginatedData.map((row, index) => (
                 <motion.tr
                   key={row.id}
                   initial={{ opacity: 0, y: 5 }}
@@ -402,7 +497,7 @@ export const Reconciliation = () => {
 
         {/* Mobile View Cards */}
         <div className="md:hidden divide-y divide-slate-100">
-          {filteredData.map((row) => (
+          {paginatedData.map((row) => (
             <div key={row.id} className={clsx(
               "p-4 transition-colors",
               row.status === 'mismatch' ? "bg-red-50/20" : "bg-white"
@@ -454,6 +549,28 @@ export const Reconciliation = () => {
         {filteredData.length === 0 && !loading && (
           <div className="py-20 text-center">
             <p className="text-slate-400 font-medium">No records found for this view.</p>
+          </div>
+        )}
+
+        {totalPages > 1 && (
+          <div className="flex justify-between items-center bg-white/40 backdrop-blur-xl p-3 sm:p-4 rounded-2xl sm:rounded-b-3xl border-t border-slate-100 mt-0">
+            <button 
+              disabled={currentPage === 0} 
+              onClick={() => setCurrentPage(p => p - 1)}
+              className="px-4 py-2 text-xs font-bold bg-white border border-slate-200 text-slate-600 rounded-xl hover:bg-slate-50 disabled:opacity-50 transition-colors shadow-sm"
+            >
+              Previous
+            </button>
+            <span className="text-xs font-bold text-slate-500">
+              Page {currentPage + 1} of {totalPages}
+            </span>
+            <button 
+              disabled={currentPage >= totalPages - 1} 
+              onClick={() => setCurrentPage(p => p + 1)}
+              className="px-4 py-2 text-xs font-bold bg-white border border-slate-200 text-slate-600 rounded-xl hover:bg-slate-50 disabled:opacity-50 transition-colors shadow-sm"
+            >
+              Next
+            </button>
           </div>
         )}
 

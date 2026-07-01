@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { LogOut, User, LayoutDashboard, Building2, Store, FileText, Users, Menu, X, Truck, Package, Receipt, ChevronRight, ClipboardList, BarChart2, AlertCircle, Compass, Shield, Palette } from 'lucide-react';
+import { LogOut, User, LayoutDashboard, Building2, Store, FileText, Users, Menu, X, Truck, Package, Receipt, ChevronRight, ClipboardList, BarChart2, AlertCircle, Compass, Shield, Palette, Settings as SettingsIcon, ChevronDown } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { clsx } from 'clsx';
 import { Logo } from './ui/Logo';
@@ -61,6 +61,7 @@ const SidebarContent = ({
   setIsThemeOpen: (show: boolean) => void;
 }) => {
   const { mode } = useTheme();
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   const confirmNavigation = (to: string) => {
     // Check for active drafts
@@ -127,7 +128,6 @@ const SidebarContent = ({
                 <NavItem to="/reconciliation" icon={Compass} label="Reconciliation" isActive={location.pathname === "/reconciliation"} onClick={() => confirmNavigation("/reconciliation")} />
                 <NavItem to="/reports" icon={BarChart2} label="Analytical Reports" isActive={location.pathname === "/reports"} onClick={() => confirmNavigation("/reports")} />
                 <NavItem to="/billing" icon={Receipt} label="Invoicing & Billing" isActive={location.pathname === "/billing"} onClick={() => confirmNavigation("/billing")} />
-                <NavItem to="/users" icon={Users} label="Access Management" isActive={location.pathname === "/users"} onClick={() => confirmNavigation("/users")} />
               </div>
             )}
           </>
@@ -141,19 +141,50 @@ const SidebarContent = ({
       </nav>
 
       <div className="pt-6 border-t border-surface-200 dark:border-surface-800 space-y-4 mt-auto pb-4">
-        <NavItem to="/profile" icon={User} label="Profile Settings" isActive={location.pathname === "/profile"} onClick={() => confirmNavigation("/profile")} />
-
-        {profile?.username === 'md' && (
+        
+        <div className="space-y-1">
           <button
-            onClick={() => { setIsThemeOpen(true); setIsSidebarOpen(false); }}
-            className="w-full flex items-center gap-3 px-4 py-2.5 rounded-2xl text-surface-500 hover:text-surface-900 dark:hover:text-white hover:bg-surface-100 dark:hover:bg-surface-800 transition-all font-bold text-sm group"
+            onClick={() => setIsSettingsOpen(!isSettingsOpen)}
+            className="w-full flex items-center justify-between px-4 py-2.5 rounded-2xl transition-all duration-200 group text-surface-500 hover:text-surface-900 dark:hover:text-white hover:bg-surface-100 dark:hover:bg-surface-800"
           >
-            <div className="w-8 h-8 rounded-xl bg-surface-100 dark:bg-surface-800 group-hover:bg-surface-50 dark:group-hover:bg-surface-700 flex items-center justify-center transition-all flex-shrink-0 shadow-sm">
-              <Palette size={18} strokeWidth={2} className="text-surface-600 dark:text-surface-300" />
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-xl bg-surface-50 dark:bg-surface-800 group-hover:bg-white dark:group-hover:bg-surface-700 flex items-center justify-center transition-all shadow-sm">
+                <SettingsIcon size={18} strokeWidth={2} />
+              </div>
+              <span className="font-bold text-sm tracking-tight">Settings</span>
             </div>
-            <span className="text-surface-600 dark:text-surface-300 group-hover:text-surface-900 dark:group-hover:text-white">Global Theme</span>
+            <ChevronDown size={16} className={clsx("transition-transform duration-200", isSettingsOpen && "rotate-180")} />
           </button>
-        )}
+
+          <AnimatePresence>
+            {isSettingsOpen && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                className="pl-4 space-y-1 overflow-hidden"
+              >
+                <NavItem to="/profile" icon={User} label="Profile Settings" isActive={location.pathname === "/profile"} onClick={() => confirmNavigation("/profile")} />
+                
+                {profile?.username === 'md' && (
+                  <button
+                    onClick={() => { setIsThemeOpen(true); setIsSidebarOpen(false); }}
+                    className="w-full flex items-center gap-3 px-4 py-2.5 rounded-2xl text-surface-500 hover:text-surface-900 dark:hover:text-white hover:bg-surface-100 dark:hover:bg-surface-800 transition-all font-bold text-sm group"
+                  >
+                    <div className="w-8 h-8 rounded-xl bg-surface-100 dark:bg-surface-800 group-hover:bg-surface-50 dark:group-hover:bg-surface-700 flex items-center justify-center transition-all flex-shrink-0 shadow-sm">
+                      <Palette size={18} strokeWidth={2} className="text-surface-600 dark:text-surface-300" />
+                    </div>
+                    <span className="text-surface-600 dark:text-surface-300 group-hover:text-surface-900 dark:group-hover:text-white flex-1 text-left">Global Theme</span>
+                  </button>
+                )}
+
+                {profile?.username === 'md' && (
+                  <NavItem to="/users" icon={Users} label="Access Management" isActive={location.pathname === "/users"} onClick={() => confirmNavigation("/users")} />
+                )}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
 
         <div className="mx-1 p-4 bg-surface-100/80 dark:bg-surface-800/80 rounded-[2rem] border border-surface-200 dark:border-surface-700/50 flex items-center gap-3 shadow-sm">
           <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center text-sm font-black text-white shadow-lg flex-shrink-0">

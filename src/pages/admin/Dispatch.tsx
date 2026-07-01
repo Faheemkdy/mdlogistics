@@ -48,7 +48,12 @@ export const Dispatch = () => {
     const timestamp = localStorage.getItem('dispatch_draft_timestamp');
     const now = Date.now();
     if (timestamp && now - parseInt(timestamp) > 5 * 60 * 60 * 1000) return {};
-    return saved ? JSON.parse(saved) : {};
+    if (!saved) return {};
+    try {
+      return JSON.parse(saved);
+    } catch {
+      return {};
+    }
   });
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [isScrolled, setIsScrolled] = useState(false);

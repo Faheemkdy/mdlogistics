@@ -19,6 +19,8 @@ export const VoucherAdmin = () => {
   const [searchDate, setSearchDate] = useState('');
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [expandedDates, setExpandedDates] = useState<Record<string, boolean>>({});
+  const [currentPage, setCurrentPage] = useState(0);
+  const itemsPerPage = 30;
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editData, setEditData] = useState<any>(null);
@@ -26,6 +28,10 @@ export const VoucherAdmin = () => {
   useEffect(() => {
     fetchVouchers();
   }, []);
+
+  useEffect(() => {
+    setCurrentPage(0);
+  }, [search, searchDate]);
 
   const fetchVouchers = async () => {
     setLoading(true);
@@ -72,15 +78,21 @@ export const VoucherAdmin = () => {
   };
 
   const handleEditItemChange = (itemId: string, field: string, value: string) => {
-    setEditData((prev: any) => ({
-      ...prev,
-      voucher_items: prev.voucher_items.map((i: any) => i.id === itemId ? { ...i, [field]: value } : i)
-    }));
+    setEditData((prev: any) => {
+      if (!prev) return prev;
+      const items = prev.voucher_items || [];
+      return {
+        ...prev,
+        voucher_items: items.map((i: any) => i.id === itemId ? { ...i, [field]: value } : i)
+      };
+    });
   };
 
   const saveEdit = async () => {
+    if (!editData) return;
     try {
-      for (const item of editData.voucher_items) {
+      const items = editData.voucher_items || [];
+      for (const item of items) {
         await supabase
           .from('voucher_items')
           .update({
@@ -101,22 +113,40 @@ export const VoucherAdmin = () => {
   };
 
   const groupItemsByDate = (items: any[]) => {
+    if (!items || !Array.isArray(items)) return [];
     const groups: Record<string, any[]> = {};
     items.forEach(item => {
-      if (!groups[item.date]) groups[item.date] = [];
-      groups[item.date].push(item);
+      const itemDate = item.date || 'Unknown Date';
+      if (!groups[itemDate]) groups[itemDate] = [];
+      groups[itemDate].push(item);
     });
     return Object.entries(groups).sort((a, b) => new Date(b[0]).getTime() - new Date(a[0]).getTime());
   };
 
+  const safeFormat = (dateValue: any, formatString: string) => {
+    try {
+      if (!dateValue) return 'N/A';
+      const d = new Date(dateValue);
+      if (isNaN(d.getTime())) return 'N/A';
+      return format(d, formatString);
+    } catch {
+      return 'N/A';
+    }
+  };
+
   const filteredVouchers = vouchers.filter(v => {
-    const matchesText = v.customer_name.toLowerCase().includes(search.toLowerCase()) ||
-                       v.status.toLowerCase().includes(search.toLowerCase());
+    const custName = String(v.customer_name || '');
+    const status = String(v.status || '');
+    const matchesText = custName.toLowerCase().includes(search.toLowerCase()) ||
+                       status.toLowerCase().includes(search.toLowerCase());
     
-    const matchesDate = !searchDate || v.voucher_items?.some((item: any) => item.date.includes(searchDate));
+    const matchesDate = !searchDate || (Array.isArray(v.voucher_items) && v.voucher_items.some((item: any) => String(item.date || '').includes(searchDate)));
     
     return matchesText && matchesDate;
   });
+
+  const totalPages = Math.ceil(filteredVouchers.length / itemsPerPage);
+  const paginatedVouchers = filteredVouchers.slice(currentPage * itemsPerPage, (currentPage + 1) * itemsPerPage);
 
   const VERCEL_URL = "https://mdlogistics-six.vercel.app/entry";
 
@@ -225,7 +255,7 @@ export const VoucherAdmin = () => {
         ) : filteredVouchers.length === 0 ? (
           <div className="text-center py-20 text-slate-400 font-bold">No submissions found.</div>
         ) : (
-          filteredVouchers.map((voucher) => (
+          paginatedVouchers.map((voucher) => (
             <div 
               key={voucher.id} 
               className="bg-white/60 backdrop-blur-sm rounded-3xl border border-white/80 overflow-hidden shadow-sm hover:shadow-md transition-all"
@@ -251,7 +281,7 @@ export const VoucherAdmin = () => {
                       </span>
                     </div>
                     <p className="text-slate-500 text-xs font-medium">
-                      {format(new Date(voucher.created_at), 'dd MMM yyyy, hh:mm a')}
+                      {safeFormat(voucher.created_at, 'dd MMM yyyy, hh:mm a')}
                     </p>
                   </div>
                 </div>
@@ -288,6 +318,7 @@ export const VoucherAdmin = () => {
               <AnimatePresence>
                 {expandedId === voucher.id && (
                   <motion.div
+                    key={`expanded-${voucher.id}`}
                     initial={{ height: 0, opacity: 0 }}
                     animate={{ height: 'auto', opacity: 1 }}
                     exit={{ height: 0, opacity: 0 }}
@@ -309,7 +340,7 @@ export const VoucherAdmin = () => {
                                       <Calendar size={14} />
                                    </div>
                                    <div>
-                                      <p className="text-sm font-black text-slate-800">{format(new Date(date), 'dd MMMM yyyy')}</p>
+                                      <p className="text-sm font-black text-slate-800">{safeFormat(date, 'dd MMMM yyyy')}</p>
                                       <p className="text-[10px] font-bold text-slate-400 uppercase">{items.length} Entries</p>
                                    </div>
                                 </div>
@@ -319,6 +350,7 @@ export const VoucherAdmin = () => {
                              <AnimatePresence>
                                {isDateExpanded && (
                                  <motion.div
+                                   key={`date-expanded-${dateId}`}
                                    initial={{ height: 0, opacity: 0 }}
                                    animate={{ height: 'auto', opacity: 1 }}
                                    exit={{ height: 0, opacity: 0 }}
@@ -387,7 +419,7 @@ export const VoucherAdmin = () => {
                                                 </td>
                                               </>
                                             )}
-                                            <td className="py-3 px-2 text-right text-slate-400 text-xs">{format(new Date(item.created_at), 'hh:mm a')}</td>
+                                            <td className="py-3 px-2 text-right text-slate-400 text-xs">{safeFormat(item.created_at, 'hh:mm a')}</td>
                                           </tr>
                                         ))}
                                       </tbody>
@@ -441,6 +473,28 @@ export const VoucherAdmin = () => {
           ))
         )}
       </div>
+
+      {totalPages > 1 && (
+        <div className="flex justify-between items-center bg-white/40 backdrop-blur-xl p-3 sm:p-4 rounded-2xl sm:rounded-b-3xl border border-slate-100 mt-4 shadow-sm">
+          <button 
+            disabled={currentPage === 0} 
+            onClick={() => setCurrentPage(p => p - 1)}
+            className="px-4 py-2 text-xs font-bold bg-white border border-slate-200 text-slate-600 rounded-xl hover:bg-slate-50 disabled:opacity-50 transition-colors shadow-sm"
+          >
+            Previous
+          </button>
+          <span className="text-xs font-bold text-slate-500">
+            Page {currentPage + 1} of {totalPages}
+          </span>
+          <button 
+            disabled={currentPage >= totalPages - 1} 
+            onClick={() => setCurrentPage(p => p + 1)}
+            className="px-4 py-2 text-xs font-bold bg-white border border-slate-200 text-slate-600 rounded-xl hover:bg-slate-50 disabled:opacity-50 transition-colors shadow-sm"
+          >
+            Next
+          </button>
+        </div>
+      )}
     </div>
   );
 };

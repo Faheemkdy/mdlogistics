@@ -76,7 +76,12 @@ export const Pickup = () => {
     const timestamp = localStorage.getItem('pickup_draft_timestamp');
     const now = Date.now();
     if (timestamp && now - parseInt(timestamp) > 5 * 60 * 60 * 1000) return {};
-    return saved ? JSON.parse(saved) : {};
+    if (!saved) return {};
+    try {
+      return JSON.parse(saved);
+    } catch {
+      return {};
+    }
   });
 
   const [initialSearch] = useState(() => {
@@ -140,14 +145,28 @@ export const Pickup = () => {
     if (!newShopName.trim()) return;
     setAddingShop(true);
     try {
+      // Check for duplicates
+      const { data: existingShops } = await supabase
+        .from('shops')
+        .select('id, location')
+        .ilike('name', newShopName.trim());
+        
+      const duplicate = existingShops?.find(s => (s.location || '').toLowerCase() === newShopLocation.trim().toLowerCase());
+      
+      if (duplicate) {
+        toast.error('Shop already exists', 'This shop is already in the system.');
+        return;
+      }
+
       const { data, error } = await supabase
-        .from('shops').insert([{ name: newShopName, location: newShopLocation }])
+        .from('shops').insert([{ name: newShopName.trim(), location: newShopLocation.trim() }])
         .select().single();
       if (error) throw error;
-      setShops(prev => [data, ...prev]);
+      
       toggleShop(data.id);
+      setSearchShops(newShopName.trim());
       setNewShopName(''); setNewShopLocation('');
-      setIsAddModalOpen(false); setSearchShops('');
+      setIsAddModalOpen(false);
       toast.success('Shop added & selected!');
     } catch (err: any) { toast.error('Failed to add shop', err.message); }
     finally { setAddingShop(false); }
@@ -481,7 +500,6 @@ export const Pickup = () => {
                                 placeholder="Enter quantity..."
                                 value={selections[shop.id]}
                                 onChange={e => updateItemNumber(shop.id, e.target.value)}
-                                autoFocus
                                 className="w-full h-10 px-3 bg-white border border-orange-200 rounded-lg text-sm font-semibold text-orange-700 placeholder-orange-300 focus:outline-none focus:ring-2 focus:ring-orange-200 focus:border-orange-400 transition-all"
                               />
                             </div>

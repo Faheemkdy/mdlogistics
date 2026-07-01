@@ -145,7 +145,7 @@ export const UserManagement = () => {
       const email = getEmailFromUsername(username);
       const tempSupabase = createTempClient();
 
-      const { error } = await tempSupabase.auth.signUp({
+      const { data: signUpData, error } = await tempSupabase.auth.signUp({
         email,
         password,
         options: {
@@ -154,6 +154,19 @@ export const UserManagement = () => {
       });
 
       if (error) throw error;
+
+      // Sync role for admin users (since the DB trigger defaults new users to 'user' for security)
+      if (signUpData.user && role && role !== 'user') {
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .update({ role })
+          .eq('id', signUpData.user.id);
+        
+        if (profileError) {
+          console.error('Error updating new profile role:', profileError);
+          toast.warning('Role Sync Warning', `User was created, but role couldn't be updated: ${profileError.message}`);
+        }
+      }
 
       setMessage({ type: 'success', text: `User "${username}" created successfully!` });
       setUsername('');
