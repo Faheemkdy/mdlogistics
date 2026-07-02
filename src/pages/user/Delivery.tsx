@@ -51,6 +51,8 @@ export const Delivery = () => {
 
   const [loading, setLoading] = useState(false);
   const [isDirectDelivery, setIsDirectDelivery] = useState(false);
+  const currentHour = new Date().getHours();
+  const [shift, setShift] = useState<'morning' | 'evening'>(currentHour < 12 ? 'morning' : 'evening');
   const [selections, setSelections] = useState<Record<string, string>>(() => {
     const saved = localStorage.getItem('delivery_draft_selections');
     const timestamp = localStorage.getItem('delivery_draft_timestamp');
@@ -68,6 +70,18 @@ export const Delivery = () => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [newShopName, setNewShopName] = useState('');
   const [newShopLocation, setNewShopLocation] = useState('');
+  const [availableLocations, setAvailableLocations] = useState<string[]>([]);
+
+  useEffect(() => {
+    const fetchLocs = async () => {
+      const { data } = await supabase.from('route_locations').select('location_name');
+      const routeLocs = data ? data.map(d => d.location_name) : [];
+      const shopLocs = shops.map(s => s.location);
+      const combined = Array.from(new Set([...routeLocs, ...shopLocs].map(l => (l||'').trim()).filter(Boolean)));
+      setAvailableLocations(combined.sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' })));
+    };
+    if (shops.length > 0) fetchLocs();
+  }, [shops]);
   const [addingShop, setAddingShop] = useState(false);
 
 
@@ -135,6 +149,7 @@ export const Delivery = () => {
       shop_id: id, user_id: user.id,
       date: new Date().toISOString().split('T')[0],
       item_number: selections[id] || null,
+      shift: shift
     }));
 
     try {
@@ -367,30 +382,45 @@ export const Delivery = () => {
         )}
         style={{ paddingBottom: 'env(safe-area-inset-bottom)', boxShadow: '0 -8px 30px rgba(0,0,0,0.06)' }}
       >
-        <div className="max-w-4xl lg:max-w-6xl mx-auto px-3 lg:px-4 py-3 flex items-center gap-3">
-          {/* Count info */}
-          <div className="flex items-center gap-3 flex-1">
-            <div className="w-10 h-10 rounded-xl bg-green-50 border border-green-100 flex items-center justify-center flex-shrink-0">
-              <Truck size={18} className="text-green-500" />
+        <div className="max-w-4xl lg:max-w-6xl mx-auto px-2 lg:px-4 py-2 lg:py-3 flex flex-col sm:flex-row gap-2 lg:gap-3">
+          
+          <div className="flex items-center justify-between gap-2">
+            {/* Count info */}
+            <div className="flex items-center gap-2 lg:gap-3">
+              <div className="w-8 h-8 lg:w-10 lg:h-10 rounded-xl bg-green-50 border border-green-100 flex items-center justify-center flex-shrink-0">
+                <Truck size={16} className="text-green-500" />
+              </div>
+              <div>
+                <p className="text-gray-900 font-bold text-base lg:text-lg leading-none">{selectedCount}</p>
+                <p className="text-gray-400 text-[9px] lg:text-[10px] font-semibold uppercase tracking-wider mt-0.5">
+                  {selectedCount === 1 ? 'Shop' : 'Shops'}
+                </p>
+              </div>
             </div>
-            <div>
-              <p className="text-gray-900 font-bold text-lg leading-none">{selectedCount}</p>
-              <p className="text-gray-400 text-[10px] font-semibold uppercase tracking-wider mt-0.5">
-                {selectedCount === 1 ? 'Shop Selected' : 'Shops Selected'}
-              </p>
+
+            <div className="flex items-center gap-2">
+              {/* Shift Select */}
+              <select
+                value={shift}
+                onChange={(e) => setShift(e.target.value as 'morning' | 'evening')}
+                className="bg-slate-50 text-[9px] lg:text-[10px] font-bold text-slate-600 uppercase tracking-wide border border-slate-200 rounded-lg px-1.5 py-1.5 lg:px-2 lg:py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
+              >
+                <option value="morning">Morning</option>
+                <option value="evening">Evening</option>
+              </select>
+
+              {/* Direct Delivery Checkbox */}
+              <label className="flex items-center gap-1 lg:gap-2 cursor-pointer bg-slate-50 px-2 py-1.5 rounded-lg border border-slate-200">
+                <input 
+                  type="checkbox" 
+                  checked={isDirectDelivery} 
+                  onChange={(e) => setIsDirectDelivery(e.target.checked)}
+                  className="w-3 h-3 lg:w-4 lg:h-4 text-green-500 rounded border-slate-300 focus:ring-green-500 cursor-pointer"
+                />
+                <span className="text-[9px] lg:text-[10px] font-bold text-slate-600 uppercase tracking-wide whitespace-nowrap">Direct</span>
+              </label>
             </div>
           </div>
-
-          {/* Direct Delivery Checkbox */}
-          <label className="flex items-center gap-2 cursor-pointer bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200">
-            <input 
-              type="checkbox" 
-              checked={isDirectDelivery} 
-              onChange={(e) => setIsDirectDelivery(e.target.checked)}
-              className="w-4 h-4 text-green-500 rounded border-slate-300 focus:ring-green-500 cursor-pointer"
-            />
-            <span className="text-[10px] font-bold text-slate-600 uppercase tracking-wide">Direct Delivery</span>
-          </label>
 
           {/* Confirm button */}
           <motion.button
@@ -398,7 +428,7 @@ export const Delivery = () => {
             onClick={handleDeliver}
             disabled={selectedCount === 0 || loading}
             className={clsx(
-              'flex items-center gap-2 h-11 px-6 rounded-xl font-semibold text-sm transition-all',
+              'flex-1 flex items-center justify-center gap-2 h-10 lg:h-11 px-4 lg:px-6 rounded-xl font-semibold text-xs lg:text-sm transition-all whitespace-nowrap',
               selectedCount > 0
                 ? 'bg-green-500 hover:bg-green-600 text-white shadow-md shadow-green-200'
                 : 'bg-gray-100 text-gray-400 cursor-not-allowed'
@@ -406,7 +436,7 @@ export const Delivery = () => {
           >
             {loading
               ? <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
-              : <Truck size={15} strokeWidth={2.5} />}
+              : <Truck size={14} strokeWidth={2.5} />}
             Confirm Delivery
           </motion.button>
         </div>
@@ -417,8 +447,16 @@ export const Delivery = () => {
         <form onSubmit={handleQuickAddShop} className="space-y-4">
           <Input label="Shop Name" placeholder="Enter shop name" value={newShopName}
             onChange={e => setNewShopName(e.target.value)} required autoFocus />
-          <Input label="Location / Area" placeholder="e.g. Kozhikode, Manjeri"
+            
+          <Input label="Location / Area" placeholder="e.g. Kozhikode, Manjeri" list="delivery-locations-list"
             value={newShopLocation} onChange={e => setNewShopLocation(e.target.value)} />
+            
+          <datalist id="delivery-locations-list">
+            {availableLocations.map(loc => (
+              <option key={loc} value={loc} />
+            ))}
+          </datalist>
+
           <div className="flex gap-3 pt-1">
             <Button type="button" variant="ghost" onClick={() => setIsAddModalOpen(false)} className="flex-1">Cancel</Button>
             <Button type="submit" variant="primary" isLoading={addingShop}

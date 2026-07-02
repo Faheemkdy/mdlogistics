@@ -42,6 +42,7 @@ export const Shops = () => {
   // Location Rates States
   const [showRates, setShowRates] = useState(false);
   const [locationRates, setLocationRates] = useState<any[]>([]);
+  const [availableLocations, setAvailableLocations] = useState<string[]>([]);
   const [newLocName, setNewLocName] = useState('');
   const [newLocRate, setNewLocRate] = useState('');
   const [locLoading, setLocLoading] = useState(false);
@@ -58,7 +59,15 @@ export const Shops = () => {
 
   useEffect(() => { 
     fetchLocationRates();
+    fetchRouteLocations();
   }, []);
+
+  const fetchRouteLocations = async () => {
+    const { data } = await supabase.from('route_locations').select('location_name');
+    if (data) {
+      setAvailableLocations(data.map(d => d.location_name));
+    }
+  };
 
   const fetchLocationRates = async () => {
     const { data } = await supabase.from('location_rates').select('*').order('location_name');
@@ -395,10 +404,19 @@ export const Shops = () => {
                     value={location}
                     onChange={(e) => setLocation(e.target.value)}
                     placeholder="Area / Landmark"
+                    list="partner-locations-list"
                     className="w-full pl-12 pr-5 py-3.5 bg-slate-50 border border-slate-100 rounded-2xl text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500/30 transition-all font-black text-sm"
                   />
                   <MapPin size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-indigo-500 transition-colors" />
                 </div>
+                
+                <datalist id="partner-locations-list">
+                  {Array.from(new Set([...availableLocations, ...(shops || []).map(s => (s.location || '').trim())].filter(Boolean)))
+                    .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }))
+                    .map(loc => (
+                      <option key={loc} value={loc} />
+                  ))}
+                </datalist>
               </div>
 
               <motion.button 

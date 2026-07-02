@@ -24,6 +24,8 @@ const VoucherAdmin = lazy(() => import('./pages/admin/VoucherAdmin').then(module
 const Dispatch = lazy(() => import('./pages/admin/Dispatch').then(module => ({ default: module.Dispatch })));
 const Reconciliation = lazy(() => import('./pages/admin/Reconciliation').then(module => ({ default: module.Reconciliation })));
 const CourierExchange = lazy(() => import('./pages/admin/CourierExchange').then(module => ({ default: module.CourierExchange })));
+const RouteSetup = lazy(() => import('./pages/admin/RouteSetup').then(module => ({ default: module.RouteSetup })));
+const RoutePrintList = lazy(() => import('./pages/admin/RoutePrintList').then(module => ({ default: module.RoutePrintList })));
 
 const ProtectedRoute = ({ children, allowedRoles }: { children: React.ReactNode, allowedRoles?: string[] }) => {
   const { user, profile, loading } = useAuth();
@@ -97,6 +99,8 @@ function AppRoutes() {
           <Route path="dispatch" element={<ProtectedRoute allowedRoles={['admin']}><Dispatch /></ProtectedRoute>} />
           <Route path="reconciliation" element={<ProtectedRoute allowedRoles={['admin']}>{isMasterAdmin ? <Reconciliation /> : <Navigate to="/" />}</ProtectedRoute>} />
           <Route path="courier-exchange" element={<ProtectedRoute allowedRoles={['admin']}><CourierExchange /></ProtectedRoute>} />
+          <Route path="routes" element={<ProtectedRoute allowedRoles={['admin']}><RouteSetup /></ProtectedRoute>} />
+          <Route path="route-print" element={<ProtectedRoute allowedRoles={['admin']}><RoutePrintList /></ProtectedRoute>} />
 
           {/* User Routes */}
           <Route path="pickup" element={<ProtectedRoute allowedRoles={['admin', 'user']}><Pickup /></ProtectedRoute>} />

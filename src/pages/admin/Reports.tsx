@@ -22,6 +22,7 @@ export const Reports = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [pickupData, setPickupData] = useState<any[]>([]);
   const [deliveryData, setDeliveryData] = useState<any[]>([]);
+  const [shiftFilter, setShiftFilter] = useState<'all' | 'morning' | 'evening'>('all');
   const [expandedCompany, setExpandedCompany] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [editingPickupItem, setEditingPickupItem] = useState<{ id: string, itemNumber: string } | null>(null);
@@ -34,10 +35,37 @@ export const Reports = () => {
   const [isMultiDateMode, setIsMultiDateMode] = useState(false);
   const [multiDateData, setMultiDateData] = useState<any[]>([]);
 
+  // Route Ordering
+  const [routes, setRoutes] = useState<any[]>([]);
+  const [selectedRouteId, setSelectedRouteId] = useState<string>('');
+  const [routeLocations, setRouteLocations] = useState<any[]>([]);
+
   useEffect(() => {
     if (activeTab === 'pickups') fetchPickups();
     else fetchDeliveries();
   }, [date, activeTab]);
+
+  useEffect(() => {
+    fetchRoutes();
+  }, []);
+
+  useEffect(() => {
+    if (selectedRouteId) {
+      fetchRouteLocations(selectedRouteId);
+    } else {
+      setRouteLocations([]);
+    }
+  }, [selectedRouteId]);
+
+  const fetchRoutes = async () => {
+    const { data } = await supabase.from('routes').select('*').order('name');
+    if (data) setRoutes(data);
+  };
+
+  const fetchRouteLocations = async (routeId: string) => {
+    const { data } = await supabase.from('route_locations').select('location_name, sequence_order').eq('route_id', routeId);
+    if (data) setRouteLocations(data);
+  };
 
   useEffect(() => {
     setDeliveryPage(1);
@@ -184,7 +212,8 @@ export const Reports = () => {
     setLoading(true);
     const { data, error } = await supabase
       .from('deliveries')
-      .select(`id, created_at, item_number, shops (name, location), profiles (username)`)
+      // @ts-ignore
+      .select(`id, created_at, shift, item_number, shop_id, shops (name, location), profiles (username)`)
       .eq('date', date)
       .order('created_at', { ascending: false });
     if (error) console.error(error);
@@ -247,7 +276,8 @@ export const Reports = () => {
     try {
       const doc = new jsPDF();
       drawPDFHeader(doc);
-      drawCustomerInfo(doc, 'Report:', 'Daily Delivery Log', date);
+      const shiftLabel = shiftFilter !== 'all' ? ` (${shiftFilter.charAt(0).toUpperCase() + shiftFilter.slice(1)})` : '';
+      drawCustomerInfo(doc, 'Report:', `Daily Delivery Log${shiftLabel}`, date);
       autoTable(doc, {
         head: [['#', 'Shop', 'Location', 'Item No.']],
         body: filteredDeliveries.map((d, i) => {
@@ -277,7 +307,8 @@ export const Reports = () => {
     drawCustomerInfo(doc, 'Report:', `${days}-Day Pickup Report`, `${format(new Date(start), 'dd MMM')} to ${format(new Date(end), 'dd MMM yyyy')}`);
     const rows: any[] = [];
     data.forEach((p: any) => {
-      p.pickup_items?.forEach((item: any) => {
+      const sortedItems = [...(p.pickup_items || [])].sort((a: any, b: any) => (a.shops?.location || '').localeCompare(b.shops?.location || ''));
+      sortedItems.forEach((item: any) => {
         rows.push([format(new Date(p.date), 'dd/MM/yy'), p.companies?.name || '-', item.shops?.name || '-', item.item_number || '-']);
       });
     });
@@ -289,13 +320,22 @@ export const Reports = () => {
   const downloadDeliveryRangePDF = async (days: number) => {
     const { start, end } = getDateRange(days, date);
     toast.info('Generating...', `Fetching ${days}-day delivery report`);
-    const { data, error } = await supabase.from('deliveries')
-      .select(`date, created_at, item_number, shops (name, location)`)
+    let query = supabase.from('deliveries')
+      // @ts-ignore
+      .select(`date, created_at, shift, item_number, shops (name, location)`)
       .gte('date', start).lte('date', end).order('date', { ascending: false });
+    
+    if (shiftFilter !== 'all') {
+      // @ts-ignore
+      query = query.eq('shift', shiftFilter);
+    }
+    
+    const { data, error } = await query;
     if (error || !data?.length) { toast.error('No data', 'No deliveries in this range.'); return; }
     const doc = new jsPDF();
     drawPDFHeader(doc);
-    drawCustomerInfo(doc, 'Report:', `${days}-Day Delivery Report`, `${format(new Date(start), 'dd MMM')} to ${format(new Date(end), 'dd MMM yyyy')}`);
+    const shiftLabel = shiftFilter !== 'all' ? ` (${shiftFilter.charAt(0).toUpperCase() + shiftFilter.slice(1)})` : '';
+    drawCustomerInfo(doc, 'Report:', `${days}-Day Delivery Report${shiftLabel}`, `${format(new Date(start), 'dd MMM')} to ${format(new Date(end), 'dd MMM yyyy')}`);
     const sortedData = [...data].sort((a: any, b: any) => (a.shops?.location || '').localeCompare(b.shops?.location || ''));
     const rows = sortedData.map((d: any) => [format(new Date(d.date), 'dd/MM/yy'), d.shops?.name || '-', d.shops?.location || '-', d.item_number || '-']);
     autoTable(doc, { head: [['Date', 'Shop', 'Location', 'Item No.']], body: rows, startY: 105, theme: 'grid', headStyles: { fillColor: [16, 185, 129], textColor: 255, fontStyle: 'bold' }, styles: { cellPadding: 3, fontSize: 10 } });
@@ -377,7 +417,8 @@ export const Reports = () => {
     drawCustomerInfo(doc, 'Report:', `Monthly Pickup Report`, format(new Date(start), 'MMMM yyyy'));
     const rows: any[] = [];
     data.forEach((p: any) => {
-      p.pickup_items?.forEach((item: any) => {
+      const sortedItems = [...(p.pickup_items || [])].sort((a: any, b: any) => (a.shops?.location || '').localeCompare(b.shops?.location || ''));
+      sortedItems.forEach((item: any) => {
         rows.push([format(new Date(p.date), 'dd/MM/yy'), p.companies?.name || '-', item.shops?.name || '-', item.item_number || '-']);
       });
     });
@@ -394,14 +435,23 @@ export const Reports = () => {
     const lastDay = new Date(Number(year), Number(month), 0).getDate();
     const end = `${monthStr}-${lastDay}`;
     
-    const { data, error } = await supabase.from('deliveries')
-      .select(`date, created_at, item_number, shops (name, location)`)
+    let query = supabase.from('deliveries')
+      // @ts-ignore
+      .select(`date, created_at, shift, item_number, shops (name, location)`)
       .gte('date', start).lte('date', end).order('date', { ascending: false });
+      
+    if (shiftFilter !== 'all') {
+      // @ts-ignore
+      query = query.eq('shift', shiftFilter);
+    }
+      
+    const { data, error } = await query;
       
     if (error || !data?.length) { toast.error('No data', 'No deliveries in this month.'); return; }
     const doc = new jsPDF();
     drawPDFHeader(doc);
-    drawCustomerInfo(doc, 'Report:', `Monthly Delivery Report`, format(new Date(start), 'MMMM yyyy'));
+    const shiftLabel = shiftFilter !== 'all' ? ` (${shiftFilter.charAt(0).toUpperCase() + shiftFilter.slice(1)})` : '';
+    drawCustomerInfo(doc, 'Report:', `Monthly Delivery Report${shiftLabel}`, format(new Date(start), 'MMMM yyyy'));
     const sortedData = [...data].sort((a: any, b: any) => (a.shops?.location || '').localeCompare(b.shops?.location || ''));
     const rows = sortedData.map((d: any) => [format(new Date(d.date), 'dd/MM/yy'), d.shops?.name || '-', d.shops?.location || '-', d.item_number || '-']);
     autoTable(doc, { head: [['Date', 'Shop', 'Location', 'Item No.']], body: rows, startY: 105, theme: 'grid', headStyles: { fillColor: [16, 185, 129], textColor: 255, fontStyle: 'bold' }, styles: { cellPadding: 3, fontSize: 10 } });
@@ -410,10 +460,29 @@ export const Reports = () => {
   };
 
   const lq = searchQuery.toLowerCase();
-  const filteredPickups = pickupData.map(c => ({ ...c, items: c.items.filter((item: any) => item.name.toLowerCase().includes(lq) || c.name.toLowerCase().includes(lq)) })).filter(c => c.items.length > 0);
+  
+  const sequenceMap = new Map(routeLocations.map(rl => [(rl.location_name || '').trim().toLowerCase(), rl.sequence_order]));
+  
+  const filteredPickups = pickupData.map(c => ({ 
+    ...c, 
+    items: c.items
+      .filter((item: any) => item.name.toLowerCase().includes(lq) || c.name.toLowerCase().includes(lq))
+      .sort((a: any, b: any) => (a.location || '').localeCompare(b.location || ''))
+  })).filter(c => c.items.length > 0);
+  
   const filteredDeliveries = deliveryData
     .filter(d => (d.shops?.name || '').toLowerCase().includes(lq) || (d.shops?.location || '').toLowerCase().includes(lq))
-    .sort((a, b) => (a.shops?.location || '').localeCompare(b.shops?.location || ''));
+    .filter(d => shiftFilter === 'all' || d.shift === shiftFilter)
+    .sort((a, b) => {
+      if (selectedRouteId && routeLocations.length > 0) {
+        const aLocation = (a.shops?.location || '').trim().toLowerCase();
+        const bLocation = (b.shops?.location || '').trim().toLowerCase();
+        const aSeq = sequenceMap.has(aLocation) ? sequenceMap.get(aLocation) : 999999;
+        const bSeq = sequenceMap.has(bLocation) ? sequenceMap.get(bLocation) : 999999;
+        if (aSeq !== bSeq) return (aSeq as number) - (bSeq as number);
+      }
+      return (a.shops?.location || '').localeCompare(b.shops?.location || '');
+    });
 
   const RangeBtns = ({ onDownloadRange, onDownloadMonth }: { onDownloadRange: (d: number) => void, onDownloadMonth: (m: string) => void }) => (
     <div className="flex gap-2 items-center">
@@ -451,16 +520,41 @@ export const Reports = () => {
           <h1 className="text-2xl sm:text-3xl font-black text-slate-800 tracking-tight">Reports</h1>
           <p className="text-slate-500 text-xs sm:text-sm font-medium">View & export logistics data</p>
         </div>
-        {/* Date picker */}
-        <label className="flex items-center gap-2 bg-white/80 backdrop-blur-md border border-white shadow-sm rounded-2xl px-4 py-2.5 cursor-pointer hover:border-indigo-300 transition-all self-end sm:self-auto">
-          <CalendarDays size={16} className="text-indigo-500 flex-shrink-0" />
-          <input
-            type="date"
-            value={date}
-            onChange={e => { setDate(e.target.value); setIsMultiDateMode(false); setSelectedDates([]); }}
-            className="bg-transparent border-none focus:ring-0 text-slate-700 font-bold text-sm w-32 outline-none"
-          />
-        </label>
+        {/* Controls row */}
+        <div className="flex items-center gap-2 self-end sm:self-auto flex-wrap justify-end">
+          {activeTab === 'deliveries' && (
+            <>
+              <select
+                value={selectedRouteId}
+                onChange={(e) => setSelectedRouteId(e.target.value)}
+                className="bg-white/80 backdrop-blur-md border border-white shadow-sm rounded-2xl px-4 py-2.5 outline-none text-sm font-bold text-slate-700 hover:border-indigo-300 transition-all max-w-[150px]"
+              >
+                <option value="">Order by Route...</option>
+                {routes.map(r => (
+                  <option key={r.id} value={r.id}>{r.name}</option>
+                ))}
+              </select>
+              <select
+                value={shiftFilter}
+                onChange={(e) => setShiftFilter(e.target.value as any)}
+                className="bg-white/80 backdrop-blur-md border border-white shadow-sm rounded-2xl px-4 py-2.5 outline-none text-sm font-bold text-slate-700 hover:border-indigo-300 transition-all"
+              >
+                <option value="all">All Shifts</option>
+                <option value="morning">Morning</option>
+                <option value="evening">Evening</option>
+              </select>
+            </>
+          )}
+          <label className="flex items-center gap-2 bg-white/80 backdrop-blur-md border border-white shadow-sm rounded-2xl px-4 py-2.5 cursor-pointer hover:border-indigo-300 transition-all">
+            <CalendarDays size={16} className="text-indigo-500 flex-shrink-0" />
+            <input
+              type="date"
+              value={date}
+              onChange={e => { setDate(e.target.value); setIsMultiDateMode(false); setSelectedDates([]); }}
+              className="bg-transparent border-none focus:ring-0 text-slate-700 font-bold text-sm w-32 outline-none"
+            />
+          </label>
+        </div>
       </div>
 
       {/* ── Multi-date Mode Toggle - Show only for pickups ── */}

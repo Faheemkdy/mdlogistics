@@ -102,6 +102,18 @@ export const Pickup = () => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [newShopName, setNewShopName] = useState('');
   const [newShopLocation, setNewShopLocation] = useState('');
+  const [availableLocations, setAvailableLocations] = useState<string[]>([]);
+
+  useEffect(() => {
+    const fetchLocs = async () => {
+      const { data } = await supabase.from('route_locations').select('location_name');
+      const routeLocs = data ? data.map(d => d.location_name) : [];
+      const shopLocs = shops.map(s => s.location);
+      const combined = Array.from(new Set([...routeLocs, ...shopLocs].map(l => (l||'').trim()).filter(Boolean)));
+      setAvailableLocations(combined.sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' })));
+    };
+    if (shops.length > 0) fetchLocs();
+  }, [shops]);
   const [addingShop, setAddingShop] = useState(false);
 
 
@@ -593,8 +605,16 @@ export const Pickup = () => {
         <form onSubmit={handleQuickAddShop} className="space-y-4">
           <Input label="Shop Name" placeholder="Enter shop name" value={newShopName}
             onChange={e => setNewShopName(e.target.value)} required autoFocus />
-          <Input label="Location / Area" placeholder="e.g. Kozhikode, Manjeri"
+          
+          <Input label="Location / Area" placeholder="e.g. Kozhikode, Manjeri" list="pickup-locations-list"
             value={newShopLocation} onChange={e => setNewShopLocation(e.target.value)} />
+            
+          <datalist id="pickup-locations-list">
+            {availableLocations.map(loc => (
+              <option key={loc} value={loc} />
+            ))}
+          </datalist>
+
           <div className="flex gap-3 pt-1">
             <Button type="button" variant="ghost" onClick={() => setIsAddModalOpen(false)} className="flex-1">Cancel</Button>
             <Button type="submit" variant="primary" isLoading={addingShop}

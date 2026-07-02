@@ -122,6 +122,12 @@ const SidebarContent = ({
               <NavItem to="/vouchers" icon={Receipt} label="Expense Vouchers" isActive={location.pathname === "/vouchers"} onClick={() => confirmNavigation("/vouchers")} />
             </div>
 
+            <div className="mb-4 pt-4 border-t border-slate-50">
+              <p className="px-4 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2">Route Management</p>
+              <NavItem to="/routes" icon={Compass} label="Route Setup" isActive={location.pathname === "/routes"} onClick={() => confirmNavigation("/routes")} />
+              <NavItem to="/route-print" icon={FileText} label="Print Route List" isActive={location.pathname === "/route-print"} onClick={() => confirmNavigation("/route-print")} />
+            </div>
+
             {profile?.username === 'md' && (
               <div className="mb-4 pt-4 border-t border-slate-50">
                 <p className="px-4 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2">Advanced Control</p>
