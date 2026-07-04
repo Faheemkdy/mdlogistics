@@ -507,7 +507,7 @@ export const Pickup = () => {
                   </button>
                 </div>
               )}
-            </motion.div>
+            </div>
           )}
 
         {/* STEP 2 — Shops */}
