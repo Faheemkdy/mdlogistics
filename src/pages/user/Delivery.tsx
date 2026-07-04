@@ -5,14 +5,22 @@ import { useToast } from '../../components/ui/Toast';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Modal } from '../../components/ui/Modal';
-import { Search, Check, MapPin, Truck, Plus, X, Hash } from 'lucide-react';
+import { Search, Check, MapPin, Truck, Plus, X, Hash, Calendar } from 'lucide-react';
 import { clsx } from 'clsx';
-import { motion, AnimatePresence } from 'framer-motion';
-import { useSupabasePagination } from '../../hooks/useSupabasePagination';
+import { isFuzzyMatch } from '../../utils/search';
 
 export const Delivery = () => {
   const { user, profile } = useAuth();
   const toast = useToast();
+  interface Shop {
+    id: string;
+    name: string;
+    location: string | null;
+  }
+
+  const [shops, setShops] = useState<Shop[]>([]);
+  const [loadingShops, setLoadingShops] = useState(true);
+
   // Load initial state with 5-hour expiration check
   const [initialSearch] = useState(() => {
     const saved = localStorage.getItem('delivery_draft_search');
@@ -23,31 +31,77 @@ export const Delivery = () => {
     if (timestamp && now - parseInt(timestamp) > fiveHours) {
       localStorage.removeItem('delivery_draft_search');
       localStorage.removeItem('delivery_draft_selections');
+      localStorage.removeItem('delivery_draft_date');
       localStorage.removeItem('delivery_draft_timestamp');
       return '';
     }
     return saved || '';
   });
 
+  const [selectedDate, setSelectedDate] = useState<string>(() => {
+    const saved = localStorage.getItem('delivery_draft_date');
+    const timestamp = localStorage.getItem('delivery_draft_timestamp');
+    const now = Date.now();
+    const fiveHours = 5 * 60 * 60 * 1000;
+    
+    if (timestamp && now - parseInt(timestamp) > fiveHours) {
+      return new Date().toISOString().split('T')[0];
+    }
+    return saved || new Date().toISOString().split('T')[0];
+  });
+
+  const [search, setSearch] = useState('');
+
   useEffect(() => {
     if (initialSearch) {
       setSearch(initialSearch);
     }
+  }, [initialSearch]);
+
+  // Fetch all shops on mount
+  useEffect(() => {
+    const fetchAllShops = async () => {
+      try {
+        setLoadingShops(true);
+        const { data, error } = await supabase
+          .from('shops')
+          .select('id, name, location')
+          .eq('is_active', true)
+          .order('name', { ascending: true });
+        if (error) throw error;
+        setShops(data || []);
+      } catch (err: any) {
+        console.error(err);
+        toast.error('Failed to load shops', err.message);
+      } finally {
+        setLoadingShops(false);
+      }
+    };
+    fetchAllShops();
   }, []);
+
+  const filteredShops = React.useMemo(() => {
+    if (!search.trim()) return shops;
+    return shops.filter(shop => 
+      isFuzzyMatch(shop.name, search) || 
+      (shop.location && isFuzzyMatch(shop.location, search))
+    );
+  }, [shops, search]);
+
+  const [visibleCount, setVisibleCount] = useState(20);
   
-  const {
-    data: shops,
-    loadingMore,
-    searchQuery: search,
-    setSearchQuery: setSearch,
-    loadMore,
-    hasMore,
-    totalCount
-  } = useSupabasePagination({
-    table: 'shops',
-    searchFields: ['name', 'location'],
-    limit: 20
-  });
+  useEffect(() => {
+    setVisibleCount(20);
+  }, [search]);
+
+  const paginatedShops = React.useMemo(() => {
+    return filteredShops.slice(0, visibleCount);
+  }, [filteredShops, visibleCount]);
+
+  const hasMore = filteredShops.length > visibleCount;
+  const loadMore = () => setVisibleCount(prev => prev + 20);
+  const loadingMore = false;
+  const totalCount = filteredShops.length;
 
   const [loading, setLoading] = useState(false);
   const [isDirectDelivery, setIsDirectDelivery] = useState(false);
@@ -97,6 +151,11 @@ export const Delivery = () => {
   }, [selections]);
 
   useEffect(() => {
+    localStorage.setItem('delivery_draft_date', selectedDate);
+    localStorage.setItem('delivery_draft_timestamp', Date.now().toString());
+  }, [selectedDate]);
+
+  useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       if (Object.keys(selections).length > 0) {
         e.preventDefault();
@@ -131,6 +190,7 @@ export const Delivery = () => {
         .select().single();
       if (error) throw error;
       
+      setShops(prev => [data, ...prev].sort((a, b) => a.name.localeCompare(b.name)));
       toggleShop(data.id);
       setSearch(newShopName.trim());
       setNewShopName(''); setNewShopLocation('');
@@ -147,7 +207,7 @@ export const Delivery = () => {
     
     const deliveryData = shopIds.map(id => ({
       shop_id: id, user_id: user.id,
-      date: new Date().toISOString().split('T')[0],
+      date: selectedDate || new Date().toISOString().split('T')[0],
       item_number: selections[id] || null,
       shift: shift
     }));
@@ -173,9 +233,8 @@ export const Delivery = () => {
       }
 
       setSelections({});
-      localStorage.removeItem('delivery_draft_selections');
-      localStorage.removeItem('delivery_draft_search');
-      localStorage.removeItem('delivery_draft_timestamp');
+      ['delivery_draft_selections', 'delivery_draft_search', 'delivery_draft_date', 'delivery_draft_timestamp'].forEach(k => localStorage.removeItem(k));
+      setSelectedDate(new Date().toISOString().split('T')[0]);
     } catch (err: any) {
       // If it's a network error, queue it anyway
       if (!navigator.onLine || err.message === 'Failed to fetch' || err.name === 'TypeError') {
@@ -185,7 +244,8 @@ export const Delivery = () => {
         toast.success('Saved to offline queue', 'Network error detected. Data will sync later.');
         
         setSelections({});
-        localStorage.removeItem('delivery_draft_selections');
+        ['delivery_draft_selections', 'delivery_draft_date'].forEach(k => localStorage.removeItem(k));
+        setSelectedDate(new Date().toISOString().split('T')[0]);
       } else {
         toast.error('Failed to save deliveries', err.message);
       }
@@ -239,13 +299,12 @@ export const Delivery = () => {
                 </button>
               )}
             </div>
-            <motion.button
-              whileTap={{ scale: 0.92 }}
+            <button
               onClick={() => setIsAddModalOpen(true)}
-              className="w-11 h-11 rounded-2xl bg-green-500 hover:bg-green-600 text-white flex items-center justify-center shadow-lg shadow-green-500/25 transition-colors flex-shrink-0"
+              className="w-11 h-11 rounded-2xl bg-green-500 hover:bg-green-600 text-white flex items-center justify-center shadow-lg shadow-green-500/25 transition-colors flex-shrink-0 active:scale-95"
             >
               <Plus size={20} />
-            </motion.button>
+            </button>
           </div>
         </div>
       </div>
@@ -253,35 +312,41 @@ export const Delivery = () => {
       {/* ── Shop List ── */}
       <div className="max-w-4xl lg:max-w-6xl mx-auto px-2 lg:px-4 pt-0 pb-36 space-y-2">
         {/* Selected banner */}
-        <AnimatePresence>
-          {selectedCount > 0 && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
-              className="flex items-center justify-between px-4 py-2.5 bg-green-50 border border-green-100 rounded-xl"
-            >
-              <span className="text-xs font-semibold text-green-600">{selectedCount} selected for delivery</span>
-              <button onClick={() => setSelections({})} className="text-[11px] font-semibold text-green-400 hover:text-green-600 transition-colors">
-                Clear all
-              </button>
-            </motion.div>
-          )}
-        </AnimatePresence>
+        {selectedCount > 0 && (
+          <div
+            className="flex items-center justify-between px-4 py-2.5 bg-green-50 border border-green-100 rounded-xl"
+          >
+            <span className="text-xs font-semibold text-green-600">{selectedCount} selected for delivery</span>
+            <button onClick={() => setSelections({})} className="text-[11px] font-semibold text-green-400 hover:text-green-600 transition-colors">
+              Clear all
+            </button>
+          </div>
+        )}
+
+        <div className="bg-white p-4 rounded-3xl border-2 border-gray-100 flex flex-col gap-2 shadow-sm mb-2">
+          <label className="text-[11px] font-bold text-gray-400 uppercase tracking-widest flex items-center gap-1.5">
+            <Calendar size={14} className="text-green-500" /> Date
+          </label>
+          <input
+            type="date"
+            value={selectedDate}
+            onChange={e => setSelectedDate(e.target.value)}
+            className="w-full h-11 px-4 bg-gray-50 border border-gray-200 rounded-2xl text-sm font-bold text-gray-700 focus:outline-none focus:border-green-400 focus:ring-4 focus:ring-green-500/5 transition-all shadow-inner"
+          />
+        </div>
 
         <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-widest">
           {totalCount} Shops
         </p>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <AnimatePresence>
-            {shops.map((shop, index) => {
-              const isSelected = selections[shop.id] !== undefined;
-              return (
-                <motion.div
+          {paginatedShops.map((shop, index) => {
+            const isSelected = selections[shop.id] !== undefined;
+            return (
+              <div
                 key={shop.id}
-                initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                exit={{ opacity: 0, scale: 0.98 }} transition={{ duration: 0.1 }}
                 className={clsx(
-                  'bg-white rounded-2xl border-2 overflow-hidden transition-all duration-200 will-change-[transform,opacity]',
+                  'bg-white rounded-2xl border-2 overflow-hidden transition-all duration-200',
                   isSelected
                     ? 'border-green-400 shadow-md shadow-green-100'
                     : 'border-gray-100 hover:border-gray-200 hover:shadow-sm'
@@ -312,44 +377,43 @@ export const Delivery = () => {
                   </div>
 
                   {isSelected && (
-                    <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }}
-                      className="w-5 h-5 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
+                    <div className="w-5 h-5 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
                       <Check size={11} className="text-green-600" strokeWidth={3} />
-                    </motion.div>
+                    </div>
                   )}
                 </div>
 
                 {/* Item input */}
-                <AnimatePresence>
-                  {isSelected && (
-                    <motion.div
-                      initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}
-                      exit={{ opacity: 0, height: 0 }}
-                      className="px-4 pb-4" onClick={e => e.stopPropagation()}
-                    >
-                      <div className="bg-green-50 rounded-xl p-3 border border-green-100">
-                        <label className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-green-600 mb-2">
-                          <Hash size={9} /> Item Count / Batch Number
-                        </label>
-                        <input
-                          type="tel" inputMode="numeric" pattern="[0-9]*"
-                          placeholder="Enter quantity..."
-                          value={selections[shop.id]}
-                          onChange={e => updateItemNumber(shop.id, e.target.value)}
-                          className="w-full h-10 px-3 bg-white border border-green-200 rounded-lg text-sm font-semibold text-green-700 placeholder-green-300 focus:outline-none focus:ring-2 focus:ring-green-200 focus:border-green-400 transition-all"
-                        />
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </motion.div>
-              );
-            })}
-          </AnimatePresence>
+                {isSelected && (
+                  <div className="px-4 pb-4" onClick={e => e.stopPropagation()}>
+                    <div className="bg-green-50 rounded-xl p-3 border border-green-100">
+                      <label className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-green-600 mb-2">
+                        <Hash size={9} /> Item Count / Batch Number
+                      </label>
+                      <input
+                        type="tel" inputMode="numeric" pattern="[0-9]*"
+                        placeholder="Enter quantity..."
+                        value={selections[shop.id]}
+                        onChange={e => updateItemNumber(shop.id, e.target.value)}
+                        className="w-full h-10 px-3 bg-white border border-green-200 rounded-lg text-sm font-semibold text-green-700 placeholder-green-300 focus:outline-none focus:ring-2 focus:ring-green-200 focus:border-green-400 transition-all"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
 
-        {shops.length === 0 && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-14">
+        {loadingShops && (
+          <div className="text-center py-14">
+            <span className="w-6 h-6 border-2 border-green-500 border-t-transparent rounded-full animate-spin inline-block" />
+            <p className="text-gray-400 text-sm mt-2">Loading shops...</p>
+          </div>
+        )}
+
+        {!loadingShops && filteredShops.length === 0 && (
+          <div className="text-center py-14">
             <div className="w-14 h-14 rounded-2xl bg-gray-100 flex items-center justify-center mx-auto mb-3">
               <Search size={22} className="text-gray-300" />
             </div>
@@ -361,7 +425,7 @@ export const Delivery = () => {
             >
               <Plus size={15} /> Add New Shop
             </button>
-          </motion.div>
+          </div>
         )}
         
         {hasMore && (
@@ -374,8 +438,7 @@ export const Delivery = () => {
       </div>
 
       {/* ── Bottom Action Bar ── */}
-      <motion.div
-        initial={{ y: 80, opacity: 0 }} animate={{ y: 0, opacity: 1 }}
+      <div
         className={clsx(
           "fixed bottom-0 right-0 z-40 bg-white border-t border-gray-100",
           profile?.role === 'admin' ? "left-0 lg:left-72" : "left-0"
@@ -423,12 +486,11 @@ export const Delivery = () => {
           </div>
 
           {/* Confirm button */}
-          <motion.button
-            whileTap={{ scale: 0.96 }}
+          <button
             onClick={handleDeliver}
             disabled={selectedCount === 0 || loading}
             className={clsx(
-              'flex-1 flex items-center justify-center gap-2 h-10 lg:h-11 px-4 lg:px-6 rounded-xl font-semibold text-xs lg:text-sm transition-all whitespace-nowrap',
+              'flex-1 flex items-center justify-center gap-2 h-10 lg:h-11 px-4 lg:px-6 rounded-xl font-semibold text-xs lg:text-sm transition-all whitespace-nowrap active:scale-98',
               selectedCount > 0
                 ? 'bg-green-500 hover:bg-green-600 text-white shadow-md shadow-green-200'
                 : 'bg-gray-100 text-gray-400 cursor-not-allowed'
@@ -438,9 +500,9 @@ export const Delivery = () => {
               ? <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
               : <Truck size={14} strokeWidth={2.5} />}
             Confirm Delivery
-          </motion.button>
+          </button>
         </div>
-      </motion.div>
+      </div>
 
       {/* ── Add Shop Modal ── */}
       <Modal isOpen={isAddModalOpen} onClose={() => setIsAddModalOpen(false)} title="Add New Shop">
