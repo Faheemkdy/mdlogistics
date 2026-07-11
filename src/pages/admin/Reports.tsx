@@ -159,11 +159,29 @@ export const Reports = () => {
         return;
       }
 
+      // Collect all unique rates used
+      const allRatesSet = new Set<number>();
+      
       Object.entries(datesGrouped).forEach(([dateStr, items]: [string, any]) => {
+        items.forEach((item: any) => {
+          const loc = (item.shops?.location || '').toLowerCase().trim();
+          const rate = rateMap[loc];
+          if (rate) allRatesSet.add(Math.round(rate));
+        });
+      });
+      
+      const allRates = Array.from(allRatesSet).sort((a, b) => a - b);
+      // If no rates found, use defaults
+      const finalRates = allRates.length > 0 ? allRates : [20, 25, 30, 35, 40, 50];
+
+      Object.entries(datesGrouped).forEach(([dateStr, items]: [string, any]) => {
+        const quantities: Record<string, string> = {};
+        finalRates.forEach(r => { quantities[String(r)] = ''; });
+        
         const row: any = { 
           id: Math.random(), 
           description: dateStr, 
-          q20: '', q25: '', q30: '', q35: '', q40: '', q50: '', 
+          quantities,
           total: 0, amount: '0' 
         };
 
@@ -171,22 +189,22 @@ export const Reports = () => {
           const loc = (item.shops?.location || '').toLowerCase().trim();
           const rate = rateMap[loc];
           if (rate) {
-            const rateKey = `q${Math.round(rate)}` as keyof typeof row;
-            // @ts-ignore
-            row[rateKey] = (Number(row[rateKey]) || 0) + 1;
+            const rateKey = String(Math.round(rate));
+            row.quantities[rateKey] = String((Number(row.quantities[rateKey]) || 0) + 1);
           }
         });
 
         // Recalculate totals
-        const q20 = Number(row.q20) || 0;
-        const q25 = Number(row.q25) || 0;
-        const q30 = Number(row.q30) || 0;
-        const q35 = Number(row.q35) || 0;
-        const q40 = Number(row.q40) || 0;
-        const q50 = Number(row.q50) || 0;
+        let totalQty = 0;
+        let totalAmt = 0;
+        finalRates.forEach(r => {
+          const qty = Number(row.quantities[String(r)]) || 0;
+          totalQty += qty;
+          totalAmt += qty * r;
+        });
         
-        row.total = q20 + q25 + q30 + q35 + q40 + q50;
-        row.amount = ((q20 * 20) + (q25 * 25) + (q30 * 30) + (q35 * 35) + (q40 * 40) + (q50 * 50)).toFixed(2);
+        row.total = totalQty;
+        row.amount = totalAmt > 0 ? totalAmt.toFixed(2) : '0';
         
         if (row.total > 0) billingRows.push(row);
       });
@@ -194,7 +212,8 @@ export const Reports = () => {
       navigate('/billing', { state: { 
         importCustomerName: company.name,
         importItems: billingRows,
-        importMode: 'delivery'
+        importMode: 'delivery',
+        importRateColumns: finalRates
       }});
 
     } catch (err: any) {

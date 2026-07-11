@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Profiles List</title>
+</head>
+<body>
+  <h1>Supabase User Profiles</h1>
+  <div id="output">Loading...</div>
+  <script>
+    const url = 'https://prahbbodynevpioaosuh.supabase.co/rest/v1/profiles';
+    const key = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InByYWhiYm9keW5ldnBpb2Fvc3VoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjgzNjY0MDMsImV4cCI6MjA4Mzk0MjQwM30.oj2Yn7u_8dUK2PiY5cT9phH3L4_H6996uMwgWb7NOow';
+    
+    fetch(url, {
+      headers: {
+        'apikey': key,
+        'Authorization': `Bearer ${key}`
+      }
+    })
+    .then(r => r.json())
+    .then(data => {
+      document.getElementById('output').innerHTML = `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+    })
+    .catch(err => {
+      document.getElementById('output').innerHTML = `Error: ${err.message}`;
+    });
+  </script>
+</body>
+</html>

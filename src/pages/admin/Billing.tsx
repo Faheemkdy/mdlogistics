@@ -4,7 +4,7 @@ import { Button } from '../../components/ui/Button';
 import { Modal } from '../../components/ui/Modal';
 import { Input } from '../../components/ui/Input';
 import { useToast } from '../../components/ui/Toast';
-import { Plus, Trash2, Download, Share2, Package, ShoppingCart, FileText, Search, Calendar, Edit3, Trash, Clock, CheckCircle } from 'lucide-react';
+import { Plus, Trash2, Download, Share2, Package, ShoppingCart, FileText, Search, Calendar, Edit3, Trash, Clock, CheckCircle, X, PlusCircle } from 'lucide-react';
 import { getStandardDate } from '../../utils/dateUtils';
 import { generateBillingPDF, getBillingPDFFile } from '../../utils/billingPdfGenerator';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -42,8 +42,52 @@ export const Billing = () => {
     orderBy: { column: 'date', ascending: false },
     filters: billingFilters
   });
+
+  // --- Dynamic Rate Columns ---
+  const STATIC_RATES = [20, 25, 30, 35, 40];
+  const DEFAULT_RATES = [20, 25, 30, 35, 40, 50];
+  const [rateColumns, setRateColumns] = useState<number[]>([...DEFAULT_RATES]);
+
+  const makeEmptyQuantities = (rates: number[]) => {
+    const q: Record<string, string> = {};
+    rates.forEach(r => { q[String(r)] = ''; });
+    return q;
+  };
+
+  // Migrate old-format items (q20, q25, ...) to new quantities object
+  const migrateItem = (item: any, rates: number[]): any => {
+    if (item.quantities) return item; // already new format
+    const quantities: Record<string, string> = {};
+    rates.forEach(r => {
+      const oldKey = `q${r}`;
+      quantities[String(r)] = item[oldKey] !== undefined ? String(item[oldKey]) : '';
+    });
+    // Also check for any qXX keys not in default rates
+    Object.keys(item).forEach(key => {
+      if (key.startsWith('q') && /^q\d+$/.test(key)) {
+        const rate = Number(key.slice(1));
+        if (!quantities[String(rate)]) {
+          quantities[String(rate)] = String(item[key]) || '';
+        }
+      }
+    });
+    return { id: item.id, description: item.description, quantities, total: item.total || 0, amount: item.amount || '' };
+  };
+
+  // Recalculate total and amount for an item based on current rates
+  const recalcItem = (item: any, rates: number[]) => {
+    let totalQty = 0;
+    let totalAmt = 0;
+    rates.forEach(rate => {
+      const qty = Number(item.quantities?.[String(rate)]) || 0;
+      totalQty += qty;
+      totalAmt += qty * rate;
+    });
+    return { ...item, total: totalQty, amount: totalAmt > 0 ? totalAmt.toFixed(2) : '' };
+  };
+
   const [deliveryItems, setDeliveryItems] = useState([
-    { id: 1, description: '', q20: '', q25: '', q30: '', q35: '', q40: '', q50: '', total: 0, amount: '' }
+    { id: 1, description: '', quantities: makeEmptyQuantities(DEFAULT_RATES), total: 0, amount: '' }
   ]);
   const [vouchersImportOpen, setVouchersImportOpen] = useState(false);
   const [pendingVouchers, setPendingVouchers] = useState<any[]>([]);
@@ -61,6 +105,10 @@ export const Billing = () => {
       if (location.state.importMode) setMode(location.state.importMode);
       
       if (location.state.importMode === 'delivery') {
+        // Set rate columns if provided by Reports
+        if (location.state.importRateColumns) {
+          setRateColumns(location.state.importRateColumns);
+        }
         setDeliveryItems(location.state.importItems);
       } else {
         setProductItems(location.state.importItems);
@@ -90,24 +138,69 @@ export const Billing = () => {
   const updateDeliveryItem = (id: number, field: string, value: string) => {
     setDeliveryItems(prev => prev.map(item => {
       if (item.id === id) {
-        const newItem = { ...item, [field]: value };
-        if (['q20', 'q25', 'q30', 'q35', 'q40', 'q50'].includes(field)) {
-            const q20 = Number(newItem.q20) || 0;
-            const q25 = Number(newItem.q25) || 0;
-            const q30 = Number(newItem.q30) || 0;
-            const q35 = Number(newItem.q35) || 0;
-            const q40 = Number(newItem.q40) || 0;
-            const q50 = Number(newItem.q50) || 0;
-            newItem.total = q20 + q25 + q30 + q35 + q40 + q50;
-            newItem.amount = ((q20 * 20) + (q25 * 25) + (q30 * 30) + (q35 * 35) + (q40 * 40) + (q50 * 50)).toFixed(2);
+        if (field === 'description') {
+          return { ...item, description: value };
         }
-        return newItem;
+        // field is a rate key like '20', '25', etc.
+        const newQuantities = { ...item.quantities, [field]: value };
+        const newItem = { ...item, quantities: newQuantities };
+        return recalcItem(newItem, rateColumns);
       }
       return item;
     }));
   };
 
-  const addDeliveryRow = () => setDeliveryItems(prev => [...prev, { id: Date.now(), description: '', q20: '', q25: '', q30: '', q35: '', q40: '', q50: '', total: 0, amount: '' }]);
+  // Update a rate column value (change the rate number)
+  const updateRateColumn = (oldRate: number, newRate: number) => {
+    if (isNaN(newRate) || newRate <= 0) return;
+    if (oldRate === newRate) return;
+    // Check for duplicate
+    if (rateColumns.includes(newRate)) {
+      toast.warning('Duplicate rate', `Rate ${newRate} already exists.`);
+      return;
+    }
+    setRateColumns(prev => prev.map(r => r === oldRate ? newRate : r));
+    // Move quantity data from old key to new key in all items
+    setDeliveryItems(prev => prev.map(item => {
+      const newQuantities = { ...item.quantities };
+      newQuantities[String(newRate)] = newQuantities[String(oldRate)] || '';
+      delete newQuantities[String(oldRate)];
+      const newItem = { ...item, quantities: newQuantities };
+      return recalcItem(newItem, rateColumns.map(r => r === oldRate ? newRate : r));
+    }));
+  };
+
+  // Add a new rate column
+  const addRateColumn = () => {
+    // Find next available rate (max + 5 or 5 if empty)
+    const maxRate = rateColumns.length > 0 ? Math.max(...rateColumns) : 0;
+    const newRate = maxRate + 5;
+    setRateColumns(prev => [...prev, newRate]);
+    // Add empty quantity for the new rate in all items
+    setDeliveryItems(prev => prev.map(item => ({
+      ...item,
+      quantities: { ...item.quantities, [String(newRate)]: '' }
+    })));
+  };
+
+  // Remove a rate column
+  const removeRateColumn = (rate: number) => {
+    if (rateColumns.length <= 1) {
+      toast.warning('Cannot remove', 'At least one rate column is required.');
+      return;
+    }
+    const newRates = rateColumns.filter(r => r !== rate);
+    setRateColumns(newRates);
+    // Remove quantity key and recalculate
+    setDeliveryItems(prev => prev.map(item => {
+      const newQuantities = { ...item.quantities };
+      delete newQuantities[String(rate)];
+      const newItem = { ...item, quantities: newQuantities };
+      return recalcItem(newItem, newRates);
+    }));
+  };
+
+  const addDeliveryRow = () => setDeliveryItems(prev => [...prev, { id: Date.now(), description: '', quantities: makeEmptyQuantities(rateColumns), total: 0, amount: '' }]);
   const removeDeliveryRow = (id: number) => { if (deliveryItems.length > 1) setDeliveryItems(prev => prev.filter(i => i.id !== id)); };
 
   // --- Product Logic (no rate) ---
@@ -130,7 +223,7 @@ export const Billing = () => {
       customer_name: customerName,
       date,
       items: mode === 'delivery' ? deliveryItems : productItems,
-      totals: mode === 'delivery' ? { qty: deliveryTotalQty, amount: deliveryTotalAmount } : { amount: productTotal }
+      totals: mode === 'delivery' ? { qty: deliveryTotalQty, amount: deliveryTotalAmount, rate_columns: rateColumns } : { amount: productTotal }
     };
 
     const { data, error } = editingBillId 
@@ -195,7 +288,8 @@ export const Billing = () => {
     // Reset if it was a new bill
     if (!editingBillId) {
       setCustomerName('');
-      setDeliveryItems([{ id: 1, description: '', q20: '', q25: '', q30: '', q35: '', q40: '', q50: '', total: 0, amount: '' }]);
+      setRateColumns([...DEFAULT_RATES]);
+      setDeliveryItems([{ id: 1, description: '', quantities: makeEmptyQuantities(DEFAULT_RATES), total: 0, amount: '' }]);
       setProductItems([{ id: 1, name: '', qty: 1, amount: 0 }]);
     }
     
@@ -223,8 +317,16 @@ export const Billing = () => {
     setCustomerName(bill.customer_name);
     setDate(bill.date);
     setEditingBillId(bill.id);
-    if (bill.type === 'delivery') setDeliveryItems(bill.items);
-    else setProductItems(bill.items);
+    if (bill.type === 'delivery') {
+      // Load rate columns from saved bill, or use static defaults
+      const savedRates = bill.totals?.rate_columns || [...DEFAULT_RATES];
+      setRateColumns(savedRates);
+      // Migrate old format items if needed
+      const migratedItems = bill.items.map((item: any) => migrateItem(item, savedRates));
+      setDeliveryItems(migratedItems);
+    } else {
+      setProductItems(bill.items);
+    }
   };
 
   const fetchPendingVouchers = async () => {
@@ -242,6 +344,14 @@ export const Billing = () => {
     
     const items = voucher.voucher_items || [];
     if (voucher.type === 'delivery') {
+      // Collect all unique rates from voucher items
+      const ratesSet = new Set<number>(rateColumns);
+      items.forEach((item: any) => {
+        if (item.rate) ratesSet.add(Number(item.rate));
+      });
+      const importRates = Array.from(ratesSet).sort((a, b) => a - b);
+      setRateColumns(importRates);
+
       const itemsByDate: Record<string, any> = {};
       items.forEach((item: any) => {
         const dateStr = item.date;
@@ -249,37 +359,23 @@ export const Billing = () => {
           itemsByDate[dateStr] = { 
             id: Date.now() + Math.random(), 
             description: dateStr, 
-            q20: '', q25: '', q30: '', q35: '', q40: '', q50: '', 
+            quantities: makeEmptyQuantities(importRates),
             total: 0, amount: '0' 
           };
         }
         const row = itemsByDate[dateStr];
         if (item.rate) {
-          const rateKey = `q${item.rate}` as keyof typeof row;
-          // @ts-ignore
-          row[rateKey] = (Number(row[rateKey]) || 0) + item.quantity;
+          const rateKey = String(item.rate);
+          row.quantities[rateKey] = String((Number(row.quantities[rateKey]) || 0) + item.quantity);
         }
       });
 
-      const newRows = Object.values(itemsByDate).map((row: any) => {
-        const q20 = Number(row.q20) || 0;
-        const q25 = Number(row.q25) || 0;
-        const q30 = Number(row.q30) || 0;
-        const q35 = Number(row.q35) || 0;
-        const q40 = Number(row.q40) || 0;
-        const q50 = Number(row.q50) || 0;
-        
-        return {
-          ...row,
-          total: q20 + q25 + q30 + q35 + q40 + q50,
-          amount: ((q20 * 20) + (q25 * 25) + (q30 * 30) + (q35 * 35) + (q40 * 40) + (q50 * 50)).toFixed(2)
-        };
-      });
+      const newRows = Object.values(itemsByDate).map((row: any) => recalcItem(row, importRates));
       
       // Sort rows chronologically by date
-      newRows.sort((a, b) => new Date(a.description).getTime() - new Date(b.description).getTime());
+      newRows.sort((a: any, b: any) => new Date(a.description).getTime() - new Date(b.description).getTime());
 
-      setDeliveryItems(newRows.length > 0 ? newRows : [{ id: 1, description: '', q20: '', q25: '', q30: '', q35: '', q40: '', q50: '', total: 0, amount: '' }]);
+      setDeliveryItems(newRows.length > 0 ? newRows : [{ id: 1, description: '', quantities: makeEmptyQuantities(importRates), total: 0, amount: '' }]);
     } else {
       // Product Mode
       const newProdRows = items.map((item: any) => ({
@@ -299,7 +395,7 @@ export const Billing = () => {
   // --- PDF / Share Logic ---
   const handlePDF = () => {
     if (mode === 'delivery') {
-      generateBillingPDF('delivery', customerName, date, deliveryItems, { qty: deliveryTotalQty, amount: deliveryTotalAmount });
+      generateBillingPDF('delivery', customerName, date, deliveryItems, { qty: deliveryTotalQty, amount: deliveryTotalAmount }, rateColumns);
     } else if (mode === 'product') {
       generateBillingPDF('product', customerName, date, productItems, { amount: productTotal });
     }
@@ -315,7 +411,8 @@ export const Billing = () => {
     const file = getBillingPDFFile(
       mode as 'delivery' | 'product', customerName, date,
       mode === 'delivery' ? deliveryItems : productItems,
-      mode === 'delivery' ? { qty: deliveryTotalQty, amount: deliveryTotalAmount } : { amount: productTotal }
+      mode === 'delivery' ? { qty: deliveryTotalQty, amount: deliveryTotalAmount } : { amount: productTotal },
+      mode === 'delivery' ? rateColumns : undefined
     );
     if (navigator.share && navigator.canShare({ files: [file] })) {
       try { 
@@ -469,7 +566,8 @@ export const Billing = () => {
                 <Button variant="secondary" onClick={() => {
                   setEditingBillId(null);
                   setCustomerName('');
-                  setDeliveryItems([{ id: 1, description: '', q20: '', q25: '', q30: '', q35: '', q40: '', q50: '', total: 0, amount: '' }]);
+                  setRateColumns([...DEFAULT_RATES]);
+                  setDeliveryItems([{ id: 1, description: '', quantities: makeEmptyQuantities(DEFAULT_RATES), total: 0, amount: '' }]);
                   setProductItems([{ id: 1, name: '', qty: 1, amount: 0 }]);
                 }} className="w-full py-2 text-xs">Cancel Edit</Button>
               )}
@@ -501,16 +599,54 @@ export const Billing = () => {
               <div className="relative group/scroll">
                 <div className="lg:hidden absolute top-0 right-0 bottom-0 w-6 bg-gradient-to-l from-slate-300/40 to-transparent pointer-events-none z-10" />
                 <div className="overflow-x-auto custom-scrollbar">
-                  <table className="w-full text-left border-collapse" style={{ minWidth: mode === 'delivery' ? '700px' : '400px' }}>
+                  <table className="w-full text-left border-collapse" style={{ minWidth: mode === 'delivery' ? `${400 + rateColumns.length * 55}px` : '400px' }}>
                   <thead>
                     <tr className="bg-slate-800 text-white text-xs">
                       {mode === 'delivery' ? (
                         <>
                           <th className="px-2 lg:px-4 py-2 lg:py-3.5 font-bold rounded-none w-28 text-left landscape:text-[10px]">Date</th>
                           <th className="px-1 lg:px-3 py-2 lg:py-3.5 font-bold text-center w-8 lg:w-14 text-yellow-300 landscape:text-[10px]">Total</th>
-                          {['20', '25', '30', '35', '40', '50'].map(s => (
-                            <th key={s} className="px-1 lg:px-2 py-2 lg:py-3.5 font-bold text-center text-slate-300 landscape:text-[10px]">{s}</th>
-                          ))}
+                          {rateColumns.map((rate, idx) => {
+                            const isStatic = STATIC_RATES.includes(rate);
+                            return (
+                            <th key={`rate-${idx}`} className="px-1 lg:px-2 py-1 lg:py-2 font-bold text-center text-slate-300 landscape:text-[10px] relative group/col">
+                              <div className="flex flex-col items-center gap-0.5">
+                                {isStatic ? (
+                                  <span className="text-[10px] lg:text-xs font-bold">{rate}</span>
+                                ) : (
+                                  <input
+                                    type="number"
+                                    value={rate}
+                                    onChange={(e) => {
+                                      const newVal = Number(e.target.value);
+                                      if (newVal > 0) updateRateColumn(rate, newVal);
+                                    }}
+                                    onWheel={(e) => (e.target as HTMLInputElement).blur()}
+                                    className="w-12 bg-slate-700 border border-slate-600 rounded text-center text-white text-[10px] lg:text-xs p-0.5 lg:p-1 outline-none focus:ring-1 focus:ring-blue-400 focus:bg-slate-600 transition-all font-bold [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                  />
+                                )}
+                                {!isStatic && (
+                                  <button
+                                    onClick={() => removeRateColumn(rate)}
+                                    className="opacity-0 group-hover/col:opacity-100 transition-opacity w-4 h-4 flex items-center justify-center rounded-full bg-red-500/80 hover:bg-red-500 text-white"
+                                    title="Remove column"
+                                  >
+                                    <X size={8} />
+                                  </button>
+                                )}
+                              </div>
+                            </th>
+                            );
+                          })}
+                          <th className="px-0.5 py-2 lg:py-3.5 w-8">
+                            <button
+                              onClick={addRateColumn}
+                              className="w-7 h-7 flex items-center justify-center rounded-lg bg-blue-500/30 hover:bg-blue-500/60 text-blue-300 hover:text-white transition-all mx-auto"
+                              title="Add rate column"
+                            >
+                              <PlusCircle size={14} />
+                            </button>
+                          </th>
                           <th className="px-2 lg:px-4 py-2 lg:py-3.5 font-bold text-right text-green-300 landscape:text-[10px]">Amount</th>
                           <th className="px-2 lg:px-3 py-2 lg:py-3.5 w-6"></th>
                         </>
@@ -550,18 +686,19 @@ export const Billing = () => {
                             <td className="px-2 py-2 text-center">
                               <span className="font-black text-slate-800 bg-yellow-100 text-yellow-700 px-2 py-1 rounded-lg text-sm">{item.total}</span>
                             </td>
-                            {['q20', 'q25', 'q30', 'q35', 'q40', 'q50'].map((size) => (
-                              <td key={size} className="px-1 py-1.5 lg:px-1.5 lg:py-2">
+                            {rateColumns.map((rate) => (
+                              <td key={`qty-${rate}`} className="px-1 py-1.5 lg:px-1.5 lg:py-2">
                                 <input
                                   type="number"
                                   placeholder="—"
-                                  // @ts-ignore
-                                  value={item[size]}
-                                  onChange={(e) => updateDeliveryItem(item.id, size, e.target.value)}
+                                  value={item.quantities?.[String(rate)] || ''}
+                                  onChange={(e) => updateDeliveryItem(item.id, String(rate), e.target.value)}
+                                  onWheel={(e) => (e.target as HTMLInputElement).blur()}
                                   className="w-full bg-white/60 border border-white/40 rounded-lg text-center text-slate-700 p-1 lg:p-1.5 outline-none focus:ring-2 focus:ring-blue-400 focus:bg-white text-[10px] lg:text-xs font-bold transition-all"
                                 />
                               </td>
                             ))}
+                            <td className="px-0.5 py-1.5"></td>
                             <td className="px-3 py-2 text-right">
                               <span className="font-black text-blue-700 text-sm">
                                 {item.amount ? `${Number(item.amount).toFixed(2)}` : '—'}
@@ -696,7 +833,7 @@ export const Billing = () => {
                       <p className="text-slate-500 text-xs font-medium">{format(new Date(bill.date), 'dd MMM yyyy')} · Rs.{bill.totals.amount.toFixed(2)}</p>
                     </div>
                     <div className="flex gap-2">
-                      <button onClick={() => generateBillingPDF(bill.type, bill.customer_name, bill.date, bill.items, bill.totals)} className="p-2.5 rounded-xl bg-white/60 text-slate-600 hover:bg-slate-800 hover:text-white transition-all shadow-sm">
+                      <button onClick={() => generateBillingPDF(bill.type, bill.customer_name, bill.date, bill.items, bill.totals, bill.totals?.rate_columns)} className="p-2.5 rounded-xl bg-white/60 text-slate-600 hover:bg-slate-800 hover:text-white transition-all shadow-sm">
                         <Download size={16} />
                       </button>
                       <button onClick={() => editSavedBill(bill)} className="p-2.5 rounded-xl bg-white/60 text-slate-600 hover:bg-indigo-600 hover:text-white transition-all shadow-sm">

@@ -19,7 +19,8 @@ const createPDFDoc = (
   customerName: string,
   date: string,
   items: any[],
-  totals: any
+  totals: any,
+  rateColumns?: number[]
 ) => {
   const doc = new jsPDF({ unit: 'mm', format: 'a4' });
   const pw = doc.internal.pageSize.width;   // 210
@@ -129,18 +130,25 @@ const createPDFDoc = (
   let tableBody: any[] = [];
 
   if (type === 'delivery') {
-    tableHead = [['Date', 'Total Qty', '20', '25', '30', '35', '40', '50', 'Amount (Rs.)']];
-    tableBody = items.map(item => [
-      item.description || '-',
-      item.total || 0,
-      item.q20 || '-',
-      item.q25 || '-',
-      item.q30 || '-',
-      item.q35 || '-',
-      item.q40 || '-',
-      item.q50 || '-',
-      item.amount ? `${Number(item.amount).toFixed(2)}` : '-'
-    ]);
+    const rates = rateColumns || [20, 25, 30, 35, 40, 50];
+    tableHead = [['Date', 'Total Qty', ...rates.map(r => String(r)), 'Amount (Rs.)']];
+    tableBody = items.map(item => {
+      // Support both old format (q20, q25...) and new format (quantities: { '20': ... })
+      const qtyValues = rates.map(r => {
+        if (item.quantities) {
+          return item.quantities[String(r)] || '-';
+        }
+        // Old format fallback
+        const oldKey = `q${r}`;
+        return item[oldKey] || '-';
+      });
+      return [
+        item.description || '-',
+        item.total || 0,
+        ...qtyValues,
+        item.amount ? `${Number(item.amount).toFixed(2)}` : '-'
+      ];
+    });
   } else {
     // Product: Only # | Item Name | Quantity | Amount (no Rate)
     tableHead = [['#', 'Item Name', 'Quantity', 'Amount (Rs.)']];
@@ -171,11 +179,16 @@ const createPDFDoc = (
       halign: 'center',
       cellPadding: { top: 4, bottom: 4, left: 4, right: 4 },
     },
-    columnStyles: type === 'delivery' ? {
-      0: { halign: 'left', cellWidth: 28 },
-      1: { fontStyle: 'bold', fillColor: BRAND.bgAlt },
-      8: { halign: 'right', fontStyle: 'bold', textColor: BRAND.accent }
-    } : {
+    columnStyles: type === 'delivery' ? (() => {
+      const rates = rateColumns || [20, 25, 30, 35, 40, 50];
+      const styles: any = {
+        0: { halign: 'left', cellWidth: 28 },
+        1: { fontStyle: 'bold', fillColor: BRAND.bgAlt },
+      };
+      // Last column (Amount) style
+      styles[rates.length + 2] = { halign: 'right', fontStyle: 'bold', textColor: BRAND.accent };
+      return styles;
+    })() : {
       0: { cellWidth: 10 },
       1: { halign: 'left' },
       2: { halign: 'center' },
@@ -287,9 +300,10 @@ export const generateBillingPDF = (
   customerName: string,
   date: string,
   items: any[],
-  totals: any
+  totals: any,
+  rateColumns?: number[]
 ) => {
-  const doc = createPDFDoc(type, customerName, date, items, totals);
+  const doc = createPDFDoc(type, customerName, date, items, totals, rateColumns);
   const filename = `Invoice_${(customerName || 'Customer').replace(/\s+/g, '_')}_${date}.pdf`;
   doc.save(filename);
 
@@ -309,9 +323,10 @@ export const getBillingPDFFile = (
   customerName: string,
   date: string,
   items: any[],
-  totals: any
+  totals: any,
+  rateColumns?: number[]
 ): File => {
-  const doc = createPDFDoc(type, customerName, date, items, totals);
+  const doc = createPDFDoc(type, customerName, date, items, totals, rateColumns);
   const blob = doc.output('blob');
   return new File([blob], `Invoice_${customerName || 'Customer'}.pdf`, { type: 'application/pdf' });
 };
