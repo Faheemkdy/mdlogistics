@@ -8,7 +8,7 @@ import { Modal } from '../../components/ui/Modal';
 import { 
   Download, Trash2, Edit2, Check, X, TrendingUp, TrendingDown, 
   FileText, Calendar, Wallet, ArrowUpRight, ArrowDownRight, 
-  ChevronRight, Package, Truck 
+  ChevronRight, Package, Truck, Search 
 } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -37,11 +37,16 @@ export const DaySheet = () => {
   const [editAmount, setEditAmount] = useState('');
   const [editDescription, setEditDescription] = useState('');
   const [editType, setEditType] = useState<'income' | 'expense'>('expense');
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => { 
     fetchEntries(); 
     setCurrentPage(1);
   }, [filterDate, viewMode]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery]);
 
   const fetchEntries = async () => {
     try {
@@ -131,12 +136,18 @@ export const DaySheet = () => {
     }
   };
 
-  const totalIncome = entries.filter(e => e.type === 'income').reduce((a, b) => a + Number(b.amount || 0), 0);
-  const totalExpense = entries.filter(e => e.type === 'expense').reduce((a, b) => a + Number(b.amount || 0), 0);
+  const filteredEntries = entries.filter(e => 
+    (e.description || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (e.amount != null && e.amount.toString().includes(searchQuery)) ||
+    (e.type || '').toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const totalIncome = filteredEntries.filter(e => e.type === 'income').reduce((a, b) => a + Number(b.amount || 0), 0);
+  const totalExpense = filteredEntries.filter(e => e.type === 'expense').reduce((a, b) => a + Number(b.amount || 0), 0);
   const balance = totalIncome - totalExpense;
 
   const downloadPDF = () => {
-    if (entries.length === 0) { 
+    if (filteredEntries.length === 0) { 
       toast.warning('Nothing to download', 'No entries found for this date.'); 
       return; 
     }
@@ -175,7 +186,7 @@ export const DaySheet = () => {
     autoTable(doc, {
       startY: 106,
       head: [['Type', 'Description', 'Amount']],
-      body: entries.map(e => [e.type.toUpperCase(), e.description || 'No description', `Rs. ${Number(e.amount).toFixed(2)}`]),
+      body: filteredEntries.map(e => [e.type.toUpperCase(), e.description || 'No description', `Rs. ${Number(e.amount).toFixed(2)}`]),
       theme: 'plain',
       headStyles: { fillColor: BRAND.primary, textColor: [255, 255, 255], fontStyle: 'bold' },
       styles: { fontSize: 10, cellPadding: 4, lineColor: BRAND.border, lineWidth: 0.3 },
@@ -427,9 +438,21 @@ export const DaySheet = () => {
           initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
           className="w-full space-y-4"
         >
-          <div className="flex items-center justify-between px-4 mb-2">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 px-4 mb-2">
             <h4 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em]">Transaction History</h4>
-            <span className="px-3 py-1 bg-white/40 border border-white/60 rounded-full text-[10px] font-bold text-slate-500">{entries.length} Entries</span>
+            <div className="flex items-center gap-3">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
+                <input
+                  type="text"
+                  placeholder="Search entries..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-9 pr-4 py-1.5 bg-white/40 border border-white/60 rounded-full text-xs font-bold text-slate-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 w-48 transition-all"
+                />
+              </div>
+              <span className="px-3 py-1 bg-white/40 border border-white/60 rounded-full text-[10px] font-bold text-slate-500 whitespace-nowrap">{filteredEntries.length} Entries</span>
+            </div>
           </div>
 
           <div className="overflow-x-auto rounded-3xl border border-white/60 bg-white/40 backdrop-blur-xl shadow-glass">
@@ -446,7 +469,7 @@ export const DaySheet = () => {
               </thead>
               <tbody className="divide-y divide-white/40">
                 <AnimatePresence mode="popLayout">
-                  {entries.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map((entry, index) => {
+                  {filteredEntries.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map((entry, index) => {
                     const isEditing = editingId === entry.id;
                     const currentType = isEditing ? editType : entry.type;
                     
@@ -532,22 +555,22 @@ export const DaySheet = () => {
             )}
           </div>
 
-          {Math.ceil(entries.length / itemsPerPage) > 1 && (
-            <div className="flex justify-between items-center bg-white/40 backdrop-blur-xl p-3 rounded-2xl border border-white/60 shadow-glass">
-              <button 
-                disabled={currentPage === 1} 
-                onClick={() => setCurrentPage(p => p - 1)}
-                className="px-4 py-2 text-xs font-bold bg-white text-slate-600 rounded-xl hover:bg-slate-50 disabled:opacity-50 transition-colors shadow-sm"
+          {filteredEntries.length > itemsPerPage && (
+            <div className="flex justify-between items-center px-4 mt-6">
+              <button
+                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                disabled={currentPage === 1}
+                className="px-4 py-2 bg-white/60 border border-white/60 rounded-2xl text-xs font-bold text-slate-600 disabled:opacity-50 transition-all hover:bg-white"
               >
                 Previous
               </button>
               <span className="text-xs font-bold text-slate-500">
-                Page {currentPage} of {Math.ceil(entries.length / itemsPerPage)}
+                Page {currentPage} of {Math.ceil(filteredEntries.length / itemsPerPage)}
               </span>
-              <button 
-                disabled={currentPage === Math.ceil(entries.length / itemsPerPage)} 
-                onClick={() => setCurrentPage(p => p + 1)}
-                className="px-4 py-2 text-xs font-bold bg-white text-slate-600 rounded-xl hover:bg-slate-50 disabled:opacity-50 transition-colors shadow-sm"
+              <button
+                onClick={() => setCurrentPage(prev => Math.min(prev + 1, Math.ceil(filteredEntries.length / itemsPerPage)))}
+                disabled={currentPage === Math.ceil(filteredEntries.length / itemsPerPage)}
+                className="px-4 py-2 bg-white/60 border border-white/60 rounded-2xl text-xs font-bold text-slate-600 disabled:opacity-50 transition-all hover:bg-white"
               >
                 Next
               </button>

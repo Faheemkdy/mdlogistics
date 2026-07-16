@@ -11,7 +11,7 @@ import {
   MapPin, Plus, Package, Building2, Hash, X, Calendar
 } from 'lucide-react';
 import { clsx } from 'clsx';
-import { isFuzzyMatch } from '../../utils/search';
+import { isFuzzyMatch, sortSearchResults } from '../../utils/search';
 
 export const Pickup = () => {
   const { user, profile } = useAuth();
@@ -105,15 +105,17 @@ export const Pickup = () => {
 
   const filteredCompanies = React.useMemo(() => {
     if (!searchCompanies.trim()) return companies;
-    return companies.filter(c => isFuzzyMatch(c.name, searchCompanies));
+    const filtered = companies.filter(c => isFuzzyMatch(c.name, searchCompanies));
+    return sortSearchResults(filtered, searchCompanies, c => c.name);
   }, [companies, searchCompanies]);
 
   const filteredShops = React.useMemo(() => {
     if (!searchShops.trim()) return shops;
-    return shops.filter(s => 
+    const filtered = shops.filter(s => 
       isFuzzyMatch(s.name, searchShops) || 
       (s.location && isFuzzyMatch(s.location, searchShops))
     );
+    return sortSearchResults(filtered, searchShops, s => s.name);
   }, [shops, searchShops]);
 
   // Local pagination for companies

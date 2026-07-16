@@ -7,7 +7,7 @@ import { Input } from '../../components/ui/Input';
 import { Modal } from '../../components/ui/Modal';
 import { Search, Check, MapPin, Truck, Plus, X, Hash, Calendar } from 'lucide-react';
 import { clsx } from 'clsx';
-import { isFuzzyMatch } from '../../utils/search';
+import { isFuzzyMatch, sortSearchResults } from '../../utils/search';
 
 export const Delivery = () => {
   const { user, profile } = useAuth();
@@ -82,10 +82,11 @@ export const Delivery = () => {
 
   const filteredShops = React.useMemo(() => {
     if (!search.trim()) return shops;
-    return shops.filter(shop => 
+    const filtered = shops.filter(shop => 
       isFuzzyMatch(shop.name, search) || 
       (shop.location && isFuzzyMatch(shop.location, search))
     );
+    return sortSearchResults(filtered, search, shop => shop.name);
   }, [shops, search]);
 
   const [visibleCount, setVisibleCount] = useState(20);

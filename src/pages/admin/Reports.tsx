@@ -40,6 +40,76 @@ export const Reports = () => {
   const [selectedRouteId, setSelectedRouteId] = useState<string>('');
   const [routeLocations, setRouteLocations] = useState<any[]>([]);
 
+  // Dashboard Stats
+  const [stats, setStats] = useState({
+    dayPickups: 0,
+    dayDeliveries: 0,
+    monthPickups: 0,
+    monthDeliveries: 0
+  });
+
+  useEffect(() => {
+    fetchDashboardStats(date);
+  }, [date]);
+
+  const fetchDashboardStats = async (selectedDateStr: string) => {
+    try {
+      const { count: dayDeliveries } = await supabase
+        .from('deliveries')
+        .select('*', { count: 'exact', head: true })
+        .eq('date', selectedDateStr);
+
+      const { data: dayPickupsData } = await supabase
+        .from('pickups')
+        .select('id')
+        .eq('date', selectedDateStr);
+      
+      let dayPickups = 0;
+      if (dayPickupsData && dayPickupsData.length > 0) {
+        const { count } = await supabase
+          .from('pickup_items')
+          .select('*', { count: 'exact', head: true })
+          .in('pickup_id', dayPickupsData.map(p => p.id));
+        dayPickups = count || 0;
+      }
+
+      const startOfMonth = selectedDateStr.substring(0, 8) + '01';
+      const [year, month] = selectedDateStr.split('-');
+      const lastDay = new Date(Number(year), Number(month), 0).getDate();
+      const endOfMonth = `${year}-${month}-${lastDay}`;
+
+      const { count: monthDeliveries } = await supabase
+        .from('deliveries')
+        .select('*', { count: 'exact', head: true })
+        .gte('date', startOfMonth)
+        .lte('date', endOfMonth);
+
+      const { data: monthPickupsData } = await supabase
+        .from('pickups')
+        .select('id')
+        .gte('date', startOfMonth)
+        .lte('date', endOfMonth);
+        
+      let monthPickups = 0;
+      if (monthPickupsData && monthPickupsData.length > 0) {
+        const { count } = await supabase
+          .from('pickup_items')
+          .select('*', { count: 'exact', head: true })
+          .in('pickup_id', monthPickupsData.map(p => p.id));
+        monthPickups = count || 0;
+      }
+
+      setStats({
+        dayPickups: dayPickups || 0,
+        dayDeliveries: dayDeliveries || 0,
+        monthPickups: monthPickups || 0,
+        monthDeliveries: monthDeliveries || 0,
+      });
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   useEffect(() => {
     if (activeTab === 'pickups') fetchPickups();
     else fetchDeliveries();
@@ -573,6 +643,49 @@ export const Reports = () => {
               className="bg-transparent border-none focus:ring-0 text-slate-700 font-bold text-sm w-32 outline-none"
             />
           </label>
+        </div>
+      </div>
+
+      {/* ── Dashboard Summary ── */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
+        <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-100 shadow-sm flex items-center gap-4 hover:shadow-md transition-all">
+          <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-indigo-50 flex items-center justify-center flex-shrink-0">
+            <Package className="text-indigo-500" size={20} />
+          </div>
+          <div>
+            <p className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider">Day Pickups</p>
+            <p className="text-xl sm:text-2xl font-black text-slate-800 leading-none mt-1">{stats.dayPickups}</p>
+          </div>
+        </div>
+        
+        <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-100 shadow-sm flex items-center gap-4 hover:shadow-md transition-all">
+          <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-emerald-50 flex items-center justify-center flex-shrink-0">
+            <Truck className="text-emerald-500" size={20} />
+          </div>
+          <div>
+            <p className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider">Day Deliveries</p>
+            <p className="text-xl sm:text-2xl font-black text-slate-800 leading-none mt-1">{stats.dayDeliveries}</p>
+          </div>
+        </div>
+
+        <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-100 shadow-sm flex items-center gap-4 hover:shadow-md transition-all">
+          <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-blue-50 flex items-center justify-center flex-shrink-0">
+            <Package className="text-blue-500" size={20} />
+          </div>
+          <div>
+            <p className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider">Month Pickups</p>
+            <p className="text-xl sm:text-2xl font-black text-slate-800 leading-none mt-1">{stats.monthPickups}</p>
+          </div>
+        </div>
+
+        <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-100 shadow-sm flex items-center gap-4 hover:shadow-md transition-all">
+          <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-teal-50 flex items-center justify-center flex-shrink-0">
+            <Truck className="text-teal-500" size={20} />
+          </div>
+          <div>
+            <p className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider">Month Deliveries</p>
+            <p className="text-xl sm:text-2xl font-black text-slate-800 leading-none mt-1">{stats.monthDeliveries}</p>
+          </div>
         </div>
       </div>
 

@@ -72,3 +72,41 @@ export function isFuzzyMatch(text: string, query: string): boolean {
     });
   });
 }
+
+/**
+ * Sorts an array of items based on their relevance to the search query.
+ * Exact matches come first, followed by prefix matches, followed by other matches.
+ * The original alphabetical order is preserved for items with the same relevance.
+ */
+export function sortSearchResults<T>(
+  items: T[],
+  query: string,
+  getText: (item: T) => string
+): T[] {
+  if (!query.trim()) return items;
+  
+  const cleanQuery = query.toLowerCase().trim();
+  
+  return [...items].sort((a, b) => {
+    const textA = getText(a).toLowerCase().trim();
+    const textB = getText(b).toLowerCase().trim();
+    
+    // 1. Exact match gets highest priority
+    const exactA = textA === cleanQuery ? 1 : 0;
+    const exactB = textB === cleanQuery ? 1 : 0;
+    if (exactA !== exactB) return exactB - exactA;
+    
+    // 2. Starts with gets second priority
+    const startsWithA = textA.startsWith(cleanQuery) ? 1 : 0;
+    const startsWithB = textB.startsWith(cleanQuery) ? 1 : 0;
+    if (startsWithA !== startsWithB) return startsWithB - startsWithA;
+    
+    // 3. Word starts with gets third priority
+    const wordStartsA = textA.split(/\s+/).some(w => w.startsWith(cleanQuery)) ? 1 : 0;
+    const wordStartsB = textB.split(/\s+/).some(w => w.startsWith(cleanQuery)) ? 1 : 0;
+    if (wordStartsA !== wordStartsB) return wordStartsB - wordStartsA;
+    
+    // 4. Preserve original alphabetical order (which is assumed for the input array)
+    return 0;
+  });
+}
