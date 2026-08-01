@@ -25,10 +25,16 @@ export const Reports = () => {
   const [shiftFilter, setShiftFilter] = useState<'all' | 'morning' | 'evening'>('all');
   const [expandedCompany, setExpandedCompany] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [editingPickupItem, setEditingPickupItem] = useState<{ id: string, itemNumber: string } | null>(null);
-  const [editingDeliveryItem, setEditingDeliveryItem] = useState<{ id: string, itemNumber: string } | null>(null);
+  const [editingPickupItem, setEditingPickupItem] = useState<{ id: string, itemNumber: string, date: string, pickupId: string } | null>(null);
+  const [editingDeliveryItem, setEditingDeliveryItem] = useState<{ id: string, itemNumber: string, date: string } | null>(null);
   const [deliveryPage, setDeliveryPage] = useState(1);
   const itemsPerPage = 30;
+
+  const [companies, setCompanies] = useState<any[]>([]);
+  const [selectedCompanyId, setSelectedCompanyId] = useState<string>('');
+
+  // Bulk date edit: companyId -> new date string
+  const [bulkDateEdit, setBulkDateEdit] = useState<Record<string, string>>({});
 
   // Multi-date selection
   const [selectedDates, setSelectedDates] = useState<string[]>([]);
@@ -115,8 +121,14 @@ export const Reports = () => {
     else fetchDeliveries();
   }, [date, activeTab]);
 
+  const fetchCompanies = async () => {
+    const { data } = await supabase.from('companies').select('id, name').eq('is_active', true).order('name');
+    if (data) setCompanies(data);
+  };
+
   useEffect(() => {
     fetchRoutes();
+    fetchCompanies();
   }, []);
 
   useEffect(() => {
@@ -302,7 +314,7 @@ export const Reports = () => {
     const { data, error } = await supabase
       .from('deliveries')
       // @ts-ignore
-      .select(`id, created_at, shift, item_number, shop_id, shops (name, location), profiles (username)`)
+      .select(`id, date, created_at, shift, item_number, shop_id, shops (name, location), profiles (username)`)
       .eq('date', date)
       .order('created_at', { ascending: false });
     if (error) console.error(error);
@@ -387,13 +399,24 @@ export const Reports = () => {
   const downloadPickupRangePDF = async (days: number) => {
     const { start, end } = getDateRange(days, date);
     toast.info('Generating...', `Fetching ${days}-day pickup report`);
-    const { data, error } = await supabase.from('pickups')
-      .select(`date, created_at, companies (name), pickup_items ( item_number, shops (name, location) )`)
-      .gte('date', start).lte('date', end).order('date', { ascending: false });
+    
+    let query = supabase.from('pickups')
+      .select(`date, created_at, companies (id, name), pickup_items ( item_number, shops (name, location) )`)
+      .gte('date', start).lte('date', end);
+      
+    if (selectedCompanyId) {
+      query = query.eq('company_id', selectedCompanyId);
+    }
+    
+    const { data, error } = await query.order('date', { ascending: false });
+    
     if (error || !data?.length) { toast.error('No data', 'No pickups in this range.'); return; }
     const doc = new jsPDF();
     drawPDFHeader(doc);
-    drawCustomerInfo(doc, 'Report:', `${days}-Day Pickup Report`, `${format(new Date(start), 'dd MMM')} to ${format(new Date(end), 'dd MMM yyyy')}`);
+    
+    const companyName = selectedCompanyId && data[0]?.companies ? data[0].companies.name : 'All Companies';
+    drawCustomerInfo(doc, 'Report:', `${days}-Day Pickup Report (${companyName})`, `${format(new Date(start), 'dd MMM')} to ${format(new Date(end), 'dd MMM yyyy')}`);
+    
     const rows: any[] = [];
     data.forEach((p: any) => {
       const sortedItems = [...(p.pickup_items || [])].sort((a: any, b: any) => (a.shops?.location || '').localeCompare(b.shops?.location || ''));
@@ -403,7 +426,7 @@ export const Reports = () => {
     });
     autoTable(doc, { head: [['Date', 'Company', 'Shop', 'Item No.']], body: rows, startY: 105, theme: 'grid', headStyles: { fillColor: [79, 70, 229], textColor: 255, fontStyle: 'bold' }, styles: { cellPadding: 3, fontSize: 9 } });
     drawGreenFooter(doc, 'TOTAL ITEMS:', rows.length);
-    savePDF(doc, `Pickups_${days}days_${end}.pdf`);
+    savePDF(doc, `Pickups_${companyName.replace(/\s+/g, '_')}_${days}days_${end}.pdf`);
   };
 
   const downloadDeliveryRangePDF = async (days: number) => {
@@ -464,6 +487,20 @@ export const Reports = () => {
     }
   };
 
+  const handleBulkDateChange = async (pickupIds: string[], newDate: string, companyId: string) => {
+    if (!newDate || pickupIds.length === 0) return;
+    if (!window.confirm(`Change date for all ${pickupIds.length} pickup record(s) of this company to ${newDate}?`)) return;
+
+    const { error } = await supabase.from('pickups').update({ date: newDate }).in('id', pickupIds);
+    if (error) {
+      toast.error('Error', error.message);
+    } else {
+      toast.success('Updated!', `All pickups moved to ${newDate}.`);
+      setBulkDateEdit(prev => { const n = { ...prev }; delete n[companyId]; return n; });
+      fetchPickups();
+    }
+  };
+
   const handleDeleteDelivery = async (deliveryId: string, e: React.MouseEvent) => {
     e.stopPropagation();
     if (!window.confirm('Delete this delivery?')) return;
@@ -474,17 +511,35 @@ export const Reports = () => {
 
   const handleSavePickupItem = async (itemId: string) => {
     if (!editingPickupItem || editingPickupItem.id !== itemId) return;
-    const { error } = await supabase.from('pickup_items').update({ item_number: editingPickupItem.itemNumber }).eq('id', itemId);
-    if (error) toast.error('Error', error.message);
-    else { toast.success('Saved', 'Item number updated.'); fetchPickups(); }
+    
+    const { error: itemError } = await supabase.from('pickup_items').update({ item_number: editingPickupItem.itemNumber }).eq('id', itemId);
+    if (itemError) {
+      toast.error('Error updating item number', itemError.message);
+      return;
+    }
+    
+    if (editingPickupItem.pickupId && editingPickupItem.date) {
+      const { error: pickupError } = await supabase.from('pickups').update({ date: editingPickupItem.date }).eq('id', editingPickupItem.pickupId);
+      if (pickupError) {
+        toast.error('Error updating pickup date', pickupError.message);
+        return;
+      }
+    }
+    
+    toast.success('Saved', 'Pickup details updated.');
+    fetchPickups();
     setEditingPickupItem(null);
   };
 
   const handleSaveDeliveryItem = async (itemId: string) => {
     if (!editingDeliveryItem || editingDeliveryItem.id !== itemId) return;
-    const { error } = await supabase.from('deliveries').update({ item_number: editingDeliveryItem.itemNumber }).eq('id', itemId);
+    const { error } = await supabase.from('deliveries').update({ 
+      item_number: editingDeliveryItem.itemNumber,
+      date: editingDeliveryItem.date
+    }).eq('id', itemId);
+    
     if (error) toast.error('Error', error.message);
-    else { toast.success('Saved', 'Item number updated.'); fetchDeliveries(); }
+    else { toast.success('Saved', 'Delivery details updated.'); fetchDeliveries(); }
     setEditingDeliveryItem(null);
   };
 
@@ -496,14 +551,23 @@ export const Reports = () => {
     const lastDay = new Date(Number(year), Number(month), 0).getDate();
     const end = `${monthStr}-${lastDay}`;
     
-    const { data, error } = await supabase.from('pickups')
-      .select(`date, created_at, companies (name), pickup_items ( item_number, shops (name, location) )`)
-      .gte('date', start).lte('date', end).order('date', { ascending: false });
+    let query = supabase.from('pickups')
+      .select(`date, created_at, companies (id, name), pickup_items ( item_number, shops (name, location) )`)
+      .gte('date', start).lte('date', end);
+      
+    if (selectedCompanyId) {
+      query = query.eq('company_id', selectedCompanyId);
+    }
+    
+    const { data, error } = await query.order('date', { ascending: false });
       
     if (error || !data?.length) { toast.error('No data', 'No pickups in this month.'); return; }
     const doc = new jsPDF();
     drawPDFHeader(doc);
-    drawCustomerInfo(doc, 'Report:', `Monthly Pickup Report`, format(new Date(start), 'MMMM yyyy'));
+    
+    const companyName = selectedCompanyId && data[0]?.companies ? data[0].companies.name : 'All Companies';
+    drawCustomerInfo(doc, 'Report:', `Monthly Pickup Report (${companyName})`, format(new Date(start), 'MMMM yyyy'));
+    
     const rows: any[] = [];
     data.forEach((p: any) => {
       const sortedItems = [...(p.pickup_items || [])].sort((a: any, b: any) => (a.shops?.location || '').localeCompare(b.shops?.location || ''));
@@ -513,7 +577,7 @@ export const Reports = () => {
     });
     autoTable(doc, { head: [['Date', 'Company', 'Shop', 'Item No.']], body: rows, startY: 105, theme: 'grid', headStyles: { fillColor: [79, 70, 229], textColor: 255, fontStyle: 'bold' }, styles: { cellPadding: 3, fontSize: 9 } });
     drawGreenFooter(doc, 'TOTAL ITEMS:', rows.length);
-    savePDF(doc, `Pickups_${monthStr}.pdf`);
+    savePDF(doc, `Pickups_${companyName.replace(/\s+/g, '_')}_${monthStr}.pdf`);
   };
 
   const downloadMonthlyDeliveryPDF = async (monthStr: string) => {
@@ -557,7 +621,8 @@ export const Reports = () => {
     items: c.items
       .filter((item: any) => item.name.toLowerCase().includes(lq) || c.name.toLowerCase().includes(lq))
       .sort((a: any, b: any) => (a.location || '').localeCompare(b.location || ''))
-  })).filter(c => c.items.length > 0);
+  })).filter(c => c.items.length > 0)
+    .filter(c => !selectedCompanyId || c.id === selectedCompanyId);
   
   const filteredDeliveries = deliveryData
     .filter(d => (d.shops?.name || '').toLowerCase().includes(lq) || (d.shops?.location || '').toLowerCase().includes(lq))
@@ -609,8 +674,19 @@ export const Reports = () => {
           <h1 className="text-2xl sm:text-3xl font-black text-slate-800 tracking-tight">Reports</h1>
           <p className="text-slate-500 text-xs sm:text-sm font-medium">View & export logistics data</p>
         </div>
-        {/* Controls row */}
         <div className="flex items-center gap-2 self-end sm:self-auto flex-wrap justify-end">
+          {activeTab === 'pickups' && (
+            <select
+              value={selectedCompanyId}
+              onChange={(e) => setSelectedCompanyId(e.target.value)}
+              className="bg-white/80 backdrop-blur-md border border-white shadow-sm rounded-2xl px-4 py-2.5 outline-none text-sm font-bold text-slate-700 hover:border-indigo-300 transition-all max-w-[200px]"
+            >
+              <option value="">All Companies...</option>
+              {companies.map(c => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+            </select>
+          )}
           {activeTab === 'deliveries' && (
             <>
               <select
@@ -747,7 +823,7 @@ export const Reports = () => {
           {(['pickups', 'deliveries'] as Tab[]).map(tab => (
             <button
               key={tab}
-              onClick={() => { setActiveTab(tab); setSearchQuery(''); setExpandedCompany(null); }}
+              onClick={() => { setActiveTab(tab); setSearchQuery(''); setExpandedCompany(null); setSelectedCompanyId(''); }}
               className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-black transition-all duration-300 ${
                 activeTab === tab
                   ? tab === 'pickups'
@@ -821,9 +897,28 @@ export const Reports = () => {
                     <p className="text-slate-400 text-xs font-medium">{company.items.length} shop{company.items.length !== 1 ? 's' : ''}</p>
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
+                    {/* Bulk Date Change */}
+                    <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
+                      <input
+                        type="date"
+                        title="Change date for all pickups of this company"
+                        value={bulkDateEdit[company.id] || ''}
+                        onChange={e => setBulkDateEdit(prev => ({ ...prev, [company.id]: e.target.value }))}
+                        className="border border-slate-200 rounded-lg px-2 py-1 text-[11px] font-bold text-slate-600 outline-none focus:ring-2 focus:ring-indigo-400/20 focus:border-indigo-300 transition-all bg-slate-50 cursor-pointer w-[130px]"
+                      />
+                      {bulkDateEdit[company.id] && (
+                        <button
+                          onClick={() => handleBulkDateChange(company.pickupIds, bulkDateEdit[company.id], company.id)}
+                          className="flex items-center gap-1 px-2 py-1 rounded-lg bg-indigo-500 text-white text-[11px] font-black hover:bg-indigo-600 transition-all shadow-sm shadow-indigo-500/30 whitespace-nowrap"
+                          title="Apply date to all pickups of this company"
+                        >
+                          <Check size={11} /> Apply All
+                        </button>
+                      )}
+                    </div>
                     <button
                       onClick={e => handleDeleteFullPickup(company.pickupIds, e)}
-                      className="flex items-center justify-center w-7 h-7 rounded-lg bg-red-50 text-red-400 hover:bg-red-100 hover:text-red-600 transition-all mr-1"
+                      className="flex items-center justify-center w-7 h-7 rounded-lg bg-red-50 text-red-400 hover:bg-red-100 hover:text-red-600 transition-all"
                       title="Delete Entire Company Pickup"
                     >
                       <Trash2 size={13} />
@@ -881,7 +976,18 @@ export const Reports = () => {
                                     </span>
                                   )}
                                 </td>
-                                <td className="px-4 py-3 text-xs text-center whitespace-nowrap"><span className="flex items-center justify-center gap-1"><Clock size={11} className="text-slate-400" />{item.pickupTime}</span></td>
+                                <td className="px-4 py-3 text-xs text-center whitespace-nowrap">
+                                  {editingPickupItem?.id === item.itemId ? (
+                                    <input 
+                                      type="date" 
+                                      className="border border-indigo-300 rounded px-2 py-1 text-xs font-bold text-indigo-700 outline-none focus:ring-2 focus:ring-indigo-500/20 text-center"
+                                      value={editingPickupItem.date}
+                                      onChange={e => setEditingPickupItem({ ...editingPickupItem, date: e.target.value })}
+                                    />
+                                  ) : (
+                                    <span className="flex items-center justify-center gap-1"><Clock size={11} className="text-slate-400" />{item.pickupTime}</span>
+                                  )}
+                                </td>
                                 <td className="px-4 py-3 text-xs text-center"><span className="flex items-center justify-center gap-1"><User size={11} className="text-slate-400" />{item.pickupUser}</span></td>
                                 <td className="px-4 py-3 text-right whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity">
                                   <div className="flex justify-end gap-1.5">
@@ -890,7 +996,7 @@ export const Reports = () => {
                                         <Check size={14} />
                                       </button>
                                     ) : (
-                                      <button onClick={() => setEditingPickupItem({ id: item.itemId, itemNumber: item.itemNumber || '' })} className="p-1.5 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition-colors" title="Edit">
+                                      <button onClick={() => setEditingPickupItem({ id: item.itemId, itemNumber: item.itemNumber || '', date: date, pickupId: item.pickupId })} className="p-1.5 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition-colors" title="Edit">
                                         <Edit2 size={14} />
                                       </button>
                                     )}
@@ -981,7 +1087,18 @@ export const Reports = () => {
                           </span>
                         )}
                       </td>
-                      <td className="px-4 py-3 text-xs text-center whitespace-nowrap"><span className="flex items-center justify-center gap-1"><Clock size={11} className="text-slate-400" />{format(new Date(delivery.created_at), 'hh:mm a')}</span></td>
+                      <td className="px-4 py-3 text-xs text-center whitespace-nowrap">
+                        {editingDeliveryItem?.id === delivery.id ? (
+                          <input 
+                            type="date" 
+                            className="border border-indigo-300 rounded px-2 py-1 text-xs font-bold text-indigo-700 outline-none focus:ring-2 focus:ring-indigo-500/20 text-center"
+                            value={editingDeliveryItem.date}
+                            onChange={e => setEditingDeliveryItem({ ...editingDeliveryItem, date: e.target.value })}
+                          />
+                        ) : (
+                          <span className="flex items-center justify-center gap-1"><Clock size={11} className="text-slate-400" />{format(new Date(delivery.created_at), 'hh:mm a')}</span>
+                        )}
+                      </td>
                       <td className="px-4 py-3 text-xs text-center"><span className="flex items-center justify-center gap-1"><User size={11} className="text-slate-400" />{delivery.profiles?.username || '-'}</span></td>
                       <td className="px-4 py-3 text-right whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity">
                         <div className="flex justify-end gap-1.5">
@@ -990,7 +1107,7 @@ export const Reports = () => {
                               <Check size={14} />
                             </button>
                           ) : (
-                            <button onClick={() => setEditingDeliveryItem({ id: delivery.id, itemNumber: delivery.item_number || '' })} className="p-1.5 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition-colors" title="Edit">
+                            <button onClick={() => setEditingDeliveryItem({ id: delivery.id, itemNumber: delivery.item_number || '', date: delivery.date || date })} className="p-1.5 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition-colors" title="Edit">
                               <Edit2 size={14} />
                             </button>
                           )}
