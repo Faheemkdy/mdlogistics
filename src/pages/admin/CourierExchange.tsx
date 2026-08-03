@@ -49,9 +49,9 @@ export const CourierExchange = () => {
   const [search, setSearch] = useState('');
   const [filterType, setFilterType] = useState<'all' | 'inward' | 'outward'>('all');
   const [filterDate, setFilterDate] = useState(new Date().toISOString().split('T')[0]);
+  const [selectedPartnerFilter, setSelectedPartnerFilter] = useState<string>('all');
   const dateInputRef = useRef<HTMLInputElement>(null);
 
-  
   // Data
   const [partners, setPartners] = useState<CourierPartner[]>([]);
   const [logs, setLogs] = useState<CourierLog[]>([]);
@@ -69,7 +69,6 @@ export const CourierExchange = () => {
   const [logCount, setLogCount] = useState('');
   const [logShopName, setLogShopName] = useState('');
   const [logDate, setLogDate] = useState(new Date().toISOString().split('T')[0]);
-
 
   useEffect(() => {
     fetchPartners();
@@ -99,14 +98,14 @@ export const CourierExchange = () => {
       if (editingPartner) {
         const { error } = await supabase
           .from('courier_partners')
-          .update({ name: partnerName })
+          .update({ name: partnerName.trim() })
           .eq('id', editingPartner.id);
         if (error) throw error;
         toast.success('Partner updated');
       } else {
         const { error } = await supabase
           .from('courier_partners')
-          .insert([{ name: partnerName }]);
+          .insert([{ name: partnerName.trim() }]);
         if (error) throw error;
         toast.success('Partner added');
       }
@@ -192,29 +191,45 @@ export const CourierExchange = () => {
     }
   };
 
-  const generateReport = (days: number) => {
+  // Partner-Specific or Period PDF Generation
+  const generateReport = (days: number, overridePartnerId?: string) => {
     try {
+      const targetPartnerId = overridePartnerId || selectedPartnerFilter;
+      const targetPartner = partners.find(p => p.id === targetPartnerId);
       const todayStr = new Date().toISOString().split('T')[0];
-      let filteredLogs = [];
+      
+      let baseLogs = targetPartnerId && targetPartnerId !== 'all' 
+        ? logs.filter(l => l.partner_id === targetPartnerId)
+        : logs;
+
       let periodLabel = "";
+      let filteredLogs = [];
 
       if (days === 0) {
-        filteredLogs = logs.filter(l => l.date === todayStr);
-        periodLabel = "Today's Daily Report";
-      } else {
+        filteredLogs = baseLogs.filter(l => l.date === todayStr);
+        periodLabel = targetPartner ? `${targetPartner.name} - Today's Statement` : "Today's Daily Report";
+      } else if (days > 0) {
         const startDate = subDays(new Date(), days);
-        filteredLogs = logs.filter(l => new Date(l.date) >= startDate);
-        periodLabel = `${days} Days History Statement`;
+        filteredLogs = baseLogs.filter(l => new Date(l.date) >= startDate);
+        periodLabel = targetPartner ? `${targetPartner.name} - ${days} Days History` : `${days} Days History Statement`;
+      } else {
+        filteredLogs = baseLogs;
+        periodLabel = targetPartner ? `${targetPartner.name} - All Time Statement` : "All Time Master Statement";
       }
       
       if (filteredLogs.length === 0) {
-        toast.warning('No data', `No logs found for ${days === 0 ? 'today' : 'the selected period'}.`);
+        toast.warning('No data', `No log entries found for ${targetPartner ? targetPartner.name : 'the selected period'}.`);
         return;
       }
 
       const doc = new jsPDF();
       drawPDFHeader(doc);
-      drawCustomerInfo(doc, "Report Type:", periodLabel, formatReportDate(new Date().toISOString()));
+      
+      if (targetPartner) {
+        drawCustomerInfo(doc, "Courier Partner:", targetPartner.name, formatReportDate(new Date().toISOString()));
+      } else {
+        drawCustomerInfo(doc, "Report Type:", periodLabel, formatReportDate(new Date().toISOString()));
+      }
 
       const tableData = filteredLogs.map(l => [
         format(new Date(l.date), 'dd MMM yyyy'),
@@ -225,7 +240,7 @@ export const CourierExchange = () => {
       ]);
 
       autoTable(doc, {
-        head: [['Date', 'Courier Name', 'Shop Name', 'Type', 'Count']],
+        head: [['Date', 'Courier Name', 'Shop Name / Notes', 'Type', 'Count']],
         body: tableData,
         startY: 105,
         theme: 'grid',
@@ -237,8 +252,15 @@ export const CourierExchange = () => {
       const totalIn = filteredLogs.filter(l => l.type === 'inward').reduce((acc, curr) => acc + curr.count, 0);
       const totalOut = filteredLogs.filter(l => l.type === 'outward').reduce((acc, curr) => acc + curr.count, 0);
 
-      drawGreenFooter(doc, "EXCHANGE SUMMARY:", `INWARD: ${totalIn} | OUTWARD: ${totalOut}`);
-      savePDF(doc, `courier_report_${days === 0 ? 'today' : days + 'days'}.pdf`);
+      const summaryTitle = targetPartner ? `${targetPartner.name.toUpperCase()} SUMMARY:` : "EXCHANGE SUMMARY:";
+      drawGreenFooter(doc, summaryTitle, `INWARD: ${totalIn} | OUTWARD: ${totalOut}`);
+      
+      const fileName = targetPartner 
+        ? `${targetPartner.name.replace(/[^a-zA-Z0-9]/g, '_')}_Courier_${days === 0 ? 'today' : days + 'days'}.pdf`
+        : `courier_report_${days === 0 ? 'today' : days + 'days'}.pdf`;
+        
+      savePDF(doc, fileName);
+      toast.success('PDF Downloaded!', `Generated statement for ${targetPartner ? targetPartner.name : 'all partners'}.`);
     } catch (e: any) {
       toast.error('Report failed', e.message);
     }
@@ -249,7 +271,8 @@ export const CourierExchange = () => {
                          (l.shop_name || '').toLowerCase().includes(search.toLowerCase());
     const matchesType = filterType === 'all' || l.type === filterType;
     const matchesDate = !filterDate || l.date === filterDate;
-    return matchesSearch && matchesType && matchesDate;
+    const matchesPartner = selectedPartnerFilter === 'all' || l.partner_id === selectedPartnerFilter;
+    return matchesSearch && matchesType && matchesDate && matchesPartner;
   });
 
   return (
@@ -264,7 +287,7 @@ export const CourierExchange = () => {
             <Plus size={18} className="mr-2" /> New Entry
           </Button>
           <Button variant="ghost" onClick={() => setIsPartnerModalOpen(true)} className="bg-white border-slate-200">
-            <Building2 size={18} className="mr-2" /> Partners
+            <Building2 size={18} className="mr-2" /> Manage Partners
           </Button>
         </div>
       </div>
@@ -303,6 +326,7 @@ export const CourierExchange = () => {
       {/* Tabs & Search */}
       <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-sm overflow-hidden">
         <div className="p-4 border-b border-slate-50 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          {/* Type Filter Buttons */}
           <div className="flex bg-slate-100 p-1 rounded-2xl w-fit">
             <button 
               onClick={() => setFilterType('all')}
@@ -325,7 +349,21 @@ export const CourierExchange = () => {
           </div>
 
           <div className="flex flex-wrap items-center justify-end gap-3 flex-1 w-full">
-            <div className="relative flex-1 min-w-[150px] md:min-w-[200px]">
+            {/* Courier Partner Filter Selector */}
+            <select
+              value={selectedPartnerFilter}
+              onChange={e => setSelectedPartnerFilter(e.target.value)}
+              className="py-2.5 px-3 bg-slate-50 border border-slate-100 rounded-2xl text-xs font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+              title="Filter by Courier Partner"
+            >
+              <option value="all">All Courier Partners</option>
+              {partners.map(p => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+            </select>
+
+            {/* Search Box */}
+            <div className="relative flex-1 min-w-[150px] md:min-w-[180px]">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
               <input 
                 placeholder="Search courier or shop..."
@@ -335,7 +373,8 @@ export const CourierExchange = () => {
               />
             </div>
             
-            <div className="relative min-w-[180px]">
+            {/* Date Filter */}
+            <div className="relative min-w-[160px]">
               <div 
                 className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 cursor-pointer z-10"
                 onClick={() => dateInputRef.current?.showPicker()}
@@ -360,11 +399,13 @@ export const CourierExchange = () => {
                 </button>
               )}
             </div>
-            <div className="flex gap-1">
-              <button onClick={() => generateReport(0)} className="p-2.5 bg-slate-50 text-slate-600 rounded-xl hover:bg-slate-100 flex items-center justify-center min-w-[40px]" title="Today's Report"><Download size={18} /></button>
-              <button onClick={() => generateReport(7)} className="p-2.5 bg-slate-50 text-slate-600 rounded-xl hover:bg-slate-100 text-xs font-black min-w-[40px]" title="7 Days Report">7</button>
-              <button onClick={() => generateReport(15)} className="p-2.5 bg-slate-50 text-slate-600 rounded-xl hover:bg-slate-100 text-xs font-black min-w-[40px]" title="15 Days Report">15</button>
-              <button onClick={() => generateReport(30)} className="p-2.5 bg-slate-50 text-slate-600 rounded-xl hover:bg-slate-100 text-xs font-black min-w-[40px]" title="30 Days Report">30</button>
+
+            {/* PDF Report Generation Buttons */}
+            <div className="flex gap-1" title={selectedPartnerFilter !== 'all' ? `Download PDF for selected partner` : `Download master PDF report`}>
+              <button onClick={() => generateReport(0)} className="p-2.5 bg-slate-50 text-slate-600 rounded-xl hover:bg-slate-100 flex items-center justify-center min-w-[40px]" title="Today's PDF Report"><Download size={18} /></button>
+              <button onClick={() => generateReport(7)} className="p-2.5 bg-slate-50 text-slate-600 rounded-xl hover:bg-slate-100 text-xs font-black min-w-[40px]" title="7 Days PDF Statement">7</button>
+              <button onClick={() => generateReport(15)} className="p-2.5 bg-slate-50 text-slate-600 rounded-xl hover:bg-slate-100 text-xs font-black min-w-[40px]" title="15 Days PDF Statement">15</button>
+              <button onClick={() => generateReport(30)} className="p-2.5 bg-slate-50 text-slate-600 rounded-xl hover:bg-slate-100 text-xs font-black min-w-[40px]" title="30 Days PDF Statement">30</button>
             </div>
           </div>
         </div>
@@ -463,7 +504,14 @@ export const CourierExchange = () => {
             {partners.map(p => (
               <div key={p.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-2xl border border-slate-100 group">
                 <span className="font-bold text-slate-700">{p.name}</span>
-                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button 
+                    onClick={() => generateReport(0, p.id)} 
+                    className="p-1.5 text-slate-400 hover:text-green-600 transition-colors"
+                    title="Download Today's PDF for this partner"
+                  >
+                    <Download size={14} />
+                  </button>
                   <button onClick={() => { setPartnerName(p.name); setEditingPartner(p); }} className="p-1.5 text-slate-400 hover:text-blue-500"><Edit2 size={14} /></button>
                   <button onClick={() => handleDeletePartner(p.id)} className="p-1.5 text-slate-400 hover:text-red-500"><Trash2 size={14} /></button>
                 </div>

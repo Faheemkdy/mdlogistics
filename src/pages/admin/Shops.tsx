@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { clsx } from 'clsx';
 import { supabase } from '../../lib/supabase';
-import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { useToast } from '../../components/ui/Toast';
-import { Trash2, Plus, MapPin, Edit2, X, Check, Upload, Search, Store, LayoutGrid, FileSpreadsheet, CheckCircle2 } from 'lucide-react';
+import {
+  Trash2, Plus, MapPin, Edit2, X, Check, Upload, Search,
+  Store, LayoutGrid, FileSpreadsheet, CheckCircle2, ChevronLeft, ChevronRight, Rate
+} from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import * as XLSX from 'xlsx';
 import { useSupabasePagination } from '../../hooks/useSupabasePagination';
@@ -23,10 +25,8 @@ export const Shops = () => {
   const {
     data: shops,
     loading,
-    loadingMore,
     searchQuery: search,
     setSearchQuery: setSearch,
-    loadMore,
     hasMore,
     totalCount,
     refetch,
@@ -50,8 +50,6 @@ export const Shops = () => {
 
   // Edit Location Rates states
   const [editingLocId, setEditingLocId] = useState<string | null>(null);
-  const [editLocName, setEditLocName] = useState('');
-  const [editLocRate, setEditLocRate] = useState('');
 
   // Persistence
   useEffect(() => { localStorage.setItem('shops_draft_name', name); }, [name]);
@@ -104,7 +102,6 @@ export const Shops = () => {
     setNewLocRate('');
   };
 
-
   const handleDeleteLocationRate = async (id: string) => {
     const { error } = await supabase.from('location_rates').delete().eq('id', id);
     if (error) toast.error('Delete failed', error.message);
@@ -142,11 +139,11 @@ export const Shops = () => {
     setSubmitting(false);
   };
 
-  const startEdit = (shop: any) => { setEditingId(shop.id); setEditName(shop.name); setEditLocation(shop.location); };
+  const startEdit = (shop: any) => { setEditingId(shop.id); setEditName(shop.name); setEditLocation(shop.location || ''); };
   const cancelEdit = () => { setEditingId(null); setEditName(''); setEditLocation(''); };
   const saveEdit = async () => {
     if (!editName.trim() || !editingId) return;
-    const { error } = await supabase.from('shops').update({ name: editName, location: editLocation }).eq('id', editingId);
+    const { error } = await supabase.from('shops').update({ name: editName.trim(), location: editLocation.trim() }).eq('id', editingId);
     if (error) { toast.error('Update failed', error.message); return; }
     toast.success('Shop updated!');
     setEditingId(null);
@@ -203,48 +200,64 @@ export const Shops = () => {
     reader.readAsBinaryString(file);
   };
 
-
   const uniqueShopLocations = Array.from(new Set(
     shops.map(s => (s.location || '').trim())
          .filter(Boolean)
          .map(loc => loc.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(' '))
   )).sort();
 
+  const getInitials = (shopName: string) => {
+    if (!shopName) return '??';
+    const clean = shopName.replace(/[^a-zA-Z0-9\s]/g, '').trim();
+    const parts = clean.split(/\s+/).filter(Boolean);
+    if (parts.length === 0) return shopName.slice(0, 2).toUpperCase();
+    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+    return (parts[0][0] + parts[1][0]).toUpperCase();
+  };
+
   return (
-    <div className="space-y-8 max-w-5xl mx-auto pb-20">
+    <div className="w-full space-y-4 pb-20">
       
-      {/* ── Page Header & Quick Actions ── */}
-      <motion.div 
-        initial={{ opacity: 0, y: -20 }} 
-        animate={{ opacity: 1, y: 0 }}
-        className="flex flex-col md:flex-row md:items-center justify-between gap-4 md:gap-6 px-1"
-      >
+      {/* ── Page Header Card ── */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-4 lg:p-5 rounded-2xl border border-gray-100 shadow-sm">
         <div className="space-y-1">
-          <h1 className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">Partner Outlets</h1>
-          <p className="text-slate-500 font-semibold text-xs sm:text-sm flex items-center gap-2">
-            <LayoutGrid size={14} className="text-indigo-500" />
-            Control and monitor your retail network
+          <div className="flex items-center gap-2">
+            <div className="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold">
+              <Store size={20} />
+            </div>
+            <h1 className="text-xl lg:text-2xl font-black text-gray-900 tracking-tight leading-tight">
+              Partner Outlets
+            </h1>
+          </div>
+          <p className="text-xs font-semibold text-gray-400 flex items-center gap-1.5 pl-0.5">
+            <LayoutGrid size={13} className="text-indigo-500" />
+            Control and monitor your retail network of partner shops
           </p>
         </div>
-        
-        <div className="flex gap-2 sm:gap-3">
+
+        {/* Action Badges */}
+        <div className="flex items-center gap-2.5">
           <button 
             onClick={() => setShowRates(!showRates)}
             className={clsx(
-              "px-4 py-2 sm:px-5 sm:py-3 rounded-2xl border transition-all flex flex-col items-center min-w-[80px] sm:min-w-[100px]",
-              showRates ? "bg-indigo-600 text-white border-indigo-600 shadow-lg" : "bg-white/80 backdrop-blur-md border-white shadow-sm text-slate-600"
+              "px-3.5 py-2 rounded-xl border transition-all flex items-center gap-2 text-xs font-bold shadow-sm active:scale-95",
+              showRates 
+                ? "bg-indigo-600 text-white border-indigo-600 shadow-indigo-500/20" 
+                : "bg-gray-50 hover:bg-gray-100 text-gray-700 border-gray-200"
             )}
           >
-            <span className="text-[8px] sm:text-[10px] font-black uppercase tracking-widest mb-0.5">Rates</span>
-            <span className="text-lg sm:text-xl font-black">{locationRates.length}</span>
+            <FileSpreadsheet size={15} />
+            <span>Rates ({locationRates.length})</span>
           </button>
-          <div className="px-4 py-2 sm:px-5 sm:py-3 bg-white/80 backdrop-blur-md rounded-2xl border border-white shadow-sm flex flex-col items-center min-w-[80px] sm:min-w-[100px]">
-            <span className="text-[8px] sm:text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Total Shops</span>
-            <span className="text-lg sm:text-xl font-black text-slate-900">{totalCount}</span>
+
+          <div className="px-4 py-2 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-xl flex items-center gap-2 shadow-md shadow-indigo-500/20">
+            <span className="text-xs font-black uppercase tracking-wider">Total Shops:</span>
+            <span className="text-base font-black">{totalCount}</span>
           </div>
         </div>
-      </motion.div>
+      </div>
 
+      {/* ── Location Rates Drawer / Panel ── */}
       <AnimatePresence>
         {showRates && (
           <motion.div
@@ -253,57 +266,54 @@ export const Shops = () => {
             exit={{ opacity: 0, height: 0 }}
             className="overflow-hidden"
           >
-            <div className="bg-white/80 backdrop-blur-xl rounded-[2.5rem] p-6 sm:p-8 border border-white shadow-xl mb-8">
-              <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-2xl bg-indigo-500 flex items-center justify-center text-white shadow-lg">
-                    <FileSpreadsheet size={20} />
+            <div className="bg-white p-5 rounded-2xl border border-indigo-100 shadow-md space-y-4 mb-2">
+              <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-indigo-500 text-white flex items-center justify-center shadow-sm">
+                    <FileSpreadsheet size={18} />
                   </div>
-                  <h3 className="font-black text-lg text-slate-900">Location-wise Rates</h3>
+                  <h3 className="font-black text-sm text-gray-900">Location-wise Shipping Rates</h3>
                 </div>
-                <button onClick={() => setShowRates(false)} className="p-2 hover:bg-slate-100 rounded-full text-slate-400">
-                  <X size={20} />
+                <button onClick={() => setShowRates(false)} className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-400">
+                  <X size={18} />
                 </button>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                {/* Add Rate Form */}
-                <form onSubmit={handleAddLocationRate} className="space-y-4">
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Form */}
+                <form onSubmit={handleAddLocationRate} className="space-y-3">
+                  <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">
                     {editingLocId ? 'Update Existing Rate' : 'Add New Location Rate'}
                   </p>
                   <div className="relative">
-                    <div className="relative group">
-                      <input 
-                        placeholder="Location Name (e.g. Kozhikode)" 
-                        value={newLocName} 
-                        onChange={e => { setNewLocName(e.target.value); setShowLocDropdown(true); }}
-                        onFocus={() => setShowLocDropdown(true)}
-                        className="w-full px-5 py-3.5 bg-slate-50 border border-slate-100 rounded-2xl text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500/30 transition-all font-black text-sm"
-                      />
-                      <Search size={16} className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-300" />
-                    </div>
-
+                    <input 
+                      placeholder="Location Name (e.g. Kozhikode)" 
+                      value={newLocName} 
+                      onChange={e => { setNewLocName(e.target.value); setShowLocDropdown(true); }}
+                      onFocus={() => setShowLocDropdown(true)}
+                      className="w-full h-10 px-3.5 bg-gray-50 border border-gray-200 rounded-xl text-xs font-semibold text-gray-800 placeholder-gray-400 focus:outline-none focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 transition-all"
+                    />
+                    
                     <AnimatePresence>
                       {showLocDropdown && !editingLocId && (
                         <motion.div 
-                          initial={{ opacity: 0, y: 10 }}
+                          initial={{ opacity: 0, y: 5 }}
                           animate={{ opacity: 1, y: 0 }}
-                          exit={{ opacity: 0, y: 10 }}
-                          className="absolute z-[100] left-0 right-0 mt-2 bg-white rounded-2xl border border-slate-100 shadow-2xl max-h-[200px] overflow-y-auto custom-scrollbar"
+                          exit={{ opacity: 0, y: 5 }}
+                          className="absolute z-[100] left-0 right-0 mt-1 bg-white rounded-xl border border-gray-200 shadow-xl max-h-[180px] overflow-y-auto custom-scrollbar"
                         >
                           {uniqueShopLocations.filter(loc => loc.toLowerCase().includes(newLocName.toLowerCase())).length === 0 ? (
-                            <div className="p-4 text-center text-xs text-slate-400 font-bold italic">No matching locations found</div>
+                            <div className="p-3 text-center text-xs text-gray-400 italic">No matching locations found</div>
                           ) : (
                             uniqueShopLocations.filter(loc => loc.toLowerCase().includes(newLocName.toLowerCase())).map(loc => (
                               <button
                                 key={loc}
                                 type="button"
                                 onClick={() => { setNewLocName(loc); setShowLocDropdown(false); }}
-                                className="w-full text-left px-5 py-3 hover:bg-indigo-50 text-slate-700 text-sm font-bold transition-colors border-b border-slate-50 last:border-0 flex items-center justify-between group"
+                                className="w-full text-left px-3.5 py-2.5 hover:bg-indigo-50 text-gray-700 text-xs font-semibold transition-colors border-b border-gray-50 last:border-0 flex items-center justify-between"
                               >
                                 {loc}
-                                <Plus size={14} className="text-indigo-300 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                <Plus size={13} className="text-indigo-400" />
                               </button>
                             ))
                           )}
@@ -311,52 +321,62 @@ export const Shops = () => {
                       )}
                     </AnimatePresence>
                     
-                    {/* Backdrop to close dropdown */}
                     {showLocDropdown && !editingLocId && (
                       <div className="fixed inset-0 z-[90]" onClick={() => setShowLocDropdown(false)} />
                     )}
                   </div>
 
-                  <Input 
+                  <input 
                     type="number" 
                     placeholder="Rate per item (e.g. 20)" 
                     value={newLocRate} 
                     onChange={e => setNewLocRate(e.target.value)} 
+                    className="w-full h-10 px-3.5 bg-gray-50 border border-gray-200 rounded-xl text-xs font-semibold text-gray-800 placeholder-gray-400 focus:outline-none focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 transition-all"
                   />
-                  <div className="flex gap-2">
-                    <Button type="submit" isLoading={locLoading} className={clsx("flex-1 font-black py-3", editingLocId ? "bg-emerald-600 text-white" : "bg-indigo-600 text-white")}>
+
+                  <div className="flex gap-2 pt-1">
+                    <button
+                      type="submit"
+                      disabled={locLoading}
+                      className={clsx(
+                        "flex-1 h-9 rounded-xl font-bold text-xs uppercase tracking-wider text-white transition-all active:scale-95 flex items-center justify-center gap-1.5 shadow-sm",
+                        editingLocId ? "bg-emerald-600 hover:bg-emerald-700" : "bg-indigo-600 hover:bg-indigo-700"
+                      )}
+                    >
                       {editingLocId ? 'Update Rate' : 'Set Rate'}
-                    </Button>
+                    </button>
                     {editingLocId && (
-                      <Button type="button" onClick={cancelLocEdit} className="px-6 bg-slate-200 text-slate-600 font-black py-3">
+                      <button
+                        type="button"
+                        onClick={cancelLocEdit}
+                        className="px-4 h-9 bg-gray-100 text-gray-600 rounded-xl font-bold text-xs hover:bg-gray-200 transition-colors"
+                      >
                         Cancel
-                      </Button>
+                      </button>
                     )}
                   </div>
                 </form>
 
-                {/* Rates List */}
-                <div className="space-y-3">
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Existing Rates</p>
-                  <div className="max-h-[200px] overflow-y-auto pr-2 space-y-2">
+                {/* Existing Rates List */}
+                <div className="space-y-2">
+                  <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Defined Location Rates</p>
+                  <div className="max-h-[190px] overflow-y-auto pr-1 space-y-2 custom-scrollbar">
                     {locationRates.length === 0 ? (
-                      <p className="text-center py-10 text-slate-400 text-sm italic">No rates defined yet.</p>
+                      <p className="text-center py-8 text-gray-400 text-xs italic bg-gray-50 rounded-xl">No rates defined yet.</p>
                     ) : (
                       locationRates.map(rate => (
-                        <div key={rate.id} className="p-3 bg-slate-50 rounded-xl border border-slate-100 group">
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <span className="font-black text-slate-800 text-sm">{rate.location_name}</span>
-                              <span className="ml-3 text-xs font-bold text-indigo-600">Rs. {rate.rate}</span>
-                            </div>
-                            <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                              <button onClick={() => startEditLocRate(rate)} className="text-indigo-400 hover:text-indigo-600">
-                                <Edit2 size={14} />
-                              </button>
-                              <button onClick={() => handleDeleteLocationRate(rate.id)} className="text-red-300 hover:text-red-500">
-                                <Trash2 size={14} />
-                              </button>
-                            </div>
+                        <div key={rate.id} className="p-2.5 bg-gray-50 rounded-xl border border-gray-100 flex items-center justify-between group">
+                          <div>
+                            <span className="font-bold text-gray-800 text-xs">{rate.location_name}</span>
+                            <span className="ml-2.5 text-xs font-black text-indigo-600">₹{rate.rate}</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <button onClick={() => startEditLocRate(rate)} className="p-1 rounded-md text-gray-400 hover:text-indigo-600 hover:bg-indigo-50">
+                              <Edit2 size={13} />
+                            </button>
+                            <button onClick={() => handleDeleteLocationRate(rate.id)} className="p-1 rounded-md text-gray-400 hover:text-rose-600 hover:bg-rose-50">
+                              <Trash2 size={13} />
+                            </button>
                           </div>
                         </div>
                       ))
@@ -369,295 +389,271 @@ export const Shops = () => {
         )}
       </AnimatePresence>
 
-      <div className="flex flex-col gap-6 lg:gap-8">
-        
-        {/* ── Top Section: Controls (Add & Import) ── */}
-        <div className="flex flex-col xl:flex-row gap-6">
-          {/* Add Shop Card */}
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="flex-1 bg-white/80 backdrop-blur-xl rounded-[2.5rem] p-6 border border-white shadow-[0_8px_30px_rgb(0,0,0,0.04)]"
-          >
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-8 h-8 rounded-xl bg-slate-900 flex items-center justify-center shadow-lg">
-                <Store size={16} className="text-white" strokeWidth={2.5} />
-              </div>
-              <h3 className="font-black text-lg text-slate-900 tracking-tight">Quick Add</h3>
+      {/* ── Top Controls: Add Outlet + Excel Import ── */}
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-3">
+        {/* Add Outlet Form */}
+        <div className="xl:col-span-2 bg-gradient-to-r from-indigo-50/60 via-purple-50/30 to-white p-4 lg:p-5 rounded-2xl border border-indigo-100 shadow-sm space-y-3">
+          <div className="flex items-center gap-2.5">
+            <div className="w-7 h-7 rounded-lg bg-indigo-600 text-white flex items-center justify-center shadow-sm">
+              <Plus size={16} strokeWidth={3} />
+            </div>
+            <h3 className="font-black text-sm text-gray-900 tracking-tight">Register New Outlet</h3>
+          </div>
+
+          <form onSubmit={handleAdd} className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-end">
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider pl-0.5">Establishment Name</label>
+              <input
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="e.g. Moonlight Cafe"
+                className="w-full h-10 px-3.5 bg-white border border-indigo-200/80 rounded-xl text-xs font-semibold text-gray-800 placeholder-indigo-300 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 transition-all shadow-sm"
+              />
             </div>
 
-            <form onSubmit={handleAdd} className="flex flex-col sm:flex-row gap-4 items-end">
-              <div className="flex-1 space-y-2 w-full">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Establishment Name</label>
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider pl-0.5">Geographic Location</label>
+              <div className="relative">
                 <input
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="e.g. Moonlight Cafe"
-                  className="w-full px-5 py-3.5 bg-slate-50 border border-slate-100 rounded-2xl text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500/30 transition-all font-black text-sm"
+                  value={location}
+                  onChange={(e) => setLocation(e.target.value)}
+                  placeholder="Area / Landmark"
+                  list="partner-locations-list"
+                  className="w-full h-10 pl-9 pr-3.5 bg-white border border-indigo-200/80 rounded-xl text-xs font-semibold text-gray-800 placeholder-indigo-300 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 transition-all shadow-sm"
                 />
+                <MapPin size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-indigo-400" />
               </div>
+              
+              <datalist id="partner-locations-list">
+                {Array.from(new Set([...availableLocations, ...(shops || []).map(s => (s.location || '').trim())].filter(Boolean)))
+                  .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }))
+                  .map(loc => (
+                    <option key={loc} value={loc} />
+                ))}
+              </datalist>
+            </div>
 
-              <div className="flex-1 space-y-2 w-full">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Geographic Location</label>
-                <div className="relative group">
-                  <input
-                    value={location}
-                    onChange={(e) => setLocation(e.target.value)}
-                    placeholder="Area / Landmark"
-                    list="partner-locations-list"
-                    className="w-full pl-12 pr-5 py-3.5 bg-slate-50 border border-slate-100 rounded-2xl text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500/30 transition-all font-black text-sm"
-                  />
-                  <MapPin size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-indigo-500 transition-colors" />
-                </div>
-                
-                <datalist id="partner-locations-list">
-                  {Array.from(new Set([...availableLocations, ...(shops || []).map(s => (s.location || '').trim())].filter(Boolean)))
-                    .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }))
-                    .map(loc => (
-                      <option key={loc} value={loc} />
-                  ))}
-                </datalist>
-              </div>
-
-              <motion.button 
-                type="submit" 
+            <div className="sm:col-span-2 flex justify-end pt-1">
+              <button
+                type="submit"
                 disabled={submitting || !name.trim()}
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                className="w-full sm:w-auto px-8 py-3.5 bg-slate-900 text-white font-black rounded-2xl hover:bg-indigo-600 transition-all disabled:opacity-50 flex items-center justify-center gap-3 shadow-xl shadow-slate-100"
+                className={clsx(
+                  'h-10 px-6 rounded-xl font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-all active:scale-95 shadow-md',
+                  name.trim()
+                    ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-indigo-500/25'
+                    : 'bg-gray-100 text-gray-400 cursor-not-allowed shadow-none'
+                )}
               >
                 {submitting ? (
-                   <motion.div
-                     animate={{ rotate: 360 }}
-                     transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-                     className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full"
-                   />
-                ) : <Plus size={18} strokeWidth={3} />}
-                Add Outlet
-              </motion.button>
-            </form>
-          </motion.div>
-
-          {/* Bulk Import Card */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className="xl:w-80 bg-white/80 backdrop-blur-xl rounded-[2.5rem] p-6 border border-white shadow-[0_8px_30px_rgb(0,0,0,0.04)]"
-          >
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-8 h-8 rounded-xl bg-emerald-500/10 flex items-center justify-center">
-                <FileSpreadsheet size={16} className="text-emerald-600" />
-              </div>
-              <h4 className="font-black text-sm text-slate-400 uppercase tracking-[0.2em]">Bulk Migration</h4>
-            </div>
-
-            <input type="file" id="excel-upload" className="hidden" accept=".xlsx, .xls" onChange={handleExcelUpload} disabled={importing} />
-            <label htmlFor="excel-upload" className="block cursor-pointer">
-              <motion.div
-                whileHover={{ scale: 1.02, backgroundColor: 'rgba(236, 253, 245, 0.8)' }}
-                whileTap={{ scale: 0.98 }}
-                className={clsx(
-                  "flex items-center justify-center gap-3 px-4 py-3.5 rounded-2xl border-2 border-dashed transition-all",
-                  "border-emerald-100 bg-emerald-50/30 text-emerald-700",
-                  importing && "opacity-60 cursor-not-allowed"
-                )}
-              >
-                {importing ? (
-                  <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1 }} className="w-5 h-5 border-2 border-emerald-300 border-t-emerald-700 rounded-full" />
+                  <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
                 ) : (
-                  <>
-                    <Upload size={18} className="text-emerald-500" />
-                    <span className="font-black text-xs">Upload Excel (.xlsx)</span>
-                  </>
+                  <Plus size={16} strokeWidth={3} />
                 )}
-              </motion.div>
-            </label>
-
-            <AnimatePresence>
-              {importSummary && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  className="mt-4 p-3 bg-indigo-50 border border-indigo-100 rounded-xl"
-                >
-                  <p className="text-[10px] font-black text-indigo-500 uppercase tracking-widest mb-2 flex items-center gap-2">
-                    <CheckCircle2 size={12} /> Sync Summary
-                  </p>
-                  <div className="flex justify-between">
-                    <div className="text-center flex-1 border-r border-indigo-100">
-                      <p className="text-lg font-black text-indigo-700">{importSummary.added}</p>
-                      <p className="text-[10px] font-bold text-indigo-400">ADDED</p>
-                    </div>
-                    <div className="text-center flex-1">
-                      <p className="text-lg font-black text-slate-400">{importSummary.skipped}</p>
-                      <p className="text-[10px] font-bold text-slate-400">SKIPPED</p>
-                    </div>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </motion.div>
+                Add Outlet
+              </button>
+            </div>
+          </form>
         </div>
 
-        {/* ── Bottom Section: Shops Directory ── */}
-        <div className="w-full space-y-6">
-          {/* Search Header */}
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="relative flex-1 group">
-              <input
-                type="text"
-                placeholder="Find outlet by name or area..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="w-full pl-14 pr-6 py-4 bg-white/80 backdrop-blur-xl border border-white rounded-[2.5rem] text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500/30 transition-all font-bold shadow-sm"
-              />
-              <Search size={22} className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-indigo-500 transition-colors" />
+        {/* Excel Import Box */}
+        <div className="bg-white p-4 lg:p-5 rounded-2xl border border-gray-100 shadow-sm flex flex-col justify-between space-y-3">
+          <div className="flex items-center gap-2.5">
+            <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
+              <FileSpreadsheet size={16} />
             </div>
-            
-            <div className="px-6 py-4 bg-white/80 backdrop-blur-xl border border-white rounded-[2.5rem] flex items-center gap-3 shadow-sm min-w-[150px]">
-               <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
-               <span className="text-sm font-black text-slate-900 uppercase tracking-tighter">Directory Live</span>
-            </div>
+            <h4 className="font-black text-xs text-gray-700 uppercase tracking-wider">Bulk Migration</h4>
           </div>
 
-          <div className="overflow-x-auto rounded-3xl border border-white/60 bg-white/40 backdrop-blur-xl shadow-glass">
-            <table className="w-full text-left text-sm text-slate-600">
-              <thead className="bg-white/50 text-[11px] uppercase text-slate-500 font-bold border-b border-white/60">
-                <tr>
-                  <th className="px-4 py-4 w-12 text-center">Brand</th>
-                  <th className="px-4 py-4">Shop Name</th>
-                  <th className="px-4 py-4">Location</th>
-                  <th className="px-4 py-4 text-center">Status</th>
-                  <th className="px-4 py-4 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-white/40">
-                <AnimatePresence mode="popLayout">
-                  {loading && shops.length === 0 ? (
-                    <motion.tr
-                      key="loader"
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                    >
-                      <td colSpan={5} className="py-16 text-center">
-                        <motion.div
-                          animate={{ rotate: 360 }}
-                          transition={{ duration: 1.2, repeat: Infinity, ease: 'linear' }}
-                          className="w-8 h-8 border-slate-300 border-t-indigo-500 rounded-full mx-auto mb-3"
-                          style={{ border: '3px solid', borderTopColor: '#6366f1' }}
-                        />
-                        <p className="text-slate-400 font-medium text-sm">Searching directory...</p>
-                      </td>
-                    </motion.tr>
-                  ) : shops.length === 0 ? (
-                    <motion.tr
-                      key="empty"
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                    >
-                      <td colSpan={5} className="text-center py-20">
-                        <Store size={48} className="mx-auto mb-3 text-slate-300" />
-                        <p className="font-black text-slate-400 text-lg tracking-tight">No outlets discovered</p>
-                      </td>
-                    </motion.tr>
-                  ) : (
-                    shops.map((shop: any, index: number) => (
-                      <motion.tr
-                        key={shop.id}
-                        layout
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0 }}
-                        className="hover:bg-white/50 transition-colors group"
-                      >
-                        <td className="px-4 py-3 text-center">
-                          <div className="w-10 h-10 mx-auto rounded-xl bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center shadow-inner group-hover:from-indigo-500 group-hover:to-blue-500 transition-all duration-300">
-                            <span className="text-slate-400 group-hover:text-white font-black text-sm transition-colors">
-                              {shop.name.charAt(0).toUpperCase()}
-                            </span>
-                          </div>
-                        </td>
-                        
-                        <td className="px-4 py-3 font-bold text-slate-800">
-                          {editingId === shop.id ? (
-                            <input
-                              value={editName}
-                              onChange={(e) => setEditName(e.target.value)}
-                              className="w-full bg-white/80 border-none rounded-lg px-2 py-1 font-bold text-slate-800 text-sm focus:ring-2 focus:ring-indigo-500/20 outline-none"
-                              autoFocus
-                            />
-                          ) : (
-                            shop.name
-                          )}
-                        </td>
-                        
-                        <td className="px-4 py-3">
-                          {editingId === shop.id ? (
-                            <input
-                              value={editLocation}
-                              onChange={(e) => setEditLocation(e.target.value)}
-                              className="w-full bg-white/80 border-none rounded-lg px-2 py-1 font-bold text-slate-600 text-sm focus:ring-2 focus:ring-indigo-500/20 outline-none"
-                              placeholder="Location"
-                            />
-                          ) : (
-                            <div className="flex items-center gap-1.5 text-slate-500">
-                               <MapPin size={12} className="text-indigo-400" />
-                               <span className="text-sm font-bold truncate max-w-[150px]">{shop.location || 'Unknown Location'}</span>
-                            </div>
-                          )}
-                        </td>
+          <input type="file" id="excel-upload" className="hidden" accept=".xlsx, .xls" onChange={handleExcelUpload} disabled={importing} />
+          <label htmlFor="excel-upload" className="block cursor-pointer">
+            <div className={clsx(
+              "flex items-center justify-center gap-2 h-11 px-4 rounded-xl border-2 border-dashed transition-all",
+              "border-emerald-200 bg-emerald-50/40 text-emerald-700 hover:bg-emerald-50",
+              importing && "opacity-60 cursor-not-allowed"
+            )}>
+              {importing ? (
+                <span className="w-4 h-4 border-2 border-emerald-400 border-t-emerald-700 rounded-full animate-spin" />
+              ) : (
+                <>
+                  <Upload size={16} className="text-emerald-600" />
+                  <span className="font-bold text-xs">Upload Excel (.xlsx)</span>
+                </>
+              )}
+            </div>
+          </label>
 
-                        <td className="px-4 py-3 text-center">
-                          <span className="text-[9px] font-black text-emerald-500 uppercase tracking-widest bg-emerald-50 px-2 py-1 rounded-md border border-emerald-100">Live</span>
-                        </td>
-
-                        <td className="px-4 py-3 text-right whitespace-nowrap opacity-100 lg:opacity-0 group-hover:opacity-100 transition-opacity">
-                          <div className="flex justify-end gap-1.5">
-                            {editingId === shop.id ? (
-                              <>
-                                <button onClick={saveEdit} className="p-2 rounded-lg bg-emerald-500 text-white hover:scale-105 transition-transform" title="Save"><Check size={14} /></button>
-                                <button onClick={cancelEdit} className="p-2 rounded-lg bg-slate-200 text-slate-600 hover:scale-105 transition-transform" title="Cancel"><X size={14} /></button>
-                              </>
-                            ) : (
-                              <>
-                                <button onClick={() => startEdit(shop)} className="p-2 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition-colors" title="Edit"><Edit2 size={14} /></button>
-                                <button onClick={() => handleDelete(shop.id, shop.name)} className="p-2 rounded-lg bg-rose-50 text-rose-500 hover:bg-rose-100 transition-colors" title="Delete"><Trash2 size={14} /></button>
-                              </>
-                            )}
-                          </div>
-                        </td>
-                      </motion.tr>
-                    ))
-                  )}
-                </AnimatePresence>
-              </tbody>
-            </table>
-          </div>
-            
-          {(hasMore || currentPage > 0) && (
-            <div className="flex justify-between items-center bg-white/40 backdrop-blur-xl p-3 rounded-2xl border border-white/60 shadow-glass">
-              <button 
-                disabled={currentPage === 0} 
-                onClick={() => goToPage(currentPage - 1)}
-                className="px-4 py-2 text-xs font-bold bg-white text-slate-600 rounded-xl hover:bg-slate-50 disabled:opacity-50 transition-colors shadow-sm"
-              >
-                Previous
-              </button>
-              <span className="text-xs font-bold text-slate-500">
-                Page {currentPage + 1}
-              </span>
-              <button 
-                disabled={!hasMore} 
-                onClick={() => goToPage(currentPage + 1)}
-                className="px-4 py-2 text-xs font-bold bg-white text-slate-600 rounded-xl hover:bg-slate-50 disabled:opacity-50 transition-colors shadow-sm"
-              >
-                Next
-              </button>
+          {importSummary && (
+            <div className="p-2.5 bg-emerald-50 border border-emerald-100 rounded-xl text-xs flex justify-around">
+              <span className="font-bold text-emerald-800">Added: {importSummary.added}</span>
+              <span className="font-bold text-gray-500">Skipped: {importSummary.skipped}</span>
             </div>
           )}
         </div>
       </div>
+
+      {/* ── Search Bar ── */}
+      <div className="bg-white p-3.5 lg:p-4 rounded-2xl border border-gray-100 shadow-sm space-y-3">
+        <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+          <div className="relative flex-1">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" size={17} />
+            <input
+              type="text"
+              placeholder="Find outlet by name or area location..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full h-10 pl-10 pr-10 bg-gray-50/80 border border-gray-200/80 rounded-xl text-xs font-semibold text-gray-800 placeholder-gray-400 focus:outline-none focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/10 transition-all"
+            />
+            {search && (
+              <button onClick={() => setSearch('')} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                <X size={15} />
+              </button>
+            )}
+          </div>
+
+          <div className="flex items-center justify-between md:justify-end gap-3 text-xs font-bold text-gray-500">
+            <span>{search.trim() ? 'Search Results' : 'All Outlets'}</span>
+            <span className="bg-gray-100 px-2.5 py-1 rounded-lg text-[11px]">{totalCount} Total</span>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Outlets Responsive Cards Grid ── */}
+      {loading && shops.length === 0 ? (
+        <div className="text-center py-16 bg-white rounded-2xl border border-gray-100">
+          <span className="w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin inline-block" />
+          <p className="text-gray-400 text-xs font-medium mt-2">Loading partner outlets...</p>
+        </div>
+      ) : shops.length === 0 ? (
+        <div className="text-center py-12 bg-white rounded-2xl border border-gray-100 p-6">
+          <Store size={36} className="text-gray-300 mx-auto mb-2" />
+          <p className="text-gray-500 font-bold text-sm">No outlets discovered</p>
+          <p className="text-gray-400 text-xs mt-1">Try another search term or register a new outlet above</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">
+          <AnimatePresence mode="popLayout">
+            {shops.map((shop: any) => (
+              <motion.div
+                key={shop.id}
+                layout
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                className="bg-white rounded-2xl border border-gray-100 p-3.5 hover:border-indigo-300 hover:shadow-md transition-all duration-200 flex flex-col justify-between gap-3 group"
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  {/* Initials Avatar */}
+                  <div className="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 text-white font-black text-xs flex items-center justify-center flex-shrink-0 shadow-sm group-hover:scale-105 transition-transform">
+                    {getInitials(shop.name)}
+                  </div>
+
+                  {/* Shop Info / Edit Inputs */}
+                  <div className="min-w-0 flex-1">
+                    {editingId === shop.id ? (
+                      <div className="space-y-1.5">
+                        <input
+                          value={editName}
+                          onChange={(e) => setEditName(e.target.value)}
+                          className="w-full bg-indigo-50 border border-indigo-300 rounded-lg px-2 py-1 font-bold text-gray-900 text-xs focus:outline-none"
+                          placeholder="Shop Name"
+                          autoFocus
+                        />
+                        <input
+                          value={editLocation}
+                          onChange={(e) => setEditLocation(e.target.value)}
+                          className="w-full bg-indigo-50 border border-indigo-200 rounded-lg px-2 py-1 font-semibold text-gray-700 text-xs focus:outline-none"
+                          placeholder="Location"
+                        />
+                      </div>
+                    ) : (
+                      <>
+                        <h4 className="font-bold text-xs sm:text-sm text-gray-900 truncate group-hover:text-indigo-600 transition-colors">
+                          {shop.name}
+                        </h4>
+                        {shop.location && (
+                          <div className="flex items-center gap-1 mt-0.5">
+                            <MapPin size={10} className="text-indigo-400 flex-shrink-0" />
+                            <span className="text-[11px] text-gray-500 truncate">{shop.location}</span>
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                {/* Footer Row: Status & Actions */}
+                <div className="flex items-center justify-between pt-2 border-t border-gray-50">
+                  <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-600 bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded-md uppercase tracking-wider">
+                    <Check size={10} strokeWidth={3} /> Live
+                  </span>
+
+                  {/* Actions */}
+                  <div className="flex items-center gap-1">
+                    {editingId === shop.id ? (
+                      <>
+                        <button
+                          onClick={saveEdit}
+                          className="w-7 h-7 rounded-lg bg-emerald-500 text-white hover:bg-emerald-600 flex items-center justify-center transition-colors shadow-sm"
+                          title="Save"
+                        >
+                          <Check size={13} strokeWidth={3} />
+                        </button>
+                        <button
+                          onClick={cancelEdit}
+                          className="w-7 h-7 rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 flex items-center justify-center transition-colors"
+                          title="Cancel"
+                        >
+                          <X size={13} />
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <button
+                          onClick={() => startEdit(shop)}
+                          className="w-7 h-7 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-100 flex items-center justify-center transition-colors"
+                          title="Edit"
+                        >
+                          <Edit2 size={13} />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(shop.id, shop.name)}
+                          className="w-7 h-7 rounded-lg bg-rose-50 text-rose-500 hover:bg-rose-100 flex items-center justify-center transition-colors"
+                          title="Delete"
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+          </AnimatePresence>
+        </div>
+      )}
+
+      {/* ── Pagination Controls ── */}
+      {(hasMore || currentPage > 0) && (
+        <div className="flex justify-between items-center bg-white p-3 rounded-2xl border border-gray-100 shadow-sm">
+          <button 
+            disabled={currentPage === 0} 
+            onClick={() => goToPage(currentPage - 1)}
+            className="flex items-center gap-1 px-4 py-2 text-xs font-bold bg-gray-50 text-gray-700 rounded-xl hover:bg-gray-100 disabled:opacity-40 transition-colors border border-gray-200"
+          >
+            <ChevronLeft size={15} /> Previous
+          </button>
+          <span className="text-xs font-bold text-gray-500">
+            Page {currentPage + 1}
+          </span>
+          <button 
+            disabled={!hasMore} 
+            onClick={() => goToPage(currentPage + 1)}
+            className="flex items-center gap-1 px-4 py-2 text-xs font-bold bg-gray-50 text-gray-700 rounded-xl hover:bg-gray-100 disabled:opacity-40 transition-colors border border-gray-200"
+          >
+            Next <ChevronRight size={15} />
+          </button>
+        </div>
+      )}
     </div>
   );
 };

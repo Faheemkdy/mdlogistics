@@ -116,7 +116,6 @@ const SidebarContent = ({
               <p className="px-4 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2">Core Operations</p>
               <NavItem to="/pickup" icon={Package} label="Pickup Requests" isActive={location.pathname === "/pickup"} onClick={() => confirmNavigation("/pickup")} />
               <NavItem to="/delivery" icon={Truck} label="Final Delivery" isActive={location.pathname === "/delivery"} onClick={() => confirmNavigation("/delivery")} />
-              <NavItem to="/dispatch" icon={ClipboardList} label="Dispatch Hub" isActive={location.pathname === "/dispatch"} onClick={() => confirmNavigation("/dispatch")} />
               <NavItem to="/courier-exchange" icon={Truck} label="Courier Exchange" isActive={location.pathname === "/courier-exchange"} onClick={() => confirmNavigation("/courier-exchange")} />
               <NavItem to="/day-sheet" icon={FileText} label="Accounting" isActive={location.pathname === "/day-sheet"} onClick={() => confirmNavigation("/day-sheet")} />
               <NavItem to="/vouchers" icon={Receipt} label="Expense Vouchers" isActive={location.pathname === "/vouchers"} onClick={() => confirmNavigation("/vouchers")} />
@@ -131,7 +130,6 @@ const SidebarContent = ({
             {profile?.username === 'md' && (
               <div className="mb-4 pt-4 border-t border-slate-50">
                 <p className="px-4 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2">Advanced Control</p>
-                <NavItem to="/reconciliation" icon={Compass} label="Reconciliation" isActive={location.pathname === "/reconciliation"} onClick={() => confirmNavigation("/reconciliation")} />
                 <NavItem to="/reports" icon={BarChart2} label="Analytical Reports" isActive={location.pathname === "/reports"} onClick={() => confirmNavigation("/reports")} />
                 <NavItem to="/billing" icon={Receipt} label="Invoicing & Billing" isActive={location.pathname === "/billing"} onClick={() => confirmNavigation("/billing")} />
               </div>
@@ -423,8 +421,8 @@ export const Layout = () => {
               exit={{ opacity: 0, y: -10 }}
               transition={{ duration: 0.2, ease: "easeOut" }}
               className={clsx(
-                "max-w-7xl mx-auto pb-12 min-h-full",
-                (profile?.role === 'admin' || location.pathname !== '/') ? "px-3 pt-0 pb-6 lg:p-10" : "p-0"
+                "w-full pb-12 min-h-full",
+                (profile?.role === 'admin' || location.pathname !== '/') ? "px-3 pt-0 pb-6 lg:px-4 lg:pt-3 lg:pb-6" : "p-0"
               )}
             >
               <Outlet />
