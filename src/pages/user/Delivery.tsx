@@ -318,6 +318,11 @@ export const Delivery = () => {
                 type="date"
                 value={selectedDate}
                 onChange={e => setSelectedDate(e.target.value)}
+                onClick={e => {
+                  try {
+                    e.currentTarget.showPicker();
+                  } catch {}
+                }}
                 className="absolute inset-0 opacity-0 w-full h-full cursor-pointer z-10"
               />
             </div>
