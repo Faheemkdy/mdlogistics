@@ -231,8 +231,9 @@ export const CourierExchange = () => {
         drawCustomerInfo(doc, "Report Type:", periodLabel, formatReportDate(new Date().toISOString()));
       }
 
-      const tableData = filteredLogs.map(l => [
-        format(new Date(l.date), 'dd MMM yyyy'),
+      const tableData = filteredLogs.map((l, i) => [
+        i + 1,
+        formatReportDate(l.date, 'dd MMM yyyy'),
         l.courier_partners.name,
         l.shop_name || '-',
         l.type.toUpperCase(),
@@ -240,7 +241,7 @@ export const CourierExchange = () => {
       ]);
 
       autoTable(doc, {
-        head: [['Date', 'Courier Name', 'Shop Name / Notes', 'Type', 'Count']],
+        head: [['#', 'Date', 'Courier Name', 'Shop Name / Notes', 'Type', 'Count']],
         body: tableData,
         startY: 105,
         theme: 'grid',

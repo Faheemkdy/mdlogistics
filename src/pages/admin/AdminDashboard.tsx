@@ -112,7 +112,8 @@ export const AdminDashboard = () => {
         });
       });
       autoTable(doc, { head: [['Company', 'Shop', 'Location', 'Item No.', 'Time']], body: tableData, startY: 105, theme: 'grid', headStyles: { fillColor: [249, 115, 22], textColor: 255, fontStyle: 'bold' }, styles: { cellPadding: 4, fontSize: 10 }, alternateRowStyles: { fillColor: [255, 247, 237] } });
-      drawGreenFooter(doc, "TOTAL ITEMS:", tableData.length);
+      const totalItems = calculateTotalItemCount(tableData.map(r => r[3]));
+      drawGreenFooter(doc, "TOTAL ITEMS:", totalItems);
       savePDF(doc, `pickups_${today}.pdf`);
     } catch (e: any) {
       console.error('PDF Generation Error:', e);
@@ -134,7 +135,8 @@ export const AdminDashboard = () => {
         return [d.shops?.name || 'Unknown', d.shops?.location || '-', d.item_number || '-', timeStr];
       });
       autoTable(doc, { head: [['Shop Name', 'Location', 'Item No.', 'Time']], body: tableData, startY: 105, theme: 'grid', headStyles: { fillColor: [34, 197, 94], textColor: 255, fontStyle: 'bold' }, styles: { cellPadding: 4, fontSize: 11 }, alternateRowStyles: { fillColor: [240, 253, 244] } });
-      drawGreenFooter(doc, "TOTAL DELIVERIES:", data.length);
+      const totalItems = calculateTotalItemCount(tableData.map(r => r[2]));
+      drawGreenFooter(doc, "TOTAL ITEMS:", totalItems);
       savePDF(doc, `deliveries_${today}.pdf`);
     } catch (e: any) {
       console.error('PDF Generation Error:', e);

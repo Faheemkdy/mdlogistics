@@ -1,24 +1,123 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../../lib/supabase';
 import { Download, ChevronDown, ChevronUp, Clock, User, FileText, Box, Trash2, Search, Package, Truck, CalendarDays, Check, Send, Edit2 } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { format } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
-import { drawPDFHeader, drawCustomerInfo, drawGreenFooter, savePDF } from '../../utils/pdfGenerator';
+import { drawPDFHeader, drawCustomerInfo, drawGreenFooter, savePDF, calculateTotalItemCount } from '../../utils/pdfGenerator';
 import { useToast } from '../../components/ui/Toast';
-import { getStandardDate, getDateRange } from '../../utils/dateUtils';
+import { getStandardDate, getDateRange, formatReportDate } from '../../utils/dateUtils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { BRAND } from '../../constants/branding';
 import { clsx } from 'clsx';
 
 type Tab = 'pickups' | 'deliveries';
 
+const SearchableCompanySelect = ({ 
+  companies, 
+  selectedCompanyId, 
+  onSelectCompany 
+}: { 
+  companies: any[]; 
+  selectedCompanyId: string; 
+  onSelectCompany: (id: string) => void;
+}) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const selectedCompany = companies.find(c => c.id === selectedCompanyId);
+  const filteredCompanies = companies.filter(c => 
+    c.name.toLowerCase().includes(search.toLowerCase())
+  );
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  return (
+    <div className="relative" ref={containerRef}>
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className="flex items-center justify-between gap-2 bg-white/80 backdrop-blur-md border border-white shadow-sm rounded-2xl px-4 py-2.5 outline-none text-sm font-bold text-slate-700 hover:border-indigo-300 transition-all min-w-[180px] max-w-[220px]"
+      >
+        <span className="truncate">{selectedCompany ? selectedCompany.name : 'All Companies...'}</span>
+        <ChevronDown size={14} className="text-slate-400 flex-shrink-0" />
+      </button>
+
+      {isOpen && (
+        <div className="absolute right-0 top-full mt-2 w-64 bg-white rounded-2xl shadow-xl border border-slate-100 p-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+          <div className="relative mb-2">
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input
+              type="text"
+              autoFocus
+              placeholder="Search company..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full pl-8 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 outline-none focus:border-indigo-400 focus:bg-white transition-all"
+            />
+          </div>
+          <div className="max-h-48 overflow-y-auto space-y-0.5 custom-scrollbar">
+            <button
+              type="button"
+              onClick={() => {
+                onSelectCompany('');
+                setIsOpen(false);
+                setSearch('');
+              }}
+              className={clsx(
+                "w-full text-left px-3 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-between",
+                !selectedCompanyId ? "bg-indigo-50 text-indigo-700 font-black" : "text-slate-600 hover:bg-slate-50"
+              )}
+            >
+              <span>All Companies...</span>
+              {!selectedCompanyId && <Check size={14} className="text-indigo-600" />}
+            </button>
+            {filteredCompanies.length === 0 ? (
+              <p className="text-[11px] font-medium text-slate-400 text-center py-3">No companies found</p>
+            ) : (
+              filteredCompanies.map(c => (
+                <button
+                  key={c.id}
+                  type="button"
+                  onClick={() => {
+                    onSelectCompany(c.id);
+                    setIsOpen(false);
+                    setSearch('');
+                  }}
+                  className={clsx(
+                    "w-full text-left px-3 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-between",
+                    selectedCompanyId === c.id ? "bg-indigo-50 text-indigo-700 font-black" : "text-slate-600 hover:bg-slate-50"
+                  )}
+                >
+                  <span className="truncate">{c.name}</span>
+                  {selectedCompanyId === c.id && <Check size={14} className="text-indigo-600" />}
+                </button>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 export const Reports = () => {
   const toast = useToast();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<Tab>('pickups');
   const [date, setDate] = useState(getStandardDate());
+  const [fromDate, setFromDate] = useState(getStandardDate());
+  const [toDate, setToDate] = useState(getStandardDate());
   const [searchQuery, setSearchQuery] = useState('');
   const [pickupData, setPickupData] = useState<any[]>([]);
   const [deliveryData, setDeliveryData] = useState<any[]>([]);
@@ -333,7 +432,8 @@ export const Reports = () => {
       headStyles: { fillColor: [79, 70, 229], textColor: 255, fontStyle: 'bold' },
       styles: { cellPadding: 3, fontSize: 10 },
     });
-    drawGreenFooter(doc, 'TOTAL SHOPS:', items.length);
+    const totalItems = calculateTotalItemCount(items.map(i => i.itemNumber));
+    drawGreenFooter(doc, 'TOTAL ITEMS:', totalItems);
     savePDF(doc, `${companyName}_Pickups_${date}.pdf`);
   };
 
@@ -346,9 +446,10 @@ export const Reports = () => {
       const doc = new jsPDF();
       drawPDFHeader(doc);
       drawCustomerInfo(doc, 'Report:', 'Master Pickup Log', date);
-      let y = 105; let total = 0;
+      let y = 105;
+      const allItemNumbers: string[] = [];
       filteredPickups.forEach((c) => {
-        total += c.items.length;
+        c.items.forEach((item: any) => allItemNumbers.push(item.itemNumber));
         if (y > 250) { doc.addPage(); drawPDFHeader(doc); y = 60; }
         doc.setFontSize(12); doc.setTextColor(...BRAND.accent); doc.setFont('helvetica', 'bold');
         doc.text(c.name || 'Unknown', 14, y);
@@ -361,7 +462,8 @@ export const Reports = () => {
         });
         y = (doc as any).lastAutoTable?.finalY ? (doc as any).lastAutoTable.finalY + 15 : y + 30;
       });
-      drawGreenFooter(doc, 'TOTAL SHOPS:', total);
+      const totalItems = calculateTotalItemCount(allItemNumbers);
+      drawGreenFooter(doc, 'TOTAL ITEMS:', totalItems);
       savePDF(doc, `Master_Pickup_${date}.pdf`);
     } catch (e: any) {
       console.error('PDF Generation Error:', e);
@@ -388,7 +490,8 @@ export const Reports = () => {
         headStyles: { fillColor: BRAND.success, textColor: 255, fontStyle: 'bold' },
         styles: { cellPadding: 3, fontSize: 10 },
       });
-      drawGreenFooter(doc, 'TOTAL DELIVERIES:', filteredDeliveries.length);
+      const totalItems = calculateTotalItemCount(filteredDeliveries.map(d => d.item_number));
+      drawGreenFooter(doc, 'TOTAL ITEMS:', totalItems);
       savePDF(doc, `Delivery_${date}.pdf`);
     } catch (e: any) {
       console.error('PDF Generation Error:', e);
@@ -415,17 +518,19 @@ export const Reports = () => {
     drawPDFHeader(doc);
     
     const companyName = selectedCompanyId && data[0]?.companies ? data[0].companies.name : 'All Companies';
-    drawCustomerInfo(doc, 'Report:', `${days}-Day Pickup Report (${companyName})`, `${format(new Date(start), 'dd MMM')} to ${format(new Date(end), 'dd MMM yyyy')}`);
+    drawCustomerInfo(doc, 'Report:', `${days}-Day Pickup Report (${companyName})`, `${formatReportDate(start, 'dd MMM')} to ${formatReportDate(end, 'dd MMM yyyy')}`);
     
     const rows: any[] = [];
+    let count = 1;
     data.forEach((p: any) => {
       const sortedItems = [...(p.pickup_items || [])].sort((a: any, b: any) => (a.shops?.location || '').localeCompare(b.shops?.location || ''));
       sortedItems.forEach((item: any) => {
-        rows.push([format(new Date(p.date), 'dd/MM/yy'), p.companies?.name || '-', item.shops?.name || '-', item.item_number || '-']);
+        rows.push([count++, formatReportDate(p.date, 'dd/MM/yy'), p.companies?.name || '-', item.shops?.name || '-', item.item_number || '-']);
       });
     });
-    autoTable(doc, { head: [['Date', 'Company', 'Shop', 'Item No.']], body: rows, startY: 105, theme: 'grid', headStyles: { fillColor: [79, 70, 229], textColor: 255, fontStyle: 'bold' }, styles: { cellPadding: 3, fontSize: 9 } });
-    drawGreenFooter(doc, 'TOTAL ITEMS:', rows.length);
+    autoTable(doc, { head: [['#', 'Date', 'Company', 'Shop', 'Item No.']], body: rows, startY: 105, theme: 'grid', headStyles: { fillColor: [79, 70, 229], textColor: 255, fontStyle: 'bold' }, styles: { cellPadding: 3, fontSize: 9 } });
+    const totalItems = calculateTotalItemCount(rows.map(r => r[4]));
+    drawGreenFooter(doc, 'TOTAL ITEMS:', totalItems);
     savePDF(doc, `Pickups_${companyName.replace(/\s+/g, '_')}_${days}days_${end}.pdf`);
   };
 
@@ -447,12 +552,106 @@ export const Reports = () => {
     const doc = new jsPDF();
     drawPDFHeader(doc);
     const shiftLabel = shiftFilter !== 'all' ? ` (${shiftFilter.charAt(0).toUpperCase() + shiftFilter.slice(1)})` : '';
-    drawCustomerInfo(doc, 'Report:', `${days}-Day Delivery Report${shiftLabel}`, `${format(new Date(start), 'dd MMM')} to ${format(new Date(end), 'dd MMM yyyy')}`);
+    drawCustomerInfo(doc, 'Report:', `${days}-Day Delivery Report${shiftLabel}`, `${formatReportDate(start, 'dd MMM')} to ${formatReportDate(end, 'dd MMM yyyy')}`);
     const sortedData = [...data].sort((a: any, b: any) => (a.shops?.location || '').localeCompare(b.shops?.location || ''));
-    const rows = sortedData.map((d: any) => [format(new Date(d.date), 'dd/MM/yy'), d.shops?.name || '-', d.shops?.location || '-', d.item_number || '-']);
-    autoTable(doc, { head: [['Date', 'Shop', 'Location', 'Item No.']], body: rows, startY: 105, theme: 'grid', headStyles: { fillColor: [16, 185, 129], textColor: 255, fontStyle: 'bold' }, styles: { cellPadding: 3, fontSize: 10 } });
-    drawGreenFooter(doc, 'TOTAL DELIVERIES:', data.length);
+    const rows = sortedData.map((d: any, i: number) => [i + 1, formatReportDate(d.date, 'dd/MM/yy'), d.shops?.name || '-', d.shops?.location || '-', d.item_number || '-']);
+    autoTable(doc, { head: [['#', 'Date', 'Shop', 'Location', 'Item No.']], body: rows, startY: 105, theme: 'grid', headStyles: { fillColor: [16, 185, 129], textColor: 255, fontStyle: 'bold' }, styles: { cellPadding: 3, fontSize: 10 } });
+    const totalItems = calculateTotalItemCount(rows.map(r => r[4]));
+    drawGreenFooter(doc, 'TOTAL ITEMS:', totalItems);
     savePDF(doc, `Deliveries_${days}days_${end}.pdf`);
+  };
+
+  const downloadCustomDateRangePDF = async (type: 'pickups' | 'deliveries') => {
+    if (!fromDate || !toDate) {
+      toast.error('Invalid Date Range', 'Please select both From Date and To Date.');
+      return;
+    }
+    if (fromDate > toDate) {
+      toast.error('Invalid Date Range', 'From Date cannot be after To Date.');
+      return;
+    }
+
+    toast.info('Generating...', `Fetching ${type} report from ${fromDate} to ${toDate}`);
+
+    if (type === 'pickups') {
+      let query = supabase.from('pickups')
+        .select(`date, created_at, companies (id, name), pickup_items ( item_number, shops (name, location) )`)
+        .gte('date', fromDate).lte('date', toDate);
+        
+      if (selectedCompanyId) {
+        query = query.eq('company_id', selectedCompanyId);
+      }
+      
+      const { data, error } = await query.order('date', { ascending: false });
+      
+      if (error || !data?.length) { 
+        toast.error('No data', 'No pickups found in this date range.'); 
+        return; 
+      }
+      
+      const doc = new jsPDF();
+      drawPDFHeader(doc);
+      
+      const companyName = selectedCompanyId && data[0]?.companies ? data[0].companies.name : 'All Companies';
+      const dateLabel = `${formatReportDate(fromDate, 'dd MMM yyyy')} to ${formatReportDate(toDate, 'dd MMM yyyy')}`;
+      drawCustomerInfo(doc, 'Report:', `Pickup Report (${companyName})`, dateLabel);
+      
+      const rows: any[] = [];
+      let count = 1;
+      data.forEach((p: any) => {
+        const sortedItems = [...(p.pickup_items || [])].sort((a: any, b: any) => (a.shops?.location || '').localeCompare(b.shops?.location || ''));
+        sortedItems.forEach((item: any) => {
+          rows.push([count++, formatReportDate(p.date, 'dd/MM/yy'), p.companies?.name || '-', item.shops?.name || '-', item.item_number || '-']);
+        });
+      });
+      autoTable(doc, { 
+        head: [['#', 'Date', 'Company', 'Shop', 'Item No.']], 
+        body: rows, 
+        startY: 105, 
+        theme: 'grid', 
+        headStyles: { fillColor: [79, 70, 229], textColor: 255, fontStyle: 'bold' }, 
+        styles: { cellPadding: 3, fontSize: 9 } 
+      });
+      const totalItems = calculateTotalItemCount(rows.map(r => r[4]));
+      drawGreenFooter(doc, 'TOTAL ITEMS:', totalItems);
+      savePDF(doc, `Pickups_${companyName.replace(/\s+/g, '_')}_${fromDate}_to_${toDate}.pdf`);
+    } else {
+      let query = supabase.from('deliveries')
+        // @ts-ignore
+        .select(`date, created_at, shift, item_number, shops (name, location)`)
+        .gte('date', fromDate).lte('date', toDate).order('date', { ascending: false });
+      
+      if (shiftFilter !== 'all') {
+        // @ts-ignore
+        query = query.eq('shift', shiftFilter);
+      }
+      
+      const { data, error } = await query;
+      if (error || !data?.length) { 
+        toast.error('No data', 'No deliveries found in this date range.'); 
+        return; 
+      }
+      
+      const doc = new jsPDF();
+      drawPDFHeader(doc);
+      const shiftLabel = shiftFilter !== 'all' ? ` (${shiftFilter.charAt(0).toUpperCase() + shiftFilter.slice(1)})` : '';
+      const dateLabel = `${formatReportDate(fromDate, 'dd MMM yyyy')} to ${formatReportDate(toDate, 'dd MMM yyyy')}`;
+      drawCustomerInfo(doc, 'Report:', `Delivery Report${shiftLabel}`, dateLabel);
+      
+      const sortedData = [...data].sort((a: any, b: any) => (a.shops?.location || '').localeCompare(b.shops?.location || ''));
+      const rows = sortedData.map((d: any, i: number) => [i + 1, formatReportDate(d.date, 'dd/MM/yy'), d.shops?.name || '-', d.shops?.location || '-', d.item_number || '-']);
+      autoTable(doc, { 
+        head: [['Date', 'Shop', 'Location', 'Item No.']], 
+        body: rows, 
+        startY: 105, 
+        theme: 'grid', 
+        headStyles: { fillColor: [16, 185, 129], textColor: 255, fontStyle: 'bold' }, 
+        styles: { cellPadding: 3, fontSize: 10 } 
+      });
+      const totalItems = calculateTotalItemCount(rows.map(r => r[3]));
+      drawGreenFooter(doc, 'TOTAL ITEMS:', totalItems);
+      savePDF(doc, `Deliveries_${fromDate}_to_${toDate}.pdf`);
+    }
   };
 
   const handleDeletePickupItem = async (itemId: string, pickupId: string, e: React.MouseEvent) => {
@@ -569,14 +768,16 @@ export const Reports = () => {
     drawCustomerInfo(doc, 'Report:', `Monthly Pickup Report (${companyName})`, format(new Date(start), 'MMMM yyyy'));
     
     const rows: any[] = [];
+    let count = 1;
     data.forEach((p: any) => {
       const sortedItems = [...(p.pickup_items || [])].sort((a: any, b: any) => (a.shops?.location || '').localeCompare(b.shops?.location || ''));
       sortedItems.forEach((item: any) => {
-        rows.push([format(new Date(p.date), 'dd/MM/yy'), p.companies?.name || '-', item.shops?.name || '-', item.item_number || '-']);
+        rows.push([count++, formatReportDate(p.date, 'dd/MM/yy'), p.companies?.name || '-', item.shops?.name || '-', item.item_number || '-']);
       });
     });
-    autoTable(doc, { head: [['Date', 'Company', 'Shop', 'Item No.']], body: rows, startY: 105, theme: 'grid', headStyles: { fillColor: [79, 70, 229], textColor: 255, fontStyle: 'bold' }, styles: { cellPadding: 3, fontSize: 9 } });
-    drawGreenFooter(doc, 'TOTAL ITEMS:', rows.length);
+    autoTable(doc, { head: [['#', 'Date', 'Company', 'Shop', 'Item No.']], body: rows, startY: 105, theme: 'grid', headStyles: { fillColor: [79, 70, 229], textColor: 255, fontStyle: 'bold' }, styles: { cellPadding: 3, fontSize: 9 } });
+    const totalItems = calculateTotalItemCount(rows.map(r => r[4]));
+    drawGreenFooter(doc, 'TOTAL ITEMS:', totalItems);
     savePDF(doc, `Pickups_${companyName.replace(/\s+/g, '_')}_${monthStr}.pdf`);
   };
 
@@ -604,11 +805,12 @@ export const Reports = () => {
     const doc = new jsPDF();
     drawPDFHeader(doc);
     const shiftLabel = shiftFilter !== 'all' ? ` (${shiftFilter.charAt(0).toUpperCase() + shiftFilter.slice(1)})` : '';
-    drawCustomerInfo(doc, 'Report:', `Monthly Delivery Report${shiftLabel}`, format(new Date(start), 'MMMM yyyy'));
+    drawCustomerInfo(doc, 'Report:', `Monthly Delivery Report${shiftLabel}`, formatReportDate(start, 'MMMM yyyy'));
     const sortedData = [...data].sort((a: any, b: any) => (a.shops?.location || '').localeCompare(b.shops?.location || ''));
-    const rows = sortedData.map((d: any) => [format(new Date(d.date), 'dd/MM/yy'), d.shops?.name || '-', d.shops?.location || '-', d.item_number || '-']);
-    autoTable(doc, { head: [['Date', 'Shop', 'Location', 'Item No.']], body: rows, startY: 105, theme: 'grid', headStyles: { fillColor: [16, 185, 129], textColor: 255, fontStyle: 'bold' }, styles: { cellPadding: 3, fontSize: 10 } });
-    drawGreenFooter(doc, 'TOTAL DELIVERIES:', data.length);
+    const rows = sortedData.map((d: any, i: number) => [i + 1, formatReportDate(d.date, 'dd/MM/yy'), d.shops?.name || '-', d.shops?.location || '-', d.item_number || '-']);
+    autoTable(doc, { head: [['#', 'Date', 'Shop', 'Location', 'Item No.']], body: rows, startY: 105, theme: 'grid', headStyles: { fillColor: [16, 185, 129], textColor: 255, fontStyle: 'bold' }, styles: { cellPadding: 3, fontSize: 10 } });
+    const totalItems = calculateTotalItemCount(rows.map(r => r[4]));
+    drawGreenFooter(doc, 'TOTAL ITEMS:', totalItems);
     savePDF(doc, `Deliveries_${monthStr}.pdf`);
   };
 
@@ -639,28 +841,61 @@ export const Reports = () => {
     });
 
   const RangeBtns = ({ onDownloadRange, onDownloadMonth }: { onDownloadRange: (d: number) => void, onDownloadMonth: (m: string) => void }) => (
-    <div className="flex gap-2 items-center">
-      {[7, 15].map(d => (
-        <button key={d} onClick={() => onDownloadRange(d)}
-          className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-xs font-bold text-slate-600 hover:bg-indigo-50 hover:border-indigo-200 hover:text-indigo-700 transition-all shadow-sm whitespace-nowrap">
-          <CalendarDays size={12} />
-          {d} Days
-        </button>
-      ))}
-      <div className="w-px h-6 bg-slate-200 mx-1"></div>
-      <div className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-white border border-slate-200 shadow-sm hover:border-indigo-200 transition-colors">
-        <span className="text-[10px] font-bold text-slate-500 uppercase">1 Month:</span>
-        <CalendarDays size={12} className="text-slate-400" />
-        <input 
-          type="month"
-          className="text-xs font-bold text-slate-600 outline-none cursor-pointer bg-transparent"
-          onChange={e => {
-            if (e.target.value) {
-              onDownloadMonth(e.target.value);
-              e.target.value = '';
-            }
-          }}
-        />
+    <div className="flex flex-col gap-2.5">
+      <div className="flex gap-2 items-center flex-wrap">
+        {[7, 15].map(d => (
+          <button key={d} onClick={() => onDownloadRange(d)}
+            className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-xs font-bold text-slate-600 hover:bg-indigo-50 hover:border-indigo-200 hover:text-indigo-700 transition-all shadow-sm whitespace-nowrap">
+            <CalendarDays size={12} />
+            {d} Days
+          </button>
+        ))}
+        <div className="w-px h-6 bg-slate-200 mx-1 hidden sm:block"></div>
+        <div className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-white border border-slate-200 shadow-sm hover:border-indigo-200 transition-colors">
+          <span className="text-[10px] font-bold text-slate-500 uppercase">1 Month:</span>
+          <CalendarDays size={12} className="text-slate-400" />
+          <input 
+            type="month"
+            className="text-xs font-bold text-slate-600 outline-none cursor-pointer bg-transparent"
+            onChange={e => {
+              if (e.target.value) {
+                onDownloadMonth(e.target.value);
+                e.target.value = '';
+              }
+            }}
+          />
+        </div>
+      </div>
+
+      {/* Custom From Date to To Date PDF export */}
+      <div className="flex items-center gap-2 pt-2 border-t border-slate-100 flex-wrap">
+        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Custom Range PDF:</span>
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <div className="flex items-center gap-1 bg-slate-50 border border-slate-200 rounded-lg px-2 py-1">
+            <span className="text-[10px] font-bold text-slate-400">From:</span>
+            <input
+              type="date"
+              value={fromDate}
+              onChange={e => setFromDate(e.target.value)}
+              className="bg-transparent text-xs font-bold text-slate-700 outline-none cursor-pointer"
+            />
+          </div>
+          <div className="flex items-center gap-1 bg-slate-50 border border-slate-200 rounded-lg px-2 py-1">
+            <span className="text-[10px] font-bold text-slate-400">To:</span>
+            <input
+              type="date"
+              value={toDate}
+              onChange={e => setToDate(e.target.value)}
+              className="bg-transparent text-xs font-bold text-slate-700 outline-none cursor-pointer"
+            />
+          </div>
+          <button
+            onClick={() => downloadCustomDateRangePDF(activeTab)}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-indigo-600 to-blue-600 text-white rounded-lg text-xs font-bold hover:from-indigo-700 hover:to-blue-700 transition-all shadow-sm shadow-indigo-500/20 whitespace-nowrap"
+          >
+            <Download size={12} /> Range PDF
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -676,16 +911,11 @@ export const Reports = () => {
         </div>
         <div className="flex items-center gap-2 self-end sm:self-auto flex-wrap justify-end">
           {activeTab === 'pickups' && (
-            <select
-              value={selectedCompanyId}
-              onChange={(e) => setSelectedCompanyId(e.target.value)}
-              className="bg-white/80 backdrop-blur-md border border-white shadow-sm rounded-2xl px-4 py-2.5 outline-none text-sm font-bold text-slate-700 hover:border-indigo-300 transition-all max-w-[200px]"
-            >
-              <option value="">All Companies...</option>
-              {companies.map(c => (
-                <option key={c.id} value={c.id}>{c.name}</option>
-              ))}
-            </select>
+            <SearchableCompanySelect
+              companies={companies}
+              selectedCompanyId={selectedCompanyId}
+              onSelectCompany={setSelectedCompanyId}
+            />
           )}
           {activeTab === 'deliveries' && (
             <>

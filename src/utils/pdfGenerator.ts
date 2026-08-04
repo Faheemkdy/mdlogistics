@@ -140,3 +140,18 @@ export const savePDF = (doc: jsPDF, filename: string) => {
     console.error('PDF fallback error:', e);
   }
 };
+
+export const calculateTotalItemCount = (itemNumbers: (string | undefined | null)[]): number => {
+  return itemNumbers.reduce((sum: number, str) => {
+    if (!str) return sum;
+    const trimmed = str.trim();
+    if (!trimmed || trimmed === '-') return sum;
+
+    const match = trimmed.match(/\d+/);
+    if (match) {
+      return sum + parseInt(match[0], 10);
+    }
+    return sum + 1;
+  }, 0);
+};
+

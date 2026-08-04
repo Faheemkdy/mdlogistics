@@ -125,7 +125,8 @@ export const Reconciliation = () => {
     drawPDFHeader(doc);
     drawCustomerInfo(doc, "Report Type:", "Reconciliation Report", formatReportDate(date));
 
-    const tableData = filteredData.map(d => [
+    const tableData = filteredData.map((d, i) => [
+      i + 1,
       d.name,
       d.location || '-',
       d.totalDispatched.toString(),
@@ -134,7 +135,7 @@ export const Reconciliation = () => {
     ]);
 
     autoTable(doc, {
-      head: [['Shop Name', 'Location', 'Dispatched', 'Delivered', 'Status']],
+      head: [['#', 'Shop Name', 'Location', 'Dispatched', 'Delivered', 'Status']],
       body: tableData,
       startY: 100,
       theme: 'grid',
@@ -208,9 +209,10 @@ export const Reconciliation = () => {
 
       const doc = new jsPDF();
       drawPDFHeader(doc);
-      drawCustomerInfo(doc, "Report Type:", `${days} Days Reconciliation`, `${format(new Date(start), 'dd MMM')} to ${format(new Date(end), 'dd MMM yyyy')}`);
+      drawCustomerInfo(doc, "Report Type:", `${days} Days Reconciliation`, `${formatReportDate(start, 'dd MMM')} to ${formatReportDate(end, 'dd MMM yyyy')}`);
 
-      const tableData = rangeReconciliation.map(d => [
+      const tableData = rangeReconciliation.map((d, i) => [
+        i + 1,
         d.name,
         d.location || '-',
         d.totalDispatched.toString(),
@@ -219,7 +221,7 @@ export const Reconciliation = () => {
       ]);
 
       autoTable(doc, {
-        head: [['Shop Name', 'Location', 'Total Dispatched', 'Total Delivered', 'Status']],
+        head: [['#', 'Shop Name', 'Location', 'Total Dispatched', 'Total Delivered', 'Status']],
         body: tableData,
         startY: 100,
         theme: 'grid',
@@ -280,9 +282,10 @@ export const Reconciliation = () => {
 
       const doc = new jsPDF();
       drawPDFHeader(doc);
-      drawCustomerInfo(doc, "Report Type:", `Monthly Reconciliation`, format(new Date(start), 'MMMM yyyy'));
+      drawCustomerInfo(doc, "Report Type:", `Monthly Reconciliation`, formatReportDate(start, 'MMMM yyyy'));
 
-      const tableData = rangeReconciliation.map(d => [
+      const tableData = rangeReconciliation.map((d, i) => [
+        i + 1,
         d.name,
         d.location || '-',
         d.totalDispatched.toString(),
@@ -291,7 +294,8 @@ export const Reconciliation = () => {
       ]);
 
       autoTable(doc, {
-        head: [['Shop Name', 'Location', 'Total Dispatched', 'Total Delivered', 'Status']],
+        head: [['#', 'Shop Name', 'Location', 'Total Dispatched', 'Total Delivered', 'Status']],
+        body: tableData,
         body: tableData,
         startY: 100,
         theme: 'grid',

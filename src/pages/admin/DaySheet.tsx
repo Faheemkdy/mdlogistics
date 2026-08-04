@@ -155,7 +155,7 @@ export const DaySheet = () => {
     const pageWidth = doc.internal.pageSize.width;
 
     drawPDFHeader(doc);
-    drawCustomerInfo(doc, "Report Type:", viewMode === 'monthly' ? "Monthly Financial Statement" : "Daily Financial Statement", viewMode === 'monthly' ? format(new Date(filterDate), 'MMMM yyyy') : filterDate);
+    drawCustomerInfo(doc, "Report Type:", viewMode === 'monthly' ? "Monthly Financial Statement" : "Daily Financial Statement", viewMode === 'monthly' ? formatReportDate(filterDate, 'MMMM yyyy') : formatReportDate(filterDate));
 
     // Summary Cards in PDF
     const cardY = 70;
@@ -185,8 +185,8 @@ export const DaySheet = () => {
 
     autoTable(doc, {
       startY: 106,
-      head: [['Type', 'Description', 'Amount']],
-      body: filteredEntries.map(e => [e.type.toUpperCase(), e.description || 'No description', `Rs. ${Number(e.amount).toFixed(2)}`]),
+      head: [['#', 'Type', 'Description', 'Amount']],
+      body: filteredEntries.map((e, i) => [i + 1, e.type.toUpperCase(), e.description || 'No description', `Rs. ${Number(e.amount).toFixed(2)}`]),
       theme: 'plain',
       headStyles: { fillColor: BRAND.primary, textColor: [255, 255, 255], fontStyle: 'bold' },
       styles: { fontSize: 10, cellPadding: 4, lineColor: BRAND.border, lineWidth: 0.3 },
@@ -207,13 +207,13 @@ export const DaySheet = () => {
       }
       const doc = new jsPDF();
       drawPDFHeader(doc);
-      drawCustomerInfo(doc, "Report Type:", `${days} Days Financial Statement`, `${format(new Date(start), 'dd MMM')} to ${format(new Date(end), 'dd MMM yyyy')}`);
+      drawCustomerInfo(doc, "Report Type:", `${days} Days Financial Statement`, `${formatReportDate(start, 'dd MMM')} to ${formatReportDate(end, 'dd MMM yyyy')}`);
       const rangeIncome = data.filter(e => e.type === 'income').reduce((a, b) => a + Number(b.amount || 0), 0);
       const rangeExpense = data.filter(e => e.type === 'expense').reduce((a, b) => a + Number(b.amount || 0), 0);
       autoTable(doc, {
         startY: 100,
-        head: [['Date', 'Type', 'Description', 'Amount']],
-        body: data.map(e => [format(new Date(e.date), 'dd/MM/yy'), e.type.toUpperCase(), e.description || 'No description', `Rs. ${Number(e.amount).toFixed(2)}`]),
+        head: [['#', 'Date', 'Type', 'Description', 'Amount']],
+        body: data.map((e, i) => [i + 1, formatReportDate(e.date, 'dd/MM/yy'), e.type.toUpperCase(), e.description || 'No description', `Rs. ${Number(e.amount).toFixed(2)}`]),
       });
       drawGreenFooter(doc, 'NET BALANCE', `Rs. ${(rangeIncome - rangeExpense).toFixed(2)}`);
       savePDF(doc, `DaySheet_${days}days_${end}.pdf`);
@@ -240,13 +240,13 @@ export const DaySheet = () => {
       }
       const doc = new jsPDF();
       drawPDFHeader(doc);
-      drawCustomerInfo(doc, "Report Type:", `Monthly Financial Statement`, format(new Date(start), 'MMMM yyyy'));
+      drawCustomerInfo(doc, "Report Type:", `Monthly Financial Statement`, formatReportDate(start, 'MMMM yyyy'));
       const rangeIncome = data.filter(e => e.type === 'income').reduce((a, b) => a + Number(b.amount || 0), 0);
       const rangeExpense = data.filter(e => e.type === 'expense').reduce((a, b) => a + Number(b.amount || 0), 0);
       autoTable(doc, {
         startY: 100,
-        head: [['Date', 'Type', 'Description', 'Amount']],
-        body: data.map(e => [format(new Date(e.date), 'dd/MM/yy'), e.type.toUpperCase(), e.description || 'No description', `Rs. ${Number(e.amount).toFixed(2)}`]),
+        head: [['#', 'Date', 'Type', 'Description', 'Amount']],
+        body: data.map((e, i) => [i + 1, formatReportDate(e.date, 'dd/MM/yy'), e.type.toUpperCase(), e.description || 'No description', `Rs. ${Number(e.amount).toFixed(2)}`]),
       });
       drawGreenFooter(doc, 'NET BALANCE', `Rs. ${(rangeIncome - rangeExpense).toFixed(2)}`);
       savePDF(doc, `DaySheet_${monthStr}.pdf`);
