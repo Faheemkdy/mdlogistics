@@ -16,7 +16,7 @@ import { savePDF } from '../../utils/pdfGenerator';
 import { format } from 'date-fns';
 import { motion, AnimatePresence } from 'framer-motion';
 import { clsx } from 'clsx';
-import { getStandardDate, getDateRange } from '../../utils/dateUtils';
+import { getStandardDate, getDateRange, formatReportDate } from '../../utils/dateUtils';
 import { drawPDFHeader, drawCustomerInfo, drawGreenFooter } from '../../utils/pdfGenerator';
 import { BRAND } from '../../constants/branding';
 
