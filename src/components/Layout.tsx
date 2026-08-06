@@ -127,11 +127,13 @@ const SidebarContent = ({
               <NavItem to="/route-print" icon={FileText} label="Print Route List" isActive={location.pathname === "/route-print"} onClick={() => confirmNavigation("/route-print")} />
             </div>
 
-            {profile?.username === 'md' && (
+            {(profile?.username === 'md' || Boolean(profile?.can_access_reports)) && (
               <div className="mb-4 pt-4 border-t border-slate-50">
                 <p className="px-4 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2">Advanced Control</p>
                 <NavItem to="/reports" icon={BarChart2} label="Analytical Reports" isActive={location.pathname === "/reports"} onClick={() => confirmNavigation("/reports")} />
-                <NavItem to="/billing" icon={Receipt} label="Invoicing & Billing" isActive={location.pathname === "/billing"} onClick={() => confirmNavigation("/billing")} />
+                {profile?.username === 'md' && (
+                  <NavItem to="/billing" icon={Receipt} label="Invoicing & Billing" isActive={location.pathname === "/billing"} onClick={() => confirmNavigation("/billing")} />
+                )}
               </div>
             )}
           </>

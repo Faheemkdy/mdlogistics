@@ -93,7 +93,7 @@ function AppRoutes() {
           <Route path="shops" element={<ProtectedRoute allowedRoles={['admin']}><Shops /></ProtectedRoute>} />
           <Route path="day-sheet" element={<ProtectedRoute allowedRoles={['admin']}><DaySheet /></ProtectedRoute>} />
           <Route path="users" element={<ProtectedRoute allowedRoles={['admin']}><UserManagement /></ProtectedRoute>} />
-          <Route path="reports" element={<ProtectedRoute allowedRoles={['admin']}><Reports /></ProtectedRoute>} />
+          <Route path="reports" element={<ProtectedRoute allowedRoles={['admin']}>{(isMasterAdmin || Boolean(profile?.can_access_reports)) ? <Reports /> : <Navigate to="/" />}</ProtectedRoute>} />
           <Route path="billing" element={<ProtectedRoute allowedRoles={['admin']}>{isMasterAdmin ? <Billing /> : <Navigate to="/" />}</ProtectedRoute>} />
           <Route path="vouchers" element={<ProtectedRoute allowedRoles={['admin']}><VoucherAdmin /></ProtectedRoute>} />
           <Route path="dispatch" element={<ProtectedRoute allowedRoles={['admin']}><Dispatch /></ProtectedRoute>} />

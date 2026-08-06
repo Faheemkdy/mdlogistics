@@ -7,6 +7,7 @@ interface Profile {
   username: string;
   role: 'admin' | 'user';
   is_active?: boolean;
+  can_access_reports?: boolean;
 }
 
 interface AuthContextType {

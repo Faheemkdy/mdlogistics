@@ -7,6 +7,7 @@ import { format } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 import { drawPDFHeader, drawCustomerInfo, drawGreenFooter, savePDF, calculateTotalItemCount } from '../../utils/pdfGenerator';
 import { useToast } from '../../components/ui/Toast';
+import { useAuth } from '../../context/AuthContext';
 import { getStandardDate, getDateRange, formatReportDate } from '../../utils/dateUtils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { BRAND } from '../../constants/branding';
@@ -114,6 +115,7 @@ const SearchableCompanySelect = ({
 export const Reports = () => {
   const toast = useToast();
   const navigate = useNavigate();
+  const { isMasterAdmin } = useAuth();
   const [activeTab, setActiveTab] = useState<Tab>('pickups');
   const [date, setDate] = useState(getStandardDate());
   const [fromDate, setFromDate] = useState(getStandardDate());
@@ -1308,23 +1310,25 @@ export const Reports = () => {
         <AnimatePresence mode="wait">
           <motion.div key="pickups" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-4">
 
-            {/* Action bar */}
-            <div className="flex flex-col gap-2 bg-white border border-slate-100 rounded-2xl p-3 shadow-sm">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Download Range (Pickups)</span>
-                <button
-                  onClick={downloadAllPickupsPDF}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-indigo-600 text-[11px] font-bold hover:bg-indigo-50 transition-all shadow-sm">
-                  <FileText size={12} /> Master PDF
-                </button>
+            {/* Action bar - Master Admin only */}
+            {isMasterAdmin && (
+              <div className="flex flex-col gap-2 bg-white border border-slate-100 rounded-2xl p-3 shadow-sm">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Download Range (Pickups)</span>
+                  <button
+                    onClick={downloadAllPickupsPDF}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-indigo-600 text-[11px] font-bold hover:bg-indigo-50 transition-all shadow-sm">
+                    <FileText size={12} /> Master PDF
+                  </button>
+                </div>
+                <div className="overflow-x-auto no-scrollbar pb-1 -mx-1 px-1">
+                  <RangeBtns onDownloadRange={downloadPickupRangePDF} onDownloadMonth={downloadMonthlyPickupPDF} />
+                </div>
+                <p className="text-[11px] text-slate-400 font-medium">
+                  {filteredPickups.length} compan{filteredPickups.length !== 1 ? 'ies' : 'y'} · {filteredPickups.reduce((a, c) => a + c.items.length, 0)} shops
+                </p>
               </div>
-              <div className="overflow-x-auto no-scrollbar pb-1 -mx-1 px-1">
-                <RangeBtns onDownloadRange={downloadPickupRangePDF} onDownloadMonth={downloadMonthlyPickupPDF} />
-              </div>
-              <p className="text-[11px] text-slate-400 font-medium">
-                {filteredPickups.length} compan{filteredPickups.length !== 1 ? 'ies' : 'y'} · {filteredPickups.reduce((a, c) => a + c.items.length, 0)} shops
-              </p>
-            </div>
+            )}
 
             {/* Company cards */}
             {filteredPickups.map(company => (
@@ -1368,11 +1372,13 @@ export const Reports = () => {
                     >
                       <Trash2 size={13} />
                     </button>
-                    <button
-                      onClick={e => { e.stopPropagation(); downloadPickupPDF(company.name, company.items); }}
-                      className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-indigo-100 hover:text-indigo-700 text-slate-600 text-[11px] font-bold transition-all">
-                      <Download size={12} /> PDF
-                    </button>
+                    {isMasterAdmin && (
+                      <button
+                        onClick={e => { e.stopPropagation(); downloadPickupPDF(company.name, company.items); }}
+                        className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-indigo-100 hover:text-indigo-700 text-slate-600 text-[11px] font-bold transition-all">
+                        <Download size={12} /> PDF
+                      </button>
+                    )}
                     {expandedCompany === company.id
                       ? <ChevronUp size={18} className="text-slate-400" />
                       : <ChevronDown size={18} className="text-slate-400" />}
@@ -1476,21 +1482,23 @@ export const Reports = () => {
         <AnimatePresence mode="wait">
           <motion.div key="deliveries" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-4">
 
-            {/* Action bar */}
-            <div className="flex flex-col gap-2 bg-white border border-slate-100 rounded-2xl p-3 shadow-sm">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Download Range (Deliveries)</span>
-                <button
-                  onClick={downloadDeliveryPDF}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-emerald-600 text-[11px] font-bold hover:bg-emerald-50 transition-all shadow-sm">
-                  <Download size={12} /> Today's PDF
-                </button>
+            {/* Action bar - Master Admin only */}
+            {isMasterAdmin && (
+              <div className="flex flex-col gap-2 bg-white border border-slate-100 rounded-2xl p-3 shadow-sm">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Download Range (Deliveries)</span>
+                  <button
+                    onClick={downloadDeliveryPDF}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-emerald-600 text-[11px] font-bold hover:bg-emerald-50 transition-all shadow-sm">
+                    <Download size={12} /> Today's PDF
+                  </button>
+                </div>
+                <RangeBtns onDownloadRange={downloadDeliveryRangePDF} onDownloadMonth={downloadMonthlyDeliveryPDF} />
+                <p className="text-[11px] text-slate-400 font-medium">
+                  {filteredDeliveries.length} deliveries recorded
+                </p>
               </div>
-              <RangeBtns onDownloadRange={downloadDeliveryRangePDF} onDownloadMonth={downloadMonthlyDeliveryPDF} />
-              <p className="text-[11px] text-slate-400 font-medium">
-                {filteredDeliveries.length} deliveries recorded
-              </p>
-            </div>
+            )}
 
             {/* Delivery Table */}
             <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm">

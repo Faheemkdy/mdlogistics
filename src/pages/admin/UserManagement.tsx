@@ -98,6 +98,7 @@ export const UserManagement = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [role, setRole] = useState<'admin' | 'user'>('user');
+  const [canAccessReports, setCanAccessReports] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
   const [showPassword, setShowPassword] = useState(false);
@@ -155,11 +156,11 @@ export const UserManagement = () => {
 
       if (error) throw error;
 
-      // Sync role for admin users (since the DB trigger defaults new users to 'user' for security)
-      if (signUpData.user && role && role !== 'user') {
+      // Sync role & reports access for admin users
+      if (signUpData.user) {
         const { error: profileError } = await supabase
           .from('profiles')
-          .update({ role })
+          .update({ role, can_access_reports: canAccessReports })
           .eq('id', signUpData.user.id);
         
         if (profileError) {
@@ -172,6 +173,7 @@ export const UserManagement = () => {
       setUsername('');
       setPassword('');
       setRole('user');
+      setCanAccessReports(false);
       toast.success('User created!', `"${username}" can now log in.`);
       setTimeout(fetchUsers, 1000);
 
@@ -215,6 +217,7 @@ export const UserManagement = () => {
     setEditingId(user.id);
     setUsername(user.username);
     setRole(user.role || 'user');
+    setCanAccessReports(Boolean(user.can_access_reports));
     setResetId(null);
     document.getElementById('create-user-form')?.scrollIntoView({ behavior: 'smooth' });
   };
@@ -230,7 +233,7 @@ export const UserManagement = () => {
 
     setSubmitting(true);
     try {
-      const { error: userError } = await supabase.from('profiles').update({ username, role }).eq('id', editingId);
+      const { error: userError } = await supabase.from('profiles').update({ username, role, can_access_reports: canAccessReports }).eq('id', editingId);
       if (userError) throw userError;
 
       if (password) {
@@ -247,6 +250,7 @@ export const UserManagement = () => {
       setUsername('');
       setPassword('');
       setRole('user');
+      setCanAccessReports(false);
       fetchUsers();
     } catch (error: any) {
       toast.error('Update failed', error.message);
@@ -260,6 +264,7 @@ export const UserManagement = () => {
     setUsername('');
     setPassword('');
     setRole('user');
+    setCanAccessReports(false);
   };
 
   const handlePasswordReset = async (userId: string) => {
@@ -428,6 +433,21 @@ export const UserManagement = () => {
               </div>
             </div>
 
+            {role === 'admin' && (
+              <div className="flex items-center gap-3 p-4 bg-slate-50/50 border border-slate-100 rounded-2xl cursor-pointer hover:bg-slate-100/50 transition-colors">
+                <input
+                  type="checkbox"
+                  id="canAccessReports"
+                  checked={canAccessReports}
+                  onChange={(e) => setCanAccessReports(e.target.checked)}
+                  className="w-5 h-5 rounded-lg text-blue-600 focus:ring-blue-500/20 cursor-pointer border-slate-300"
+                />
+                <label htmlFor="canAccessReports" className="text-xs font-bold text-slate-700 cursor-pointer select-none flex-1">
+                  Allow Reports Access (View Only)
+                </label>
+              </div>
+            )}
+
             <AnimatePresence>
               {message && (
                 <motion.div
@@ -593,6 +613,11 @@ export const UserManagement = () => {
                                 }`}>
                                   {isMasterUser ? 'Master Admin' : user.role === 'admin' ? 'Administrator' : 'Standard Staff'}
                                 </span>
+                                {user.can_access_reports && (
+                                  <span className="text-[10px] font-black uppercase tracking-widest px-2.5 py-1 bg-indigo-50 text-indigo-600 border border-indigo-100 rounded-lg">
+                                    Reports View
+                                  </span>
+                                )}
                                 {isDeactivated && (
                                   <span className="text-[10px] font-black uppercase tracking-widest px-2.5 py-1 bg-slate-100 text-slate-500 border border-slate-200 rounded-lg">Suspended</span>
                                 )}
