@@ -57,34 +57,35 @@ export const drawPDFHeader = (doc: jsPDF) => {
   doc.text(CONTACT_INFO.email, divX + 6, logoY + 22.5);
 };
 
-export const drawCustomerInfo = (doc: jsPDF, label: string, value: string, date: string, startY: number = 65) => {
+export const drawCustomerInfo = (doc: jsPDF, label: string, value: string, date: string, startY: number = 60) => {
   const pw = doc.internal.pageSize.width;
   const margin = 12;
+  const boxH = 22;
 
   // Left: Primary Info Box
   doc.setFillColor(...BRAND.white);
-  roundedRect(doc, margin, startY, 85, 28, 3, 'F');
+  roundedRect(doc, margin, startY, 85, boxH, 3, 'F');
   doc.setDrawColor(...BRAND.border);
   doc.setLineWidth(0.3);
-  roundedRect(doc, margin, startY, 85, 28, 3, 'S');
+  roundedRect(doc, margin, startY, 85, boxH, 3, 'S');
 
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(7.5);
   doc.setTextColor(...BRAND.textMuted);
-  doc.text(label.toUpperCase(), margin + 4, startY + 7);
+  doc.text(label.toUpperCase(), margin + 5, startY + 7);
 
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(11);
+  doc.setFontSize(10.5);
   doc.setTextColor(...BRAND.text);
-  doc.text(value || 'N/A', margin + 4, startY + 16);
+  doc.text(value || 'N/A', margin + 5, startY + 16);
 
   // Right: Date & Report Info box
   doc.setFillColor(...BRAND.white);
-  roundedRect(doc, pw - margin - 85, startY, 85, 28, 3, 'F');
+  roundedRect(doc, pw - margin - 85, startY, 85, boxH, 3, 'F');
   doc.setDrawColor(...BRAND.border);
-  roundedRect(doc, pw - margin - 85, startY, 85, 28, 3, 'S');
+  roundedRect(doc, pw - margin - 85, startY, 85, boxH, 3, 'S');
 
-  const rightX = pw - margin - 81;
+  const rightX = pw - margin - 80;
 
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(7.5);
@@ -92,20 +93,15 @@ export const drawCustomerInfo = (doc: jsPDF, label: string, value: string, date:
   doc.text('REPORT DATE', rightX, startY + 7);
 
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(11);
+  doc.setFontSize(10.5);
   doc.setTextColor(...BRAND.text);
   
   if (date.includes(' to ')) {
-    doc.setFontSize(9); // Smaller font for range
+    doc.setFontSize(8.5); // Smaller font for range
     doc.text(date, rightX, startY + 16);
   } else {
     doc.text(formatReportDate(date), rightX, startY + 16);
   }
-
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(8);
-  doc.setTextColor(...BRAND.textMuted);
-  doc.text(`Doc ID: ${Math.random().toString(36).substring(7).toUpperCase()}`, rightX, startY + 23);
 };
 
 export const drawGreenFooter = (doc: jsPDF, label: string, value: string | number) => {

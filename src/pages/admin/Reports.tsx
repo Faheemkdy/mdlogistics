@@ -423,17 +423,79 @@ export const Reports = () => {
 
   const downloadPickupPDF = (companyName: string, items: any[]) => {
     const doc = new jsPDF();
+    const pw = doc.internal.pageSize.width;
+    const margin = 14;
+
     drawPDFHeader(doc);
-    drawCustomerInfo(doc, 'Customer:', companyName, date);
+    drawCustomerInfo(doc, 'Customer:', companyName, date, 60);
+
+    const totalItemCount = calculateTotalItemCount(items.map((i: any) => i.itemNumber));
+    const y = 92;
+
+    // Numbered Badge [01]
+    doc.setFillColor(79, 70, 229);
+    doc.roundedRect(margin, y, 14, 8, 2, 2, 'F');
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8.5);
+    doc.setTextColor(255, 255, 255);
+    doc.text('01', margin + 3.8, y + 5.5);
+
+    // Company Name
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(12);
+    doc.setTextColor(15, 23, 42);
+    doc.text(companyName || 'Unknown Company', margin + 18, y + 6);
+
+    // Total Items Pill on right
+    const pillW = 34;
+    const pillX = pw - margin - pillW;
+    doc.setFillColor(79, 70, 229);
+    doc.roundedRect(pillX, y, pillW, 7.5, 3.75, 3.75, 'F');
+    doc.setFontSize(7.5);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(255, 255, 255);
+    doc.text(`Total Items: ${totalItemCount}`, pillX + 4.5, y + 5);
+
+    // Table Body Construction
+    const tableBody: any[] = items.map((item: any, i: number) => [
+      i + 1,
+      formatReportDate(date, 'dd/MM/yy'),
+      item.location && item.location !== '-' ? item.location : '-',
+      item.name || '-',
+      item.itemNumber || '1'
+    ]);
+
+    // Company Total Footer Row
+    tableBody.push([
+      { 
+        content: `Total Items for ${companyName}`, 
+        colSpan: 4, 
+        styles: { fontStyle: 'bold', textColor: [79, 70, 229], fillColor: [243, 244, 256], halign: 'left' } 
+      },
+      { 
+        content: `${totalItemCount}`, 
+        styles: { fontStyle: 'bold', textColor: [79, 70, 229], fillColor: [243, 244, 256], halign: 'center' } 
+      }
+    ]);
+
     autoTable(doc, {
-      head: [['#', 'Shop', 'Location', 'Item No.']],
-      body: items.map((item, i) => [i + 1, item.name, item.location || '-', item.itemNumber || '-']),
-      startY: 105, theme: 'grid',
-      headStyles: { fillColor: [79, 70, 229], textColor: 255, fontStyle: 'bold' },
-      styles: { cellPadding: 3, fontSize: 10 },
+      startY: y + 11,
+      head: [['#', 'Date', 'Shop / Location', 'Item / Package', 'Item No.']],
+      body: tableBody,
+      theme: 'plain',
+      headStyles: { fillColor: [79, 70, 229], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 9 },
+      styles: { fontSize: 9, cellPadding: 3, lineColor: [226, 232, 240], lineWidth: 0.3 },
+      columnStyles: {
+        0: { halign: 'center', cellWidth: 12 },
+        1: { halign: 'center', cellWidth: 26 },
+        2: { halign: 'left' },
+        3: { halign: 'left' },
+        4: { halign: 'center', cellWidth: 26 }
+      },
+      margin: { left: margin, right: margin }
     });
-    const totalItems = calculateTotalItemCount(items.map(i => i.itemNumber));
-    drawGreenFooter(doc, 'TOTAL ITEMS:', totalItems);
+
+    drawGreenFooter(doc, 'TOTAL ITEMS:', totalItemCount);
     savePDF(doc, `${companyName}_Pickups_${date}.pdf`);
   };
 
@@ -444,24 +506,94 @@ export const Reports = () => {
     }
     try {
       const doc = new jsPDF();
+      const pw = doc.internal.pageSize.width;
+      const margin = 14;
+
       drawPDFHeader(doc);
-      drawCustomerInfo(doc, 'Report:', 'Master Pickup Log', date);
-      let y = 105;
+      drawCustomerInfo(doc, 'Report:', 'Master Pickup Log', date, 60);
+
+      let y = 92;
       const allItemNumbers: string[] = [];
-      filteredPickups.forEach((c) => {
+
+      filteredPickups.forEach((c, idx) => {
         c.items.forEach((item: any) => allItemNumbers.push(item.itemNumber));
-        if (y > 250) { doc.addPage(); drawPDFHeader(doc); y = 60; }
-        doc.setFontSize(12); doc.setTextColor(...BRAND.accent); doc.setFont('helvetica', 'bold');
-        doc.text(c.name || 'Unknown', 14, y);
+
+        const totalItemCount = calculateTotalItemCount(c.items.map((i: any) => i.itemNumber));
+        const numStr = (idx + 1).toString().padStart(2, '0');
+
+        // Check space on current page before drawing company section header
+        if (y > 235) {
+          doc.addPage();
+          drawPDFHeader(doc);
+          y = 65;
+        }
+
+        // 1. Numbered Badge [01]
+        doc.setFillColor(79, 70, 229);
+        doc.roundedRect(margin, y, 14, 8, 2, 2, 'F');
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(8.5);
+        doc.setTextColor(255, 255, 255);
+        doc.text(numStr, margin + 3.8, y + 5.5);
+
+        // 2. Company Name
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(12);
+        doc.setTextColor(15, 23, 42);
+        doc.text(c.name || 'Unknown Company', margin + 18, y + 6);
+
+        // 3. Total Items Pill on far right
+        const pillW = 34;
+        const pillX = pw - margin - pillW;
+        doc.setFillColor(79, 70, 229);
+        doc.roundedRect(pillX, y, pillW, 7.5, 3.75, 3.75, 'F');
+        doc.setFontSize(7.5);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(255, 255, 255);
+        doc.text(`Total Items: ${totalItemCount}`, pillX + 4.5, y + 5);
+
+        // Table Body Construction
+        const tableBody: any[] = c.items.map((item: any, i: number) => [
+          i + 1,
+          formatReportDate(date, 'dd/MM/yy'),
+          item.location && item.location !== '-' ? item.location : '-',
+          item.name || '-',
+          item.itemNumber || '1'
+        ]);
+
+        // Company Total Footer Row
+        tableBody.push([
+          { 
+            content: `Total Items for ${c.name || 'Company'}`, 
+            colSpan: 4, 
+            styles: { fontStyle: 'bold', textColor: [79, 70, 229], fillColor: [243, 244, 256], halign: 'left' } 
+          },
+          { 
+            content: `${totalItemCount}`, 
+            styles: { fontStyle: 'bold', textColor: [79, 70, 229], fillColor: [243, 244, 256], halign: 'center' } 
+          }
+        ]);
+
         autoTable(doc, {
-          head: [['#', 'Shop', 'Location', 'Item No.']],
-          body: c.items.map((item: any, i: number) => [i + 1, item.name, item.location || '-', item.itemNumber || '-']),
-          startY: y + 5, theme: 'grid',
-          headStyles: { fillColor: BRAND.accent, textColor: 255, fontStyle: 'bold' },
-          styles: { cellPadding: 3, fontSize: 10 }, margin: { left: 14, right: 14 },
+          startY: y + 11,
+          head: [['#', 'Date', 'Shop / Location', 'Item / Package', 'Item No.']],
+          body: tableBody,
+          theme: 'plain',
+          headStyles: { fillColor: [79, 70, 229], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 9 },
+          styles: { fontSize: 9, cellPadding: 3, lineColor: [226, 232, 240], lineWidth: 0.3 },
+          columnStyles: {
+            0: { halign: 'center', cellWidth: 12 },
+            1: { halign: 'center', cellWidth: 26 },
+            2: { halign: 'left' },
+            3: { halign: 'left' },
+            4: { halign: 'center', cellWidth: 26 }
+          },
+          margin: { left: margin, right: margin }
         });
-        y = (doc as any).lastAutoTable?.finalY ? (doc as any).lastAutoTable.finalY + 15 : y + 30;
+
+        y = (doc as any).lastAutoTable?.finalY ? (doc as any).lastAutoTable.finalY + 12 : y + 40;
       });
+
       const totalItems = calculateTotalItemCount(allItemNumbers);
       drawGreenFooter(doc, 'TOTAL ITEMS:', totalItems);
       savePDF(doc, `Master_Pickup_${date}.pdf`);
@@ -499,6 +631,133 @@ export const Reports = () => {
     }
   };
 
+  const generateGroupedPickupsPDF = (
+    doc: jsPDF, 
+    pickupsData: any[], 
+    reportTitleLabel: string, 
+    dateRangeLabel: string, 
+    filename: string
+  ) => {
+    const pw = doc.internal.pageSize.width;
+    const margin = 14;
+
+    drawPDFHeader(doc);
+    drawCustomerInfo(doc, 'Report:', reportTitleLabel, dateRangeLabel, 60);
+
+    let y = 92;
+    const allItemNumbers: string[] = [];
+
+    // Group items by company
+    const companyGroups: { id: string; name: string; items: any[] }[] = [];
+    const map: { [key: string]: any } = {};
+
+    pickupsData.forEach((p: any) => {
+      const cId = p.companies?.id || 'unknown';
+      const cName = p.companies?.name || 'Unknown Company';
+      if (!map[cId]) {
+        map[cId] = { id: cId, name: cName, items: [] };
+        companyGroups.push(map[cId]);
+      }
+      const sortedItems = [...(p.pickup_items || [])].sort((a: any, b: any) => (a.shops?.location || '').localeCompare(b.shops?.location || ''));
+      sortedItems.forEach((item: any) => {
+        map[cId].items.push({
+          date: p.date,
+          name: item.shops?.name || '-',
+          location: item.shops?.location || '-',
+          itemNumber: item.item_number || '1'
+        });
+      });
+    });
+
+    if (companyGroups.length === 0) {
+      toast.error('No data', 'No pickup records found.');
+      return;
+    }
+
+    companyGroups.forEach((c, idx) => {
+      c.items.forEach((item: any) => allItemNumbers.push(item.itemNumber));
+
+      const totalItemCount = calculateTotalItemCount(c.items.map((i: any) => i.itemNumber));
+      const numStr = (idx + 1).toString().padStart(2, '0');
+
+      // Check space on current page before drawing company section header
+      if (y > 235) {
+        doc.addPage();
+        drawPDFHeader(doc);
+        y = 65;
+      }
+
+      // 1. Numbered Badge [01]
+      doc.setFillColor(79, 70, 229);
+      doc.roundedRect(margin, y, 14, 8, 2, 2, 'F');
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(8.5);
+      doc.setTextColor(255, 255, 255);
+      doc.text(numStr, margin + 3.8, y + 5.5);
+
+      // 2. Company Name
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(12);
+      doc.setTextColor(15, 23, 42);
+      doc.text(c.name || 'Unknown Company', margin + 18, y + 6);
+
+      // 3. Total Items Pill on far right
+      const pillW = 34;
+      const pillX = pw - margin - pillW;
+      doc.setFillColor(79, 70, 229);
+      doc.roundedRect(pillX, y, pillW, 7.5, 3.75, 3.75, 'F');
+      doc.setFontSize(7.5);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(255, 255, 255);
+      doc.text(`Total Items: ${totalItemCount}`, pillX + 4.5, y + 5);
+
+      // Table Body Construction
+      const tableBody: any[] = c.items.map((item: any, i: number) => [
+        i + 1,
+        formatReportDate(item.date, 'dd/MM/yy'),
+        item.location && item.location !== '-' ? item.location : '-',
+        item.name || '-',
+        item.itemNumber || '1'
+      ]);
+
+      // Company Total Footer Row
+      tableBody.push([
+        { 
+          content: `Total Items for ${c.name || 'Company'}`, 
+          colSpan: 4, 
+          styles: { fontStyle: 'bold', textColor: [79, 70, 229], fillColor: [243, 244, 256], halign: 'left' } 
+        },
+        { 
+          content: `${totalItemCount}`, 
+          styles: { fontStyle: 'bold', textColor: [79, 70, 229], fillColor: [243, 244, 256], halign: 'center' } 
+        }
+      ]);
+
+      autoTable(doc, {
+        startY: y + 11,
+        head: [['#', 'Date', 'Shop / Location', 'Item / Package', 'Item No.']],
+        body: tableBody,
+        theme: 'plain',
+        headStyles: { fillColor: [79, 70, 229], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 9 },
+        styles: { fontSize: 9, cellPadding: 3, lineColor: [226, 232, 240], lineWidth: 0.3 },
+        columnStyles: {
+          0: { halign: 'center', cellWidth: 12 },
+          1: { halign: 'center', cellWidth: 26 },
+          2: { halign: 'left' },
+          3: { halign: 'left' },
+          4: { halign: 'center', cellWidth: 26 }
+        },
+        margin: { left: margin, right: margin }
+      });
+
+      y = (doc as any).lastAutoTable?.finalY ? (doc as any).lastAutoTable.finalY + 12 : y + 40;
+    });
+
+    const totalItems = calculateTotalItemCount(allItemNumbers);
+    drawGreenFooter(doc, 'TOTAL ITEMS:', totalItems);
+    savePDF(doc, filename);
+  };
+
   const downloadPickupRangePDF = async (days: number) => {
     const { start, end } = getDateRange(days, date);
     toast.info('Generating...', `Fetching ${days}-day pickup report`);
@@ -515,23 +774,11 @@ export const Reports = () => {
     
     if (error || !data?.length) { toast.error('No data', 'No pickups in this range.'); return; }
     const doc = new jsPDF();
-    drawPDFHeader(doc);
-    
     const companyName = selectedCompanyId && data[0]?.companies ? data[0].companies.name : 'All Companies';
-    drawCustomerInfo(doc, 'Report:', `${days}-Day Pickup Report (${companyName})`, `${formatReportDate(start, 'dd MMM')} to ${formatReportDate(end, 'dd MMM yyyy')}`);
-    
-    const rows: any[] = [];
-    let count = 1;
-    data.forEach((p: any) => {
-      const sortedItems = [...(p.pickup_items || [])].sort((a: any, b: any) => (a.shops?.location || '').localeCompare(b.shops?.location || ''));
-      sortedItems.forEach((item: any) => {
-        rows.push([count++, formatReportDate(p.date, 'dd/MM/yy'), p.companies?.name || '-', item.shops?.name || '-', item.item_number || '-']);
-      });
-    });
-    autoTable(doc, { head: [['#', 'Date', 'Company', 'Shop', 'Item No.']], body: rows, startY: 105, theme: 'grid', headStyles: { fillColor: [79, 70, 229], textColor: 255, fontStyle: 'bold' }, styles: { cellPadding: 3, fontSize: 9 } });
-    const totalItems = calculateTotalItemCount(rows.map(r => r[4]));
-    drawGreenFooter(doc, 'TOTAL ITEMS:', totalItems);
-    savePDF(doc, `Pickups_${companyName.replace(/\s+/g, '_')}_${days}days_${end}.pdf`);
+    const reportTitle = `${days}-Day Pickup Report (${companyName})`;
+    const dateRange = `${formatReportDate(start, 'dd MMM')} to ${formatReportDate(end, 'dd MMM yyyy')}`;
+
+    generateGroupedPickupsPDF(doc, data, reportTitle, dateRange, `Pickups_${companyName.replace(/\s+/g, '_')}_${days}days_${end}.pdf`);
   };
 
   const downloadDeliveryRangePDF = async (days: number) => {
@@ -590,31 +837,11 @@ export const Reports = () => {
       }
       
       const doc = new jsPDF();
-      drawPDFHeader(doc);
-      
       const companyName = selectedCompanyId && data[0]?.companies ? data[0].companies.name : 'All Companies';
       const dateLabel = `${formatReportDate(fromDate, 'dd MMM yyyy')} to ${formatReportDate(toDate, 'dd MMM yyyy')}`;
-      drawCustomerInfo(doc, 'Report:', `Pickup Report (${companyName})`, dateLabel);
-      
-      const rows: any[] = [];
-      let count = 1;
-      data.forEach((p: any) => {
-        const sortedItems = [...(p.pickup_items || [])].sort((a: any, b: any) => (a.shops?.location || '').localeCompare(b.shops?.location || ''));
-        sortedItems.forEach((item: any) => {
-          rows.push([count++, formatReportDate(p.date, 'dd/MM/yy'), p.companies?.name || '-', item.shops?.name || '-', item.item_number || '-']);
-        });
-      });
-      autoTable(doc, { 
-        head: [['#', 'Date', 'Company', 'Shop', 'Item No.']], 
-        body: rows, 
-        startY: 105, 
-        theme: 'grid', 
-        headStyles: { fillColor: [79, 70, 229], textColor: 255, fontStyle: 'bold' }, 
-        styles: { cellPadding: 3, fontSize: 9 } 
-      });
-      const totalItems = calculateTotalItemCount(rows.map(r => r[4]));
-      drawGreenFooter(doc, 'TOTAL ITEMS:', totalItems);
-      savePDF(doc, `Pickups_${companyName.replace(/\s+/g, '_')}_${fromDate}_to_${toDate}.pdf`);
+      const reportTitle = `Pickup Report (${companyName})`;
+
+      generateGroupedPickupsPDF(doc, data, reportTitle, dateLabel, `Pickups_${companyName.replace(/\s+/g, '_')}_${fromDate}_to_${toDate}.pdf`);
     } else {
       let query = supabase.from('deliveries')
         // @ts-ignore
@@ -762,23 +989,11 @@ export const Reports = () => {
       
     if (error || !data?.length) { toast.error('No data', 'No pickups in this month.'); return; }
     const doc = new jsPDF();
-    drawPDFHeader(doc);
-    
     const companyName = selectedCompanyId && data[0]?.companies ? data[0].companies.name : 'All Companies';
-    drawCustomerInfo(doc, 'Report:', `Monthly Pickup Report (${companyName})`, format(new Date(start), 'MMMM yyyy'));
-    
-    const rows: any[] = [];
-    let count = 1;
-    data.forEach((p: any) => {
-      const sortedItems = [...(p.pickup_items || [])].sort((a: any, b: any) => (a.shops?.location || '').localeCompare(b.shops?.location || ''));
-      sortedItems.forEach((item: any) => {
-        rows.push([count++, formatReportDate(p.date, 'dd/MM/yy'), p.companies?.name || '-', item.shops?.name || '-', item.item_number || '-']);
-      });
-    });
-    autoTable(doc, { head: [['#', 'Date', 'Company', 'Shop', 'Item No.']], body: rows, startY: 105, theme: 'grid', headStyles: { fillColor: [79, 70, 229], textColor: 255, fontStyle: 'bold' }, styles: { cellPadding: 3, fontSize: 9 } });
-    const totalItems = calculateTotalItemCount(rows.map(r => r[4]));
-    drawGreenFooter(doc, 'TOTAL ITEMS:', totalItems);
-    savePDF(doc, `Pickups_${companyName.replace(/\s+/g, '_')}_${monthStr}.pdf`);
+    const reportTitle = `Monthly Pickup Report (${companyName})`;
+    const dateRange = format(new Date(start), 'MMMM yyyy');
+
+    generateGroupedPickupsPDF(doc, data, reportTitle, dateRange, `Pickups_${companyName.replace(/\s+/g, '_')}_${monthStr}.pdf`);
   };
 
   const downloadMonthlyDeliveryPDF = async (monthStr: string) => {

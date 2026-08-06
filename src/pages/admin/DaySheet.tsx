@@ -155,10 +155,10 @@ export const DaySheet = () => {
     const pageWidth = doc.internal.pageSize.width;
 
     drawPDFHeader(doc);
-    drawCustomerInfo(doc, "Report Type:", viewMode === 'monthly' ? "Monthly Financial Statement" : "Daily Financial Statement", viewMode === 'monthly' ? formatReportDate(filterDate, 'MMMM yyyy') : formatReportDate(filterDate));
+    drawCustomerInfo(doc, "Report Type:", viewMode === 'monthly' ? "Monthly Financial Statement" : "Daily Financial Statement", viewMode === 'monthly' ? formatReportDate(filterDate, 'MMMM yyyy') : formatReportDate(filterDate), 60);
 
-    // Summary Cards in PDF
-    const cardY = 70;
+    // Summary Cards in PDF (Positioned below Customer Info box)
+    const cardY = 88;
     const cardH = 22;
     const cardW = (pageWidth - 28 - 8) / 3;
 
@@ -166,14 +166,14 @@ export const DaySheet = () => {
     doc.roundedRect(14, cardY, cardW, cardH, 3, 3, 'F');
     doc.setFontSize(8); doc.setFont('helvetica', 'bold'); doc.setTextColor(6, 95, 70);
     doc.text('TOTAL INCOME', 22, cardY + 7);
-    doc.setFontSize(14); doc.text(`Rs. ${totalIncome.toFixed(2)}`, 22, cardY + 17);
+    doc.setFontSize(13); doc.text(`Rs. ${totalIncome.toFixed(2)}`, 22, cardY + 17);
 
     const card2X = 14 + cardW + 4;
     doc.setFillColor(254, 226, 226);
     doc.roundedRect(card2X, cardY, cardW, cardH, 3, 3, 'F');
     doc.setFontSize(8); doc.setTextColor(153, 27, 27);
     doc.text('TOTAL EXPENSE', card2X + 8, cardY + 7);
-    doc.setFontSize(14); doc.text(`Rs. ${totalExpense.toFixed(2)}`, card2X + 8, cardY + 17);
+    doc.setFontSize(13); doc.text(`Rs. ${totalExpense.toFixed(2)}`, card2X + 8, cardY + 17);
 
     const card3X = 14 + (cardW + 4) * 2;
     const isProfit = balance >= 0;
@@ -181,15 +181,39 @@ export const DaySheet = () => {
     doc.roundedRect(card3X, cardY, cardW, cardH, 3, 3, 'F');
     doc.setFontSize(8); doc.setTextColor(isProfit ? 55 : 120, isProfit ? 48 : 53, isProfit ? 163 : 15);
     doc.text('NET BALANCE', card3X + 8, cardY + 7);
-    doc.setFontSize(14); doc.text(`Rs. ${Math.abs(balance).toFixed(2)}${isProfit ? '' : ' (-)'}`, card3X + 8, cardY + 17);
+    doc.setFontSize(13); doc.text(`Rs. ${Math.abs(balance).toFixed(2)}${isProfit ? '' : ' (-)'}`, card3X + 8, cardY + 17);
 
     autoTable(doc, {
-      startY: 106,
+      startY: 118,
       head: [['#', 'Type', 'Description', 'Amount']],
       body: filteredEntries.map((e, i) => [i + 1, e.type.toUpperCase(), e.description || 'No description', `Rs. ${Number(e.amount).toFixed(2)}`]),
       theme: 'plain',
       headStyles: { fillColor: BRAND.primary, textColor: [255, 255, 255], fontStyle: 'bold' },
       styles: { fontSize: 10, cellPadding: 4, lineColor: BRAND.border, lineWidth: 0.3 },
+      didParseCell: (data) => {
+        if (data.section === 'body') {
+          const typeVal = String(data.row.raw[1]).toUpperCase();
+          if (typeVal === 'EXPENSE') {
+            if (data.column.index === 1) {
+              data.cell.styles.fillColor = [254, 226, 226];
+              data.cell.styles.textColor = [185, 28, 28];
+              data.cell.styles.fontStyle = 'bold';
+            } else if (data.column.index === 3) {
+              data.cell.styles.textColor = [185, 28, 28];
+              data.cell.styles.fontStyle = 'bold';
+            }
+          } else if (typeVal === 'INCOME') {
+            if (data.column.index === 1) {
+              data.cell.styles.fillColor = [209, 250, 229];
+              data.cell.styles.textColor = [6, 95, 70];
+              data.cell.styles.fontStyle = 'bold';
+            } else if (data.column.index === 3) {
+              data.cell.styles.textColor = [6, 95, 70];
+              data.cell.styles.fontStyle = 'bold';
+            }
+          }
+        }
+      }
     });
 
     drawGreenFooter(doc, 'TOTAL BALANCE', `Rs. ${balance.toFixed(2)}${balance >= 0 ? '' : ' (-)'}`);
@@ -206,16 +230,74 @@ export const DaySheet = () => {
         return; 
       }
       const doc = new jsPDF();
+      const pageWidth = doc.internal.pageSize.width;
+
       drawPDFHeader(doc);
-      drawCustomerInfo(doc, "Report Type:", `${days} Days Financial Statement`, `${formatReportDate(start, 'dd MMM')} to ${formatReportDate(end, 'dd MMM yyyy')}`);
+      drawCustomerInfo(doc, "Report Type:", `${days} Days Financial Statement`, `${formatReportDate(start, 'dd MMM')} to ${formatReportDate(end, 'dd MMM yyyy')}`, 60);
+
       const rangeIncome = data.filter(e => e.type === 'income').reduce((a, b) => a + Number(b.amount || 0), 0);
       const rangeExpense = data.filter(e => e.type === 'expense').reduce((a, b) => a + Number(b.amount || 0), 0);
+      const rangeBalance = rangeIncome - rangeExpense;
+
+      // Summary Cards
+      const cardY = 88;
+      const cardH = 22;
+      const cardW = (pageWidth - 28 - 8) / 3;
+
+      doc.setFillColor(209, 250, 229);
+      doc.roundedRect(14, cardY, cardW, cardH, 3, 3, 'F');
+      doc.setFontSize(8); doc.setFont('helvetica', 'bold'); doc.setTextColor(6, 95, 70);
+      doc.text('TOTAL INCOME', 22, cardY + 7);
+      doc.setFontSize(13); doc.text(`Rs. ${rangeIncome.toFixed(2)}`, 22, cardY + 17);
+
+      const card2X = 14 + cardW + 4;
+      doc.setFillColor(254, 226, 226);
+      doc.roundedRect(card2X, cardY, cardW, cardH, 3, 3, 'F');
+      doc.setFontSize(8); doc.setTextColor(153, 27, 27);
+      doc.text('TOTAL EXPENSE', card2X + 8, cardY + 7);
+      doc.setFontSize(13); doc.text(`Rs. ${rangeExpense.toFixed(2)}`, card2X + 8, cardY + 17);
+
+      const card3X = 14 + (cardW + 4) * 2;
+      const isProfit = rangeBalance >= 0;
+      doc.setFillColor(isProfit ? 219 : 254, isProfit ? 234 : 243, isProfit ? 254 : 199);
+      doc.roundedRect(card3X, cardY, cardW, cardH, 3, 3, 'F');
+      doc.setFontSize(8); doc.setTextColor(isProfit ? 55 : 120, isProfit ? 48 : 53, isProfit ? 163 : 15);
+      doc.text('NET BALANCE', card3X + 8, cardY + 7);
+      doc.setFontSize(13); doc.text(`Rs. ${Math.abs(rangeBalance).toFixed(2)}${isProfit ? '' : ' (-)'}`, card3X + 8, cardY + 17);
+
       autoTable(doc, {
-        startY: 100,
+        startY: 118,
         head: [['#', 'Date', 'Type', 'Description', 'Amount']],
         body: data.map((e, i) => [i + 1, formatReportDate(e.date, 'dd/MM/yy'), e.type.toUpperCase(), e.description || 'No description', `Rs. ${Number(e.amount).toFixed(2)}`]),
+        theme: 'plain',
+        headStyles: { fillColor: BRAND.primary, textColor: [255, 255, 255], fontStyle: 'bold' },
+        styles: { fontSize: 10, cellPadding: 4, lineColor: BRAND.border, lineWidth: 0.3 },
+        didParseCell: (data) => {
+          if (data.section === 'body') {
+            const typeVal = String(data.row.raw[2]).toUpperCase();
+            if (typeVal === 'EXPENSE') {
+              if (data.column.index === 2) {
+                data.cell.styles.fillColor = [254, 226, 226];
+                data.cell.styles.textColor = [185, 28, 28];
+                data.cell.styles.fontStyle = 'bold';
+              } else if (data.column.index === 4) {
+                data.cell.styles.textColor = [185, 28, 28];
+                data.cell.styles.fontStyle = 'bold';
+              }
+            } else if (typeVal === 'INCOME') {
+              if (data.column.index === 2) {
+                data.cell.styles.fillColor = [209, 250, 229];
+                data.cell.styles.textColor = [6, 95, 70];
+                data.cell.styles.fontStyle = 'bold';
+              } else if (data.column.index === 4) {
+                data.cell.styles.textColor = [6, 95, 70];
+                data.cell.styles.fontStyle = 'bold';
+              }
+            }
+          }
+        }
       });
-      drawGreenFooter(doc, 'NET BALANCE', `Rs. ${(rangeIncome - rangeExpense).toFixed(2)}`);
+      drawGreenFooter(doc, 'NET BALANCE', `Rs. ${rangeBalance.toFixed(2)}${rangeBalance >= 0 ? '' : ' (-)'}`);
       savePDF(doc, `DaySheet_${days}days_${end}.pdf`);
     } catch (err: any) {
       toast.error("Report failed", err.message);
@@ -239,16 +321,74 @@ export const DaySheet = () => {
         return; 
       }
       const doc = new jsPDF();
+      const pageWidth = doc.internal.pageSize.width;
+
       drawPDFHeader(doc);
-      drawCustomerInfo(doc, "Report Type:", `Monthly Financial Statement`, formatReportDate(start, 'MMMM yyyy'));
+      drawCustomerInfo(doc, "Report Type:", `Monthly Financial Statement`, formatReportDate(start, 'MMMM yyyy'), 60);
+
       const rangeIncome = data.filter(e => e.type === 'income').reduce((a, b) => a + Number(b.amount || 0), 0);
       const rangeExpense = data.filter(e => e.type === 'expense').reduce((a, b) => a + Number(b.amount || 0), 0);
+      const rangeBalance = rangeIncome - rangeExpense;
+
+      // Summary Cards
+      const cardY = 88;
+      const cardH = 22;
+      const cardW = (pageWidth - 28 - 8) / 3;
+
+      doc.setFillColor(209, 250, 229);
+      doc.roundedRect(14, cardY, cardW, cardH, 3, 3, 'F');
+      doc.setFontSize(8); doc.setFont('helvetica', 'bold'); doc.setTextColor(6, 95, 70);
+      doc.text('TOTAL INCOME', 22, cardY + 7);
+      doc.setFontSize(13); doc.text(`Rs. ${rangeIncome.toFixed(2)}`, 22, cardY + 17);
+
+      const card2X = 14 + cardW + 4;
+      doc.setFillColor(254, 226, 226);
+      doc.roundedRect(card2X, cardY, cardW, cardH, 3, 3, 'F');
+      doc.setFontSize(8); doc.setTextColor(153, 27, 27);
+      doc.text('TOTAL EXPENSE', card2X + 8, cardY + 7);
+      doc.setFontSize(13); doc.text(`Rs. ${rangeExpense.toFixed(2)}`, card2X + 8, cardY + 17);
+
+      const card3X = 14 + (cardW + 4) * 2;
+      const isProfit = rangeBalance >= 0;
+      doc.setFillColor(isProfit ? 219 : 254, isProfit ? 234 : 243, isProfit ? 254 : 199);
+      doc.roundedRect(card3X, cardY, cardW, cardH, 3, 3, 'F');
+      doc.setFontSize(8); doc.setTextColor(isProfit ? 55 : 120, isProfit ? 48 : 53, isProfit ? 163 : 15);
+      doc.text('NET BALANCE', card3X + 8, cardY + 7);
+      doc.setFontSize(13); doc.text(`Rs. ${Math.abs(rangeBalance).toFixed(2)}${isProfit ? '' : ' (-)'}`, card3X + 8, cardY + 17);
+
       autoTable(doc, {
-        startY: 100,
+        startY: 118,
         head: [['#', 'Date', 'Type', 'Description', 'Amount']],
         body: data.map((e, i) => [i + 1, formatReportDate(e.date, 'dd/MM/yy'), e.type.toUpperCase(), e.description || 'No description', `Rs. ${Number(e.amount).toFixed(2)}`]),
+        theme: 'plain',
+        headStyles: { fillColor: BRAND.primary, textColor: [255, 255, 255], fontStyle: 'bold' },
+        styles: { fontSize: 10, cellPadding: 4, lineColor: BRAND.border, lineWidth: 0.3 },
+        didParseCell: (data) => {
+          if (data.section === 'body') {
+            const typeVal = String(data.row.raw[2]).toUpperCase();
+            if (typeVal === 'EXPENSE') {
+              if (data.column.index === 2) {
+                data.cell.styles.fillColor = [254, 226, 226];
+                data.cell.styles.textColor = [185, 28, 28];
+                data.cell.styles.fontStyle = 'bold';
+              } else if (data.column.index === 4) {
+                data.cell.styles.textColor = [185, 28, 28];
+                data.cell.styles.fontStyle = 'bold';
+              }
+            } else if (typeVal === 'INCOME') {
+              if (data.column.index === 2) {
+                data.cell.styles.fillColor = [209, 250, 229];
+                data.cell.styles.textColor = [6, 95, 70];
+                data.cell.styles.fontStyle = 'bold';
+              } else if (data.column.index === 4) {
+                data.cell.styles.textColor = [6, 95, 70];
+                data.cell.styles.fontStyle = 'bold';
+              }
+            }
+          }
+        }
       });
-      drawGreenFooter(doc, 'NET BALANCE', `Rs. ${(rangeIncome - rangeExpense).toFixed(2)}`);
+      drawGreenFooter(doc, 'NET BALANCE', `Rs. ${rangeBalance.toFixed(2)}${rangeBalance >= 0 ? '' : ' (-)'}`);
       savePDF(doc, `DaySheet_${monthStr}.pdf`);
     } catch (err: any) {
       toast.error("Report failed", err.message);
