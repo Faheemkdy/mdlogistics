@@ -9,7 +9,7 @@ import { Modal } from '../../components/ui/Modal';
 import {
   Search, Check, ChevronLeft, ChevronRight,
   MapPin, Plus, Package, Building2, Hash, X, Calendar,
-  ChevronDown
+  ChevronDown, ShoppingBag, ArrowLeft, Trash2
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { isFuzzyMatch, sortSearchResults } from '../../utils/search';
@@ -191,9 +191,56 @@ export const Pickup = () => {
 
   const [loading, setLoading] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isSelectedModalOpen, setIsSelectedModalOpen] = useState(false);
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
+  const shopSearchInputRef = React.useRef<HTMLInputElement>(null);
+  const controlsCardRef = React.useRef<HTMLDivElement>(null);
+
+  const handleSearchInputFocus = () => {
+    setIsSearchFocused(true);
+    setTimeout(() => {
+      controlsCardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 100);
+  };
+
   const [newShopName, setNewShopName] = useState('');
   const [newShopLocation, setNewShopLocation] = useState('');
   const [availableLocations, setAvailableLocations] = useState<string[]>([]);
+
+  // Shop selection in search - toggles shop without clearing search so item count can be typed immediately
+  const handleShopSelectInSearch = (shop: Shop) => {
+    toggleShop(shop.id);
+  };
+
+  // Back button handler: 1st click clears search term, 2nd click goes back to step 1
+  const handleSearchBackClick = () => {
+    if (searchShops.trim()) {
+      setSearchShops('');
+      shopSearchInputRef.current?.blur();
+    } else {
+      setStep(1);
+      setSelections({});
+      setSearchShops('');
+    }
+  };
+
+  // Mobile hardware/gesture back button handler to clear search state first before exiting
+  useEffect(() => {
+    if (step === 2 && (searchShops.trim() || isSearchFocused)) {
+      window.history.pushState({ pickupSearchActive: true }, '');
+      const handlePopState = () => {
+        if (searchShops.trim() || isSearchFocused) {
+          setSearchShops('');
+          setIsSearchFocused(false);
+          shopSearchInputRef.current?.blur();
+        }
+      };
+      window.addEventListener('popstate', handlePopState);
+      return () => {
+        window.removeEventListener('popstate', handlePopState);
+      };
+    }
+  }, [step, searchShops, isSearchFocused]);
 
   useEffect(() => {
     const fetchLocs = async () => {
@@ -410,7 +457,7 @@ export const Pickup = () => {
         </div>
 
         {/* ── Full Width Controls Card: Date + Search Side by Side ── */}
-        <div className="bg-white p-3.5 lg:p-4 rounded-2xl border border-gray-100 shadow-sm space-y-3">
+        <div ref={controlsCardRef} className="scroll-mt-16 bg-white p-3.5 lg:p-4 rounded-2xl border border-gray-100 shadow-sm space-y-3">
           <div className="flex flex-col md:flex-row items-stretch md:items-center gap-3">
             
             {/* Date Picker Card */}
@@ -455,25 +502,68 @@ export const Pickup = () => {
             ) : (
               <div className="flex items-center gap-2 flex-1">
                 <div className="relative flex-1">
-                  <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" size={17} />
+                  {/* WhatsApp style back/search toggle icon */}
+                  {searchShops.trim() || isSearchFocused ? (
+                    <button
+                      onClick={handleSearchBackClick}
+                      className="absolute left-2.5 top-1/2 -translate-y-1/2 p-1 text-orange-600 hover:text-orange-700 hover:bg-orange-50 rounded-lg transition-colors z-10"
+                      title="Back / Clear search"
+                    >
+                      <ArrowLeft size={18} />
+                    </button>
+                  ) : (
+                    <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={17} />
+                  )}
+
                   <input
+                    ref={shopSearchInputRef}
                     placeholder="Type shop name..."
                     value={searchShops}
                     onChange={e => setSearchShops(e.target.value)}
-                    className="w-full h-10 pl-10 pr-10 bg-gray-50/80 border border-gray-200/80 rounded-xl text-xs font-semibold text-gray-800 placeholder-gray-400 focus:outline-none focus:bg-white focus:border-orange-500 focus:ring-2 focus:ring-orange-500/10 transition-all"
+                    onFocus={handleSearchInputFocus}
+                    className={clsx(
+                      "w-full h-10 pr-10 bg-gray-50/80 border border-gray-200/80 rounded-xl text-xs font-semibold text-gray-800 placeholder-gray-400 focus:outline-none focus:bg-white focus:border-orange-500 focus:ring-2 focus:ring-orange-500/10 transition-all",
+                      (searchShops.trim() || isSearchFocused) ? "pl-10 border-orange-400" : "pl-10"
+                    )}
                     autoFocus
                   />
                   {searchShops && (
-                    <button onClick={() => setSearchShops('')} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                    <button
+                      onClick={() => {
+                        setSearchShops('');
+                        shopSearchInputRef.current?.focus();
+                      }}
+                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    >
                       <X size={15} />
                     </button>
                   )}
                 </div>
 
+                {/* Selected Shops Side Icon Button */}
+                <button
+                  onClick={() => setIsSelectedModalOpen(true)}
+                  className={clsx(
+                    "h-10 px-3 rounded-xl border flex items-center gap-1.5 font-bold text-xs transition-all relative flex-shrink-0 active:scale-95",
+                    selectedCount > 0
+                      ? "bg-orange-50 border-orange-200 text-orange-700 hover:bg-orange-100 shadow-sm"
+                      : "bg-gray-50 border-gray-200 text-gray-400 hover:bg-gray-100"
+                  )}
+                  title="View Selected Shops"
+                >
+                  <ShoppingBag size={17} className={selectedCount > 0 ? "text-orange-500" : "text-gray-400"} />
+                  <span className="hidden sm:inline font-extrabold">Selected</span>
+                  {selectedCount > 0 && (
+                    <span className="w-5 h-5 rounded-full bg-orange-500 text-white text-[11px] font-black flex items-center justify-center shadow-sm">
+                      {selectedCount}
+                    </span>
+                  )}
+                </button>
+
                 {/* Quick Add Shop Button */}
                 <button
                   onClick={() => setIsAddModalOpen(true)}
-                  className="h-10 px-4 bg-orange-500 hover:bg-orange-600 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm shadow-orange-500/20 transition-all active:scale-95 flex-shrink-0"
+                  className="h-10 px-3.5 bg-orange-500 hover:bg-orange-600 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm shadow-orange-500/20 transition-all active:scale-95 flex-shrink-0"
                   title="Add new shop"
                 >
                   <Plus size={16} /> <span className="hidden sm:inline">Add Shop</span>
@@ -488,7 +578,7 @@ export const Pickup = () => {
               {searchShops.trim() ? (
                 <>
                   <span className="w-2 h-2 rounded-full bg-orange-500 animate-ping inline-block" />
-                  Searching shops...
+                  Searching shops... Tap shop to select and type next!
                 </>
               ) : (
                 <>
@@ -570,41 +660,6 @@ export const Pickup = () => {
         {step === 2 && (
           <div className="space-y-3 pt-1">
 
-            {/* Selected Shops Tag Chips */}
-            {selectedCount > 0 && (
-              <div className="bg-orange-50/60 border border-orange-100/80 rounded-2xl p-3.5 space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-gray-800">
-                    Selected Shops ({selectedCount})
-                  </span>
-                  <button
-                    onClick={() => setSelections({})}
-                    className="text-xs font-bold text-orange-600 hover:text-orange-700 transition-colors"
-                  >
-                    Clear all
-                  </button>
-                </div>
-
-                {/* Tag Chips Container */}
-                <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto custom-scrollbar pt-0.5">
-                  {selectedShopObjects.map(shop => (
-                    <div
-                      key={shop.id}
-                      className="inline-flex items-center gap-1.5 px-3 py-1 bg-white border border-orange-200 rounded-full text-xs font-bold text-orange-800 shadow-sm transition-all"
-                    >
-                      <span>{shop.name}</span>
-                      <button
-                        onClick={(e) => { e.stopPropagation(); toggleShop(shop.id); }}
-                        className="w-4 h-4 rounded-full flex items-center justify-center hover:bg-orange-100 text-orange-600 hover:text-orange-900 transition-colors"
-                      >
-                        <X size={12} />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
             {/* Section Header */}
             <div className="flex items-center justify-between px-1">
               <span className="text-xs font-bold text-gray-700">
@@ -623,7 +678,7 @@ export const Pickup = () => {
               </div>
             )}
 
-            {/* Shops Full-Width Responsive Grid (3-4 columns on desktop) */}
+            {/* Shops Full-Width Responsive Grid */}
             {!loadingShops && (
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">
                 {paginatedShops.map((shop) => {
@@ -633,7 +688,7 @@ export const Pickup = () => {
                   return (
                     <div
                       key={shop.id}
-                      onClick={() => toggleShop(shop.id)}
+                      onClick={() => handleShopSelectInSearch(shop)}
                       className={clsx(
                         'rounded-2xl border transition-all duration-200 cursor-pointer overflow-hidden',
                         isSelected
@@ -748,20 +803,25 @@ export const Pickup = () => {
           style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
         >
           <div className="max-w-4xl mx-auto bg-white/95 backdrop-blur-md border border-gray-200/90 rounded-2xl shadow-2xl p-3 flex items-center justify-between gap-4 pointer-events-auto">
-            {/* Count Info */}
-            <div className="flex items-center gap-3 pl-1">
-              <div className="w-9 h-9 rounded-xl bg-orange-50 border border-orange-100 flex items-center justify-center text-orange-600 flex-shrink-0 font-black text-sm">
+            {/* Clickable Count Info opening Selected Shops Popup */}
+            <button
+              onClick={() => setIsSelectedModalOpen(true)}
+              className="flex items-center gap-3 pl-1 text-left hover:opacity-85 transition-opacity group"
+              title="View selected shops list"
+            >
+              <div className="w-9 h-9 rounded-xl bg-orange-50 border border-orange-100 flex items-center justify-center text-orange-600 flex-shrink-0 font-black text-sm group-hover:scale-105 transition-transform">
                 {selectedCount}
               </div>
               <div>
-                <p className="text-gray-900 font-bold text-sm leading-none">
+                <p className="text-gray-900 font-bold text-sm leading-none flex items-center gap-1">
                   {selectedCount === 1 ? '1 Shop Selected' : `${selectedCount} Shops Selected`}
+                  <ChevronRight size={14} className="text-orange-500" />
                 </p>
                 <p className="text-gray-400 text-[10px] font-semibold mt-0.5">
-                  Tap to add more shops
+                  Tap to view & edit list
                 </p>
               </div>
-            </div>
+            </button>
 
             {/* Save Pickup Button */}
             <button
@@ -785,6 +845,87 @@ export const Pickup = () => {
           </div>
         </div>
       )}
+
+      {/* ── Selected Shops List Modal Popup ── */}
+      <Modal
+        isOpen={isSelectedModalOpen}
+        onClose={() => setIsSelectedModalOpen(false)}
+        title={`Selected Shops (${selectedCount})`}
+      >
+        <div className="space-y-4 max-h-[65vh] overflow-y-auto pr-1">
+          {selectedCount === 0 ? (
+            <div className="text-center py-8 text-gray-400">
+              <ShoppingBag size={36} className="mx-auto mb-2 opacity-50 text-orange-400" />
+              <p className="text-sm font-bold text-gray-700">No shops selected yet</p>
+              <p className="text-xs text-gray-400 mt-1">Tap any shop in the list to select it.</p>
+            </div>
+          ) : (
+            <div className="space-y-2.5">
+              {selectedShopObjects.map(shop => (
+                <div
+                  key={shop.id}
+                  className="p-3 bg-gray-50/80 rounded-2xl border border-gray-200/80 space-y-2"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-orange-500 to-amber-600 text-white font-black text-xs flex items-center justify-center flex-shrink-0 shadow-sm">
+                        {getInitials(shop.name)}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="font-bold text-xs text-gray-900 truncate">{shop.name}</p>
+                        {shop.location && (
+                          <p className="text-[11px] text-gray-500 flex items-center gap-1">
+                            <MapPin size={10} className="text-orange-500 flex-shrink-0" /> {shop.location}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => toggleShop(shop.id)}
+                      className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors flex-shrink-0"
+                      title="Remove shop"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+
+                  <div className="bg-white rounded-xl p-2 border border-gray-200 flex items-center gap-2 shadow-inner">
+                    <Hash size={13} className="text-orange-500 flex-shrink-0" />
+                    <input
+                      type="text"
+                      placeholder="Item count (optional)..."
+                      value={selections[shop.id] || ''}
+                      onChange={e => updateItemNumber(shop.id, e.target.value)}
+                      className="w-full text-xs font-bold text-gray-800 placeholder-gray-400 focus:outline-none bg-transparent"
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div className="flex items-center justify-between gap-3 pt-3 border-t border-gray-100">
+            {selectedCount > 0 && (
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => setSelections({})}
+                className="text-red-600 hover:bg-red-50 hover:text-red-700 font-bold text-xs"
+              >
+                Clear All
+              </Button>
+            )}
+            <Button
+              type="button"
+              variant="primary"
+              onClick={() => setIsSelectedModalOpen(false)}
+              className="ml-auto bg-orange-500 hover:bg-orange-600 text-white font-bold text-xs px-6"
+            >
+              Done
+            </Button>
+          </div>
+        </div>
+      </Modal>
 
       {/* ── Add New Shop Modal ── */}
       <Modal isOpen={isAddModalOpen} onClose={() => setIsAddModalOpen(false)} title="Add New Shop">
