@@ -109,20 +109,38 @@ export const drawGreenFooter = (doc: jsPDF, label: string, value: string | numbe
   const margin = 12;
   const finalY = (doc as any).lastAutoTable?.finalY ? (doc as any).lastAutoTable.finalY + 10 : 150;
 
-  const summaryWidth = 80;
+  const valStr = String(value);
+  doc.setFont('helvetica', 'bold');
+
+  doc.setFontSize(8);
+  const labelWidth = doc.getTextWidth(label.toUpperCase());
+
+  let valFontSize = 12;
+  doc.setFontSize(valFontSize);
+  let valWidth = doc.getTextWidth(valStr);
+
+  if (valWidth > 45) {
+    valFontSize = 9.5;
+    doc.setFontSize(valFontSize);
+    valWidth = doc.getTextWidth(valStr);
+  }
+
+  const padding = 14;
+  const requiredWidth = Math.max(85, labelWidth + valWidth + padding);
+  const summaryWidth = Math.min(requiredWidth, pw - (margin * 2));
   const summaryX = pw - margin - summaryWidth;
 
   doc.setFillColor(...BRAND.success);
   roundedRect(doc, summaryX, finalY, summaryWidth, 14, 3, 'F');
 
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(9);
+  doc.setFontSize(8);
   doc.setTextColor(209, 250, 229); // emerald-100
-  doc.text(label.toUpperCase(), summaryX + 4, finalY + 9);
+  doc.text(label.toUpperCase(), summaryX + 5, finalY + 9);
 
-  doc.setFontSize(13);
+  doc.setFontSize(valFontSize);
   doc.setTextColor(...BRAND.white);
-  doc.text(String(value), pw - margin - 4, finalY + 9, { align: 'right' });
+  doc.text(valStr, summaryX + summaryWidth - 5, finalY + 9, { align: 'right' });
 };
 
 export const savePDF = (doc: jsPDF, filename: string) => {

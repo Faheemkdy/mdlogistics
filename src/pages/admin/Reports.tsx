@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../../lib/supabase';
-import { Download, ChevronDown, ChevronUp, Clock, User, FileText, Box, Trash2, Search, Package, Truck, CalendarDays, Check, Send, Edit2 } from 'lucide-react';
+import { Download, ChevronDown, ChevronUp, Clock, User, FileText, Box, Trash2, Search, Package, Truck, CalendarDays, Check, Send, Edit2, BarChart3, ArrowDownLeft, ArrowUpRight, Building2, FileSpreadsheet } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { format } from 'date-fns';
@@ -13,7 +13,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { BRAND } from '../../constants/branding';
 import { clsx } from 'clsx';
 
-type Tab = 'pickups' | 'deliveries';
+type Tab = 'pickups' | 'deliveries' | 'summary';
 
 const SearchableCompanySelect = ({ 
   companies, 
@@ -155,6 +155,17 @@ export const Reports = () => {
     monthDeliveries: 0
   });
 
+  // Summary Report State
+  const [summaryPreset, setSummaryPreset] = useState<'today' | '7days' | '15days' | '30days' | 'custom'>('today');
+  const [summaryFromDate, setSummaryFromDate] = useState(getStandardDate());
+  const [summaryToDate, setSummaryToDate] = useState(getStandardDate());
+  const [summaryPickups, setSummaryPickups] = useState<{ id: string; name: string; count: number }[]>([]);
+  const [summaryCouriers, setSummaryCouriers] = useState<{ id: string; name: string; inward: number; outward: number; total: number }[]>([]);
+  const [selectedSummaryCompanies, setSelectedSummaryCompanies] = useState<string[]>([]);
+  const [selectedSummaryCouriers, setSelectedSummaryCouriers] = useState<string[]>([]);
+  const [includeInwardCourier, setIncludeInwardCourier] = useState(false);
+  const [summaryLoading, setSummaryLoading] = useState(false);
+
   useEffect(() => {
     fetchDashboardStats(date);
   }, [date]);
@@ -219,8 +230,319 @@ export const Reports = () => {
 
   useEffect(() => {
     if (activeTab === 'pickups') fetchPickups();
-    else fetchDeliveries();
+    else if (activeTab === 'deliveries') fetchDeliveries();
   }, [date, activeTab]);
+
+  const fetchSummaryData = async (start: string, end: string) => {
+    setSummaryLoading(true);
+    try {
+      // 1. Fetch Pickups Summary
+      const { data: pickupsData, error: pickupError } = await supabase
+        .from('pickups')
+        .select('company_id, date, companies (id, name), pickup_items ( item_number )')
+        .gte('date', start)
+        .lte('date', end);
+
+      if (pickupError) console.error('Error fetching summary pickups:', pickupError);
+
+      const companyCountMap: Record<string, { id: string; name: string; count: number }> = {};
+      (pickupsData || []).forEach((p: any) => {
+        const cId = p.companies?.id || 'unknown';
+        const cName = p.companies?.name || 'Unknown Company';
+        if (!companyCountMap[cId]) {
+          companyCountMap[cId] = { id: cId, name: cName, count: 0 };
+        }
+        const itemNums = (p.pickup_items || []).map((pi: any) => pi.item_number);
+        const count = calculateTotalItemCount(itemNums);
+        companyCountMap[cId].count += count;
+      });
+
+      const pickupsSummary = Object.values(companyCountMap).sort((a, b) => b.count - a.count);
+      setSummaryPickups(pickupsSummary);
+      setSelectedSummaryCompanies(pickupsSummary.map(p => p.id));
+
+      // 2. Fetch Courier Exchange Summary
+      const { data: courierLogsData, error: courierError } = await supabase
+        .from('courier_logs')
+        .select('partner_id, type, count, date, courier_partners (id, name)')
+        .gte('date', start)
+        .lte('date', end);
+
+      if (courierError) console.error('Error fetching summary courier logs:', courierError);
+
+      const partnerCountMap: Record<string, { id: string; name: string; inward: number; outward: number; total: number }> = {};
+      (courierLogsData || []).forEach((log: any) => {
+        const pId = log.courier_partners?.id || log.partner_id || 'unknown';
+        const pName = log.courier_partners?.name || 'Unknown Partner';
+        if (!partnerCountMap[pId]) {
+          partnerCountMap[pId] = { id: pId, name: pName, inward: 0, outward: 0, total: 0 };
+        }
+        const cnt = log.count || 0;
+        if (log.type === 'inward') {
+          partnerCountMap[pId].inward += cnt;
+        } else {
+          partnerCountMap[pId].outward += cnt;
+        }
+        partnerCountMap[pId].total += cnt;
+      });
+
+      const couriersSummary = Object.values(partnerCountMap).sort((a, b) => b.total - a.total);
+      setSummaryCouriers(couriersSummary);
+      setSelectedSummaryCouriers(couriersSummary.map(c => c.id));
+
+    } catch (err: any) {
+      console.error('Failed to load summary report:', err);
+    } finally {
+      setSummaryLoading(false);
+    }
+  };
+
+  const toggleSummaryCompany = (id: string) => {
+    setSelectedSummaryCompanies(prev => 
+      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+    );
+  };
+
+  const toggleAllSummaryCompanies = () => {
+    if (selectedSummaryCompanies.length === summaryPickups.length) {
+      setSelectedSummaryCompanies([]);
+    } else {
+      setSelectedSummaryCompanies(summaryPickups.map(p => p.id));
+    }
+  };
+
+  const toggleSummaryCourier = (id: string) => {
+    setSelectedSummaryCouriers(prev => 
+      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+    );
+  };
+
+  const toggleAllSummaryCouriers = () => {
+    if (selectedSummaryCouriers.length === summaryCouriers.length) {
+      setSelectedSummaryCouriers([]);
+    } else {
+      setSelectedSummaryCouriers(summaryCouriers.map(c => c.id));
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'summary') {
+      let start = summaryFromDate;
+      let end = summaryToDate;
+
+      if (summaryPreset === 'today') {
+        start = getStandardDate();
+        end = getStandardDate();
+      } else if (summaryPreset === '7days') {
+        const range = getDateRange(7);
+        start = range.start;
+        end = range.end;
+      } else if (summaryPreset === '15days') {
+        const range = getDateRange(15);
+        start = range.start;
+        end = range.end;
+      } else if (summaryPreset === '30days') {
+        const range = getDateRange(30);
+        start = range.start;
+        end = range.end;
+      }
+
+      setSummaryFromDate(start);
+      setSummaryToDate(end);
+      fetchSummaryData(start, end);
+    }
+  }, [activeTab, summaryPreset, summaryFromDate, summaryToDate]);
+
+  const downloadSummaryPDF = (mode: 'pickups' | 'exchange' | 'combined' = 'combined') => {
+    const lq = searchQuery.toLowerCase().trim();
+    const filteredPickups = summaryPickups
+      .filter(p => !lq || p.name.toLowerCase().includes(lq))
+      .filter(p => selectedSummaryCompanies.includes(p.id));
+
+    const filteredCouriers = summaryCouriers
+      .filter(c => !lq || c.name.toLowerCase().includes(lq))
+      .filter(c => selectedSummaryCouriers.includes(c.id));
+
+    const includePickups = mode === 'pickups' || mode === 'combined';
+    const includeCouriers = mode === 'exchange' || mode === 'combined';
+
+    if (mode === 'pickups' && filteredPickups.length === 0) {
+      toast.error('No Pickups Selected', 'Please select at least one company to download Pickup PDF.');
+      return;
+    }
+
+    if (mode === 'exchange' && filteredCouriers.length === 0) {
+      toast.error('No Exchange Selected', 'Please select at least one courier partner to download Exchange PDF.');
+      return;
+    }
+
+    if (filteredPickups.length === 0 && filteredCouriers.length === 0) {
+      toast.error('No Items Selected', 'Please select at least one item to download PDF.');
+      return;
+    }
+
+    try {
+      const doc = new jsPDF();
+      const margin = 14;
+
+      drawPDFHeader(doc);
+
+      const dateRangeLabel = summaryFromDate === summaryToDate
+        ? formatReportDate(summaryFromDate, 'dd MMMM yyyy')
+        : `${formatReportDate(summaryFromDate, 'dd MMM yyyy')} to ${formatReportDate(summaryToDate, 'dd MMM yyyy')}`;
+
+      const reportTitle = mode === 'pickups' 
+        ? 'Pickup Quantity Summary' 
+        : mode === 'exchange' 
+        ? 'Courier Exchange Summary' 
+        : 'Pickup & Courier Summary';
+
+      drawCustomerInfo(doc, 'Report:', reportTitle, dateRangeLabel, 60);
+
+      let startY = 92;
+      let totalPickupsCount = 0;
+      let grandTotalExchange = 0;
+
+      // Section 1: Pickup Summary Table (Only selected companies)
+      if (includePickups && filteredPickups.length > 0) {
+        doc.setFillColor(79, 70, 229);
+        doc.roundedRect(margin, startY, 6, 12, 1, 1, 'F');
+
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(11);
+        doc.setTextColor(15, 23, 42);
+        doc.text('1. PICKUP COUNT SUMMARY', margin + 10, startY + 8);
+
+        const pickupRows: any[] = filteredPickups.map((p, i) => [
+          i + 1,
+          p.name,
+          p.count
+        ]);
+
+        totalPickupsCount = filteredPickups.reduce((acc, c) => acc + c.count, 0);
+
+        pickupRows.push([
+          { content: 'TOTAL PICKUPS', colSpan: 2, styles: { fontStyle: 'bold', textColor: [79, 70, 229], fillColor: [243, 244, 256], halign: 'left' } },
+          { content: `${totalPickupsCount}`, styles: { fontStyle: 'bold', textColor: [79, 70, 229], fillColor: [243, 244, 256], halign: 'center' } }
+        ]);
+
+        autoTable(doc, {
+          startY: startY + 14,
+          head: [['#', 'Company Name', 'Total Picked Up']],
+          body: pickupRows,
+          theme: 'plain',
+          headStyles: { fillColor: [79, 70, 229], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 9 },
+          styles: { fontSize: 9, cellPadding: 3.5, lineColor: [226, 232, 240], lineWidth: 0.3 },
+          columnStyles: {
+            0: { halign: 'center', cellWidth: 14 },
+            1: { halign: 'left' },
+            2: { halign: 'center', cellWidth: 35 }
+          },
+          margin: { left: margin, right: margin }
+        });
+      }
+
+      let currentY = (doc as any).lastAutoTable?.finalY ? (doc as any).lastAutoTable.finalY + 14 : startY;
+
+      // Section 2: Courier Exchange Summary Table (Only selected courier partners)
+      if (includeCouriers && filteredCouriers.length > 0) {
+        if (includePickups && filteredPickups.length > 0 && currentY > 220) {
+          doc.addPage();
+          drawPDFHeader(doc);
+          currentY = 65;
+        }
+
+        doc.setFillColor(16, 185, 129);
+        doc.roundedRect(margin, currentY, 6, 12, 1, 1, 'F');
+
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(11);
+        doc.setTextColor(15, 23, 42);
+        const sectionNum = mode === 'exchange' ? '1' : '2';
+        doc.text(`${sectionNum}. COURIER EXCHANGE SUMMARY`, margin + 10, currentY + 8);
+
+        let courierHead: string[][];
+        let courierRows: any[];
+        let colStyles: any;
+
+        const totalInward = filteredCouriers.reduce((acc, c) => acc + c.inward, 0);
+        const totalOutward = filteredCouriers.reduce((acc, c) => acc + c.outward, 0);
+        const totalExchange = filteredCouriers.reduce((acc, c) => acc + c.total, 0);
+
+        if (includeInwardCourier) {
+          grandTotalExchange = totalExchange;
+          courierHead = [['#', 'Courier Partner', 'Inward Count', 'Outward Count', 'Total Exchange']];
+          courierRows = filteredCouriers.map((c, i) => [
+            i + 1,
+            c.name,
+            c.inward,
+            c.outward,
+            c.total
+          ]);
+          courierRows.push([
+            { content: 'TOTAL EXCHANGE', colSpan: 2, styles: { fontStyle: 'bold', textColor: [16, 185, 129], fillColor: [236, 253, 245], halign: 'left' } },
+            { content: `${totalInward}`, styles: { fontStyle: 'bold', textColor: [16, 185, 129], fillColor: [236, 253, 245], halign: 'center' } },
+            { content: `${totalOutward}`, styles: { fontStyle: 'bold', textColor: [16, 185, 129], fillColor: [236, 253, 245], halign: 'center' } },
+            { content: `${totalExchange}`, styles: { fontStyle: 'bold', textColor: [16, 185, 129], fillColor: [236, 253, 245], halign: 'center' } }
+          ]);
+          colStyles = {
+            0: { halign: 'center', cellWidth: 14 },
+            1: { halign: 'left' },
+            2: { halign: 'center', cellWidth: 30 },
+            3: { halign: 'center', cellWidth: 30 },
+            4: { halign: 'center', cellWidth: 32 }
+          };
+        } else {
+          grandTotalExchange = totalOutward;
+          courierHead = [['#', 'Courier Partner', 'Total Items']];
+          courierRows = filteredCouriers.map((c, i) => [
+            i + 1,
+            c.name,
+            c.outward
+          ]);
+          courierRows.push([
+            { content: 'TOTAL EXCHANGE', colSpan: 2, styles: { fontStyle: 'bold', textColor: [16, 185, 129], fillColor: [236, 253, 245], halign: 'left' } },
+            { content: `${totalOutward}`, styles: { fontStyle: 'bold', textColor: [16, 185, 129], fillColor: [236, 253, 245], halign: 'center' } }
+          ]);
+          colStyles = {
+            0: { halign: 'center', cellWidth: 14 },
+            1: { halign: 'left' },
+            2: { halign: 'center', cellWidth: 35 }
+          };
+        }
+
+        autoTable(doc, {
+          startY: currentY + 14,
+          head: courierHead,
+          body: courierRows,
+          theme: 'plain',
+          headStyles: { fillColor: [16, 185, 129], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 9 },
+          styles: { fontSize: 9, cellPadding: 3.5, lineColor: [226, 232, 240], lineWidth: 0.3 },
+          columnStyles: colStyles,
+          margin: { left: margin, right: margin }
+        });
+      }
+
+      if (mode === 'pickups') {
+        drawGreenFooter(doc, 'TOTAL PICKUPS:', `${totalPickupsCount} ITEMS`);
+      } else if (mode === 'exchange') {
+        drawGreenFooter(doc, 'TOTAL EXCHANGE:', `${grandTotalExchange} ITEMS`);
+      } else {
+        drawGreenFooter(doc, 'SUMMARY TOTALS:', `PICKUPS: ${totalPickupsCount}  |  EXCHANGE: ${grandTotalExchange}`);
+      }
+
+      const modePrefix = mode === 'pickups' ? 'Pickup_Summary' : mode === 'exchange' ? 'Courier_Exchange' : 'Summary_Report';
+      const filename = summaryFromDate === summaryToDate
+        ? `${modePrefix}_${summaryFromDate}.pdf`
+        : `${modePrefix}_${summaryFromDate}_to_${summaryToDate}.pdf`;
+
+      savePDF(doc, filename);
+      toast.success('PDF Downloaded!', `${reportTitle} PDF generated successfully.`);
+    } catch (e: any) {
+      console.error('PDF Generation Error:', e);
+      toast.error('Export Failed', 'An error occurred while generating the summary PDF.');
+    }
+  };
 
   const fetchCompanies = async () => {
     const { data } = await supabase.from('companies').select('id, name').eq('is_active', true).order('name');
@@ -1267,7 +1589,7 @@ export const Reports = () => {
       <div className="sticky top-0 z-30 bg-slate-50/95 backdrop-blur-xl pb-4 pt-1 -mx-2 px-2 sm:-mx-4 sm:px-4 shadow-sm border-b border-slate-200/50 space-y-3 mb-5">
         {/* ── Tab Toggle ── */}
         <div className="flex gap-2 p-1.5 bg-slate-200/50 rounded-2xl backdrop-blur-sm">
-          {(['pickups', 'deliveries'] as Tab[]).map(tab => (
+          {(['pickups', 'deliveries', 'summary'] as Tab[]).map(tab => (
             <button
               key={tab}
               onClick={() => { setActiveTab(tab); setSearchQuery(''); setExpandedCompany(null); setSelectedCompanyId(''); }}
@@ -1275,22 +1597,24 @@ export const Reports = () => {
                 activeTab === tab
                   ? tab === 'pickups'
                     ? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-lg shadow-blue-500/30'
-                    : 'bg-gradient-to-r from-emerald-500 to-green-600 text-white shadow-lg shadow-emerald-500/30'
+                    : tab === 'deliveries'
+                    ? 'bg-gradient-to-r from-emerald-500 to-green-600 text-white shadow-lg shadow-emerald-500/30'
+                    : 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg shadow-purple-500/30'
                   : 'text-slate-500 hover:text-slate-700 hover:bg-white/60'
               }`}
             >
-              {tab === 'pickups' ? <Package size={16} /> : <Truck size={16} />}
-              <span className="capitalize">{tab}</span>
+              {tab === 'pickups' ? <Package size={16} /> : tab === 'deliveries' ? <Truck size={16} /> : <BarChart3 size={16} />}
+              <span className="capitalize">{tab === 'summary' ? 'Counts Summary' : tab}</span>
             </button>
           ))}
         </div>
 
-        {/* ── Search ── */}
+        {/* ── Search Bar ── */}
         <div className="relative group">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors" size={16} />
           <input
             type="text"
-            placeholder={`Find ${activeTab}...`}
+            placeholder={activeTab === 'summary' ? 'Search company or courier partner...' : `Find ${activeTab}...`}
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
             className="w-full pl-11 pr-4 py-3 sm:py-3.5 bg-white/80 backdrop-blur-md border border-slate-200 rounded-2xl text-sm text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-400 shadow-sm transition-all font-bold"
@@ -1603,6 +1927,277 @@ export const Reports = () => {
                 <p className="font-bold text-sm">{searchQuery ? 'No deliveries match your search' : 'No deliveries recorded for this date'}</p>
               </div>
             )}
+          </motion.div>
+        </AnimatePresence>
+      )}
+
+      {/* ══════════ SUMMARY TAB ══════════ */}
+      {activeTab === 'summary' && (
+        <AnimatePresence mode="wait">
+          <motion.div key="summary" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-6">
+
+            {/* Toolbar: Date Range Filters & PDF Download */}
+            <div className="bg-white border border-slate-100 rounded-3xl p-5 shadow-sm space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <h2 className="text-base font-black text-slate-800 flex items-center gap-2">
+                    <BarChart3 size={18} className="text-indigo-600" />
+                    Pickup & Courier Exchange Quantity Summary
+                  </h2>
+                  <p className="text-xs text-slate-500 font-medium">Select date range to view total count breakdowns per company & partner</p>
+                </div>
+
+                <div className="flex items-center gap-2 flex-wrap justify-end">
+                  <button
+                    onClick={() => downloadSummaryPDF('pickups')}
+                    disabled={summaryLoading}
+                    className="flex items-center gap-1.5 px-3.5 py-2 bg-indigo-50 border border-indigo-200 text-indigo-700 rounded-xl font-bold text-xs hover:bg-indigo-100 transition-all shadow-sm disabled:opacity-50"
+                  >
+                    <Package size={14} /> Pickup PDF
+                  </button>
+                  <button
+                    onClick={() => downloadSummaryPDF('exchange')}
+                    disabled={summaryLoading}
+                    className="flex items-center gap-1.5 px-3.5 py-2 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-xl font-bold text-xs hover:bg-emerald-100 transition-all shadow-sm disabled:opacity-50"
+                  >
+                    <Truck size={14} /> Exchange PDF
+                  </button>
+                  <button
+                    onClick={() => downloadSummaryPDF('combined')}
+                    disabled={summaryLoading}
+                    className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl font-black text-xs hover:from-indigo-700 hover:to-purple-700 transition-all shadow-md shadow-indigo-500/20 disabled:opacity-50"
+                  >
+                    <Download size={14} /> Combined PDF
+                  </button>
+                </div>
+              </div>
+
+              {/* Preset buttons & Search input */}
+              <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-slate-100">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mr-1">Period:</span>
+                  {[
+                    { id: 'today', label: 'Today' },
+                    { id: '7days', label: '7 Days' },
+                    { id: '15days', label: '15 Days' },
+                    { id: '30days', label: '30 Days (1 Month)' },
+                    { id: 'custom', label: 'Custom Range' },
+                  ].map(preset => (
+                    <button
+                      key={preset.id}
+                      onClick={() => setSummaryPreset(preset.id as any)}
+                      className={clsx(
+                        "px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all shadow-sm",
+                        summaryPreset === preset.id
+                          ? "bg-indigo-600 text-white shadow-indigo-500/30"
+                          : "bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200"
+                      )}
+                    >
+                      {preset.label}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="relative min-w-[220px] flex-1 sm:flex-none">
+                  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <input
+                    type="text"
+                    placeholder="Search company or partner..."
+                    value={searchQuery}
+                    onChange={e => setSearchQuery(e.target.value)}
+                    className="w-full pl-9 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 outline-none focus:border-indigo-400 focus:bg-white transition-all shadow-sm"
+                  />
+                </div>
+              </div>
+
+              {/* Custom Date Pickers if custom selected */}
+              {summaryPreset === 'custom' && (
+                <div className="flex items-center gap-3 pt-3 border-t border-slate-100 flex-wrap">
+                  <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2">
+                    <span className="text-xs font-bold text-slate-400 uppercase">From:</span>
+                    <input
+                      type="date"
+                      value={summaryFromDate}
+                      onChange={e => setSummaryFromDate(e.target.value)}
+                      className="bg-transparent text-xs font-bold text-slate-700 outline-none cursor-pointer"
+                    />
+                  </div>
+                  <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2">
+                    <span className="text-xs font-bold text-slate-400 uppercase">To:</span>
+                    <input
+                      type="date"
+                      value={summaryToDate}
+                      onChange={e => setSummaryToDate(e.target.value)}
+                      className="bg-transparent text-xs font-bold text-slate-700 outline-none cursor-pointer"
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Loading Indicator */}
+            {summaryLoading && (
+              <div className="flex justify-center py-16">
+                <div className="w-10 h-10 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin shadow-lg" />
+              </div>
+            )}
+
+            {/* Summary Cards Grid */}
+            {!summaryLoading && (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+                {/* 1. Pickups Summary Card */}
+                <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6 space-y-4">
+                  <div className="flex items-center justify-between border-b border-slate-100 pb-4 flex-wrap gap-2">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-black">
+                        <Package size={20} />
+                      </div>
+                      <div>
+                        <h3 className="font-black text-slate-800 text-base">Pickup Summary</h3>
+                        <p className="text-xs font-semibold text-slate-400">Total items picked up</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {summaryPickups.length > 0 && (
+                        <button
+                          type="button"
+                          onClick={toggleAllSummaryCompanies}
+                          className="text-xs font-bold text-indigo-600 hover:bg-indigo-50 px-2.5 py-1 rounded-lg transition-colors border border-indigo-100"
+                        >
+                          {selectedSummaryCompanies.length === summaryPickups.length ? 'Deselect All' : 'Select All'}
+                        </button>
+                      )}
+                      <span className="px-3 py-1 bg-indigo-50 text-indigo-700 font-black text-xs rounded-xl border border-indigo-100">
+                        Selected: {summaryPickups.filter(p => selectedSummaryCompanies.includes(p.id)).reduce((acc, p) => acc + p.count, 0)}
+                      </span>
+                    </div>
+                  </div>
+
+                  {summaryPickups.filter(p => !searchQuery || p.name.toLowerCase().includes(searchQuery.toLowerCase().trim())).length === 0 ? (
+                    <div className="text-center py-10 text-slate-400">
+                      <Package size={32} className="mx-auto mb-2 opacity-30" />
+                      <p className="text-xs font-bold">{searchQuery ? 'No pickups match search' : 'No pickup records for this period'}</p>
+                    </div>
+                  ) : (
+                    <div className="divide-y divide-slate-100 max-h-96 overflow-y-auto pr-1 custom-scrollbar">
+                      {summaryPickups
+                        .filter(p => !searchQuery || p.name.toLowerCase().includes(searchQuery.toLowerCase().trim()))
+                        .map((company, idx) => {
+                          const isSelected = selectedSummaryCompanies.includes(company.id);
+                          return (
+                            <label key={company.id} className="flex items-center justify-between py-3 hover:bg-slate-50/80 px-2 rounded-xl transition-colors cursor-pointer select-none">
+                              <div className="flex items-center gap-3">
+                                <input
+                                  type="checkbox"
+                                  checked={isSelected}
+                                  onChange={() => toggleSummaryCompany(company.id)}
+                                  className="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500 cursor-pointer"
+                                />
+                                <span className="text-xs font-black text-slate-400 w-4">{idx + 1}.</span>
+                                <span className={clsx("font-bold text-sm", isSelected ? "text-slate-800" : "text-slate-400 line-through")}>
+                                  {company.name}
+                                </span>
+                              </div>
+                              <span className={clsx(
+                                "inline-flex items-center px-3 py-1 rounded-xl font-black text-xs transition-all",
+                                isSelected ? "bg-indigo-50 text-indigo-700 border border-indigo-100" : "bg-slate-100 text-slate-400"
+                              )}>
+                                {company.count} items
+                              </span>
+                            </label>
+                          );
+                        })}
+                    </div>
+                  )}
+                </div>
+
+                {/* 2. Courier Exchange Summary Card */}
+                <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6 space-y-4">
+                  <div className="flex items-center justify-between border-b border-slate-100 pb-4 flex-wrap gap-2">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-black">
+                        <Truck size={20} />
+                      </div>
+                      <div>
+                        <h3 className="font-black text-slate-800 text-base">Courier Exchange Summary</h3>
+                        <p className="text-xs font-semibold text-slate-400">Total exchange items</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <label className="flex items-center gap-1.5 cursor-pointer select-none text-xs font-bold text-slate-600 hover:text-emerald-700 transition-colors bg-slate-50 border border-slate-200 px-2.5 py-1 rounded-lg">
+                        <input
+                          type="checkbox"
+                          checked={includeInwardCourier}
+                          onChange={e => setIncludeInwardCourier(e.target.checked)}
+                          className="w-3.5 h-3.5 text-emerald-600 rounded border-slate-300 focus:ring-emerald-500 cursor-pointer"
+                        />
+                        <span>Include Inward</span>
+                      </label>
+
+                      {summaryCouriers.length > 0 && (
+                        <button
+                          type="button"
+                          onClick={toggleAllSummaryCouriers}
+                          className="text-xs font-bold text-emerald-600 hover:bg-emerald-50 px-2.5 py-1 rounded-lg transition-colors border border-emerald-100"
+                        >
+                          {selectedSummaryCouriers.length === summaryCouriers.length ? 'Deselect All' : 'Select All'}
+                        </button>
+                      )}
+                      <span className="px-3 py-1 bg-emerald-50 text-emerald-700 font-black text-xs rounded-xl border border-emerald-100">
+                        Selected: {summaryCouriers.filter(c => selectedSummaryCouriers.includes(c.id)).reduce((acc, c) => acc + (includeInwardCourier ? c.total : c.outward), 0)}
+                      </span>
+                    </div>
+                  </div>
+
+                  {summaryCouriers.filter(c => !searchQuery || c.name.toLowerCase().includes(searchQuery.toLowerCase().trim())).length === 0 ? (
+                    <div className="text-center py-10 text-slate-400">
+                      <Truck size={32} className="mx-auto mb-2 opacity-30" />
+                      <p className="text-xs font-bold">{searchQuery ? 'No courier exchange match search' : 'No courier exchange records for this period'}</p>
+                    </div>
+                  ) : (
+                    <div className="divide-y divide-slate-100 max-h-96 overflow-y-auto pr-1 custom-scrollbar">
+                      {summaryCouriers
+                        .filter(c => !searchQuery || c.name.toLowerCase().includes(searchQuery.toLowerCase().trim()))
+                        .map((partner, idx) => {
+                          const isSelected = selectedSummaryCouriers.includes(partner.id);
+                          return (
+                            <label key={partner.id} className="flex items-center justify-between py-3 hover:bg-slate-50/80 px-2 rounded-xl transition-colors cursor-pointer select-none">
+                              <div className="flex items-center gap-3">
+                                <input
+                                  type="checkbox"
+                                  checked={isSelected}
+                                  onChange={() => toggleSummaryCourier(partner.id)}
+                                  className="w-4 h-4 text-emerald-600 rounded border-slate-300 focus:ring-emerald-500 cursor-pointer"
+                                />
+                                <span className="text-xs font-black text-slate-400 w-4">{idx + 1}.</span>
+                                <div>
+                                  <span className={clsx("font-bold text-sm block", isSelected ? "text-slate-800" : "text-slate-400 line-through")}>
+                                    {partner.name}
+                                  </span>
+                                  {includeInwardCourier && (
+                                    <span className="text-[10px] font-semibold text-slate-400">
+                                      Inward: {partner.inward} | Outward: {partner.outward}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                              <span className={clsx(
+                                "inline-flex items-center px-3 py-1 rounded-xl font-black text-xs transition-all",
+                                isSelected ? "bg-emerald-50 text-emerald-700 border border-emerald-100" : "bg-slate-100 text-slate-400"
+                              )}>
+                                {includeInwardCourier ? `${partner.total} total` : `${partner.outward} items`}
+                              </span>
+                            </label>
+                          );
+                        })}
+                    </div>
+                  )}
+                </div>
+
+              </div>
+            )}
+
           </motion.div>
         </AnimatePresence>
       )}
